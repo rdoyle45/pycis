@@ -1,31 +1,36 @@
-from setuptools import setup
-from distutils.extension import Extension
-import Cython
+import setuptools
 import numpy as np
 import os.path
 from Cython.Build import cythonize
-from Cython.Distutils import build_ext
-
-path = os.path.dirname(os.path.realpath(__file__))
-
-phase_delay_pyx_file = os.path.join(path, 'model', 'phase_delay.pyx'),
-degree_coherence_pyx_file = os.path.join(path, 'model', 'degree_coherence.pyx'),
-bbo_pyx_file = os.path.join(path, 'model', 'bbo.pyx'),
 
 
-ext_modules = [
-    Extension('model.phase_delay', [phase_delay_pyx_file[0]], include_dirs=[np.get_include()]),
-    Extension('model.degree_coherence', [degree_coherence_pyx_file[0]], include_dirs=[np.get_include()]),
-    Extension('model.bbo', [bbo_pyx_file[0]], include_dirs=[np.get_include()]),
-]
+compilation_includes = [".", np.get_include()]
+compilation_args = []
+cython_directives = {
+    'language_level': 3
+}
 
-setup(
+setup_path = os.path.dirname(os.path.abspath(__file__))
+
+# build .pyx extension list -- this is taken from cherab
+extensions = []
+for root, dirs, files in os.walk(setup_path):
+    for file in files:
+        if os.path.splitext(file)[1] == ".pyx":
+            pyx_file = os.path.relpath(os.path.join(root, file), setup_path)
+            module = os.path.splitext(pyx_file)[0].replace("/", ".")
+            extensions.append(setuptools.Extension(module, [pyx_file], include_dirs=compilation_includes, extra_compile_args=compilation_args),)
+
+
+setuptools.setup(
     name='pycis',
     version='0.1',
+    author='Joseph Allcock',
     description='Analysis and modelling for the Coherence Imaging Spectroscopy (CIS) plasma diagnostic',
     url='https://github.com/jsallcock/pycis',
-    cmdclass={'build_ext': build_ext},
-    ext_modules = ext_modules,
+    packages=setuptools.find_packages(),
+    # cmdclass={'build_ext': build_ext},
+    ext_modules = cythonize(extensions),  # generate .c files from .pyx
 )
 
 
