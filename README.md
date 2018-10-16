@@ -5,7 +5,7 @@ Analysis and modelling for the Coherence Imaging Spectroscopy (CIS) plasma diagn
 Authorship:
 
 - Joseph Allcock
-- Scott Silburn: Author of the original Matlab scripts upon which most of the code is based. Author of ```pycis/data/get.py```  
+- Scott Silburn: Author of the original Matlab scripts. Author of ```pycis/data/get.py```  
 
 # Modules
 
@@ -28,24 +28,14 @@ Runs on python 3, compiled C for cython scripts is provided but will likely need
 
 # Setup
 
-After cloning, the cython .pyx files in model need to be compiled, this is done by executing: 
+After cloning, setup the package from the top directory using: 
 
 ```
-python setup.py build_ext --inplace
+pip install -e .
 ```
 
-from the terminal. This will be made easier!
+from the terminal.
 
-# To Do
-
-- demod:
-  - Optimise window widths and functions to demodulation of realistic synthetic data using cherab.
-  - How to pass kwargs to pool.map?
-
-- model:
-  - Remove repeated parts of code.
-  - Implement realistic instrument throughput.
-  - Incorporate multiprocessing in demod and model for a speedup
 
 
 

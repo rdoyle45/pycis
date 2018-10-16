@@ -1,13 +1,9 @@
 from .find_nearest import find_nearest
 from .coord_transform import cart2pol, pol2cart
-from .quantise import quantise
-from .savitzky_golay import savitzky_golay
-from .gauss2d import gauss2d
 from .sensor_angle import sensor_angle
 from .to_precision import to_precision
 from .find_peaks import indexes
 from .log_trapz import log_trapz
-
 
 from .fit_functions import *
 from.utils import *
