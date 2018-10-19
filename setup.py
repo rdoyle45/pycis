@@ -29,7 +29,6 @@ setuptools.setup(
     description='Analysis and modelling for the Coherence Imaging Spectroscopy (CIS) plasma diagnostic',
     url='https://github.com/jsallcock/pycis',
     packages=setuptools.find_packages(),
-    # cmdclass={'build_ext': build_ext},
     ext_modules = cythonize(extensions),  # generate .c files from .pyx
 )
 

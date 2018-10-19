@@ -22,3 +22,16 @@ def thermal_speed(t_ev, mass, mass_unit='amu'):
     t_kelvin = t_ev * (e / k)
 
     return np.sqrt(2 * k * t_kelvin / mass_kg)
+
+
+def cart2pol(y, x):
+    rho = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x)
+    return rho, phi
+
+
+def pol2cart(rho, phi):
+    x = rho * np.cos(phi)
+    y = rho * np.sin(phi)
+    return y, x
+

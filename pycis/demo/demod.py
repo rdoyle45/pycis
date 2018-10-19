@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 ##### Oct 2017: masking not working yet due to dependency on opencv
 
-# DEMOD EXAMPLE 1: Demodulate experimental CIS data (HL-2A #29657, viewing high field side CIII)
+# DEMOD EXAMPLE 1: Demodulate experimental CIS tabulated_data (HL-2A #29657, viewing high field side CIII)
 
 # load raw image
 raw_img_path = os.path.join(pycis.paths.demos_path, 'raw_image.tif')
@@ -19,7 +19,7 @@ raw_col = raw_img[:, 676]
 dc_img, phase_img, contrast_img = pycis.demod.fd_image_2d(raw_img, despeckle=True, display=True)
 
 
-# DEMOD EXAMPLE 2: Generate and then demodulate synthetic CIS data - with comparison to input to assess demodulation
+# DEMOD EXAMPLE 2: Generate and then demodulate synthetic CIS tabulated_data - with comparison to input to assess demodulation
 # accuracy
 
 

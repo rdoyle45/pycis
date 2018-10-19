@@ -123,7 +123,7 @@ class WrapFitPosterior(object):
         # now remove this point from the shifted coordinates
         omit_zero_idx = self.wls != self.wl_0
 
-        self.wls_reduced = self.wls[omit_zero_idx]  # data wavelengths, excluding the targeted wavelength wl_0.
+        self.wls_reduced = self.wls[omit_zero_idx]  # tabulated_data wavelengths, excluding the targeted wavelength wl_0.
         self.wl_shift = (self.wls[omit_zero_idx] - self.wl_0)
         self.phase_shift = pycis.demod.wrap(phase[omit_zero_idx] - self.phase_0, units='fringes')
         self.phase_shift_std = np.sqrt(phase_std[omit_zero_idx] ** 2 + self.phase_std_0 ** 2)
@@ -280,7 +280,7 @@ class WrapFitPosterior(object):
 
     def forward_model(self, x, theta):
         """
-        Makes a prediction of the experimental data we would expect to measure given a specific state of the
+        Makes a prediction of the experimental tabulated_data we would expect to measure given a specific state of the
         system, which is specified by the model parameters theta.
         """
 

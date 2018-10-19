@@ -139,7 +139,7 @@ class Instrument(object):
         # load line
         line = pycis.model.Lineshape(line_name, 1, 0, 1)
 
-        _, _, _, wavelength_com = line.make_curve(1000)
+        _, _, _, wavelength_com = line.make(1000)
 
         if self.optical_filter is not None:
             # estimate filter transmission at line wavelength
@@ -170,7 +170,7 @@ class Instrument(object):
         # load line
         line = pycis.model.Lineshape(line_name, 1, 0, 1)
 
-        _, _, _, wavelength_com = line.make_curve(1000)
+        _, _, _, wavelength_com = line.make(1000)
 
         # calculate characteristic temperature
 
