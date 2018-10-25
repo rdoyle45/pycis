@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import os.path
 import pycis.paths
-from pycis.tools.coord_transform import *
+from pycis.tools import *
 from pycis.model.phase_delay import uniaxial_crystal, savart_plate
 import scipy.interpolate
 
@@ -121,10 +121,10 @@ class Instrument(object):
             ax1 = fig1.add_subplot(121)
             ax2 = fig1.add_subplot(122)
 
-            im1 = ax1.imshow(inc_angles)
+            im1 = ax1.imshow_raw(inc_angles)
             cbar = plt.colorbar(im1, ax=ax1)
 
-            im2 = ax2.imshow(azim_angles_wp)
+            im2 = ax2.imshow_raw(azim_angles_wp)
             cbar = plt.colorbar(im2, ax=ax2)
 
 
@@ -139,7 +139,7 @@ class Instrument(object):
         # load line
         line = pycis.model.Lineshape(line_name, 1, 0, 1)
 
-        _, _, _, wavelength_com = line.make_curve(1000)
+        _, _, _, wavelength_com = line.make(1000)
 
         if self.optical_filter is not None:
             # estimate filter transmission at line wavelength
@@ -170,7 +170,7 @@ class Instrument(object):
         # load line
         line = pycis.model.Lineshape(line_name, 1, 0, 1)
 
-        _, _, _, wavelength_com = line.make_curve(1000)
+        _, _, _, wavelength_com = line.make(1000)
 
         # calculate characteristic temperature
 

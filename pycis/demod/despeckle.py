@@ -70,13 +70,13 @@ def despeckle(image, display=False):
 
         f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, sharex=True, sharey=True)
 
-        im1 = ax1.imshow(image)
+        im1 = ax1.imshow_raw(image)
         # cbar1 = plt.colorbar(im1, ax=ax1)
 
-        im2 = ax2.imshow(image_out, vmax=np.max(image))
+        im2 = ax2.imshow_raw(image_out, vmax=np.max(image))
         # cbar2 = plt.colorbar(im2, ax=ax2)
 
-        im3 = ax3.imshow(filtered_pixels)
+        im3 = ax3.imshow_raw(filtered_pixels)
         # cbar2 = plt.colorbar(im2, ax=ax2)
 
         plt.show()

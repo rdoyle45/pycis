@@ -90,17 +90,17 @@ def fd_image_2d(img, noise_calc=False, nfringes=None, despeckle=False, display=F
         fig1 = plt.figure(figsize=(10, 6), facecolor='white')
 
         ax11 = fig1.add_subplot(2, 3, 1)
-        im11 = ax11.imshow(np.log10(abs(fft_img)**2))
+        im11 = ax11.imshow_raw(np.log10(abs(fft_img) ** 2))
         cbar11 = fig1.colorbar(im11, ax=ax11)
         ax11.set_title('FFT img')
         
         ax12 = fig1.add_subplot(2, 3, 2)
-        im12 = ax12.imshow(np.log10(abs(fft_carrier)**2))
+        im12 = ax12.imshow_raw(np.log10(abs(fft_carrier) ** 2))
         cbar12 = plt.colorbar(im12, ax=ax12)
         ax12.set_title('FFT carrier')
         
         ax13 = fig1.add_subplot(2, 3, 3)
-        im13 = ax13.imshow(np.log10(abs(fft_dc)**2))
+        im13 = ax13.imshow_raw(np.log10(abs(fft_dc) ** 2))
         cbar13 = plt.colorbar(im13, ax=ax13)
         ax13.set_title('FFT DC')
 
@@ -109,7 +109,7 @@ def fd_image_2d(img, noise_calc=False, nfringes=None, despeckle=False, display=F
         plt.title('window 1D')
 
         ax15 = fig1.add_subplot(2, 3, 5)
-        im15 = ax15.imshow(window_2d, cmap='gray')
+        im15 = ax15.imshow_raw(window_2d, cmap='gray')
         cbar15 = fig1.colorbar(im15, ax=ax15)
         ax15.set_title('window 2D')
 
@@ -122,12 +122,12 @@ def fd_image_2d(img, noise_calc=False, nfringes=None, despeckle=False, display=F
 
             fig3 = plt.figure(figsize=(10, 6), facecolor='white')
             ax31 = fig3.add_subplot(1, 2, 1)
-            im31 = ax31.imshow(sigma_flow, vmax=2)
+            im31 = ax31.imshow_raw(sigma_flow, vmax=2)
             cbar31 = fig3.colorbar(im31, ax=ax31)
             ax31.set_title('phase noise')
 
             ax32 = fig3.add_subplot(1, 2, 2)
-            im32 = ax32.imshow(np.log10(sigma_contrast), vmax=np.log10(10))
+            im32 = ax32.imshow_raw(np.log10(sigma_contrast), vmax=np.log10(10))
             cbar32 = fig3.colorbar(im32, ax=ax32)
             ax32.set_title('contrast noise')
 

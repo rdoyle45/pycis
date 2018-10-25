@@ -56,15 +56,15 @@ def plot_bbo_dispersion(wavelength_range=(400e-9, 700e-9)):
         biref, n_e, n_o, kappa, dBdlambda, d2Bdlambda2,  d3Bdlambda3  = bbo_slo(wavelength, source=sources[i])
 
         # add to plot
-        ax_biref.plot(wavelength, biref, color=colormap(j), label=sources[i])
+        ax_biref.plot_raw(wavelength, biref, color=colormap(j), label=sources[i])
 
-        ax_indices.plot(wavelength, n_e, color=colormap(j), label=sources[i])
-        ax_indices.plot(wavelength, n_o, color=colormap(j))
+        ax_indices.plot_raw(wavelength, n_e, color=colormap(j), label=sources[i])
+        ax_indices.plot_raw(wavelength, n_o, color=colormap(j))
 
-        ax_kappa.plot(wavelength, kappa, color=colormap(j), label=sources[i])
+        ax_kappa.plot_raw(wavelength, kappa, color=colormap(j), label=sources[i])
 
-        ax_dBdlambda.plot(wavelength, dBdlambda, color=colormap(j), label=sources[i])
-        ax_d2Bdlambda2.plot(wavelength, d2Bdlambda2, color=colormap(j), label=sources[i])
+        ax_dBdlambda.plot_raw(wavelength, dBdlambda, color=colormap(j), label=sources[i])
+        ax_d2Bdlambda2.plot_raw(wavelength, d2Bdlambda2, color=colormap(j), label=sources[i])
 
     leg_biref = ax_biref.legend(prop={'size': 15}, loc=0)
     leg_indices = ax_indices.legend(prop={'size': 15}, loc=0)

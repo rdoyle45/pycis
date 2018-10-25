@@ -6,9 +6,9 @@ root_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe
 demod_path = os.path.join(root_path, 'uncertainty')
 model_path = os.path.join(root_path, 'model')
 demos_path = os.path.join(root_path, 'demo')
-general_path = os.path.join(root_path, 'tools')
+tools_path = os.path.join(root_path, 'tools')
 
-# define user data paths:
+# define user tabulated_data paths:
 config_path = os.path.join(model_path, 'config')
 
 synth_images_path = os.path.join(config_path, 'synth_image')

@@ -70,7 +70,7 @@ def wrapfit(wls, phase, phase_std, l_wp_guess, idx_0=0, num_steps=120000, polyno
         phase_shift_mode = pycis.tools.phase_shift_wl_poly(wl_shift_axis, parameter_modes) / wl_axis
         phase_shift_std = pycis.tools.phase_shift_wl_poly_std(wl_shift_axis, parameter_stds) / wl_axis
 
-        ax1.plot(wl_shift_axis, phase_shift_mode, 'r', lw=1, label='mode')
+        ax1.plot_raw(wl_shift_axis, phase_shift_mode, 'r', lw=1, label='mode')
         ax1.fill_between(wl_shift_axis, phase_shift_mode - phase_shift_std, phase_shift_mode + phase_shift_std, color='peachpuff',
                         label='1std')
 
@@ -123,7 +123,7 @@ class WrapFitPosterior(object):
         # now remove this point from the shifted coordinates
         omit_zero_idx = self.wls != self.wl_0
 
-        self.wls_reduced = self.wls[omit_zero_idx]  # data wavelengths, excluding the targeted wavelength wl_0.
+        self.wls_reduced = self.wls[omit_zero_idx]  # tabulated_data wavelengths, excluding the targeted wavelength wl_0.
         self.wl_shift = (self.wls[omit_zero_idx] - self.wl_0)
         self.phase_shift = pycis.demod.wrap(phase[omit_zero_idx] - self.phase_0, units='fringes')
         self.phase_shift_std = np.sqrt(phase_std[omit_zero_idx] ** 2 + self.phase_std_0 ** 2)
@@ -280,7 +280,7 @@ class WrapFitPosterior(object):
 
     def forward_model(self, x, theta):
         """
-        Makes a prediction of the experimental data we would expect to measure given a specific state of the
+        Makes a prediction of the experimental tabulated_data we would expect to measure given a specific state of the
         system, which is specified by the model parameters theta.
         """
 
@@ -291,8 +291,8 @@ class WrapFitPosterior(object):
         phase_shift_excess_label = 'Measured $\Delta\phi$ (wrapped)'
         phase_shift_ambiguous_label = 'Measured $\Delta\phi$ (unwrapped, ambiguous)'
 
-        ax.plot(self.wl_shift, self.phase_shift, '.', color='lightblue', label=phase_shift_excess_label)
-        ax.plot(0, 0, '.', color='lightblue')
+        ax.plot_raw(self.wl_shift, self.phase_shift, '.', color='lightblue', label=phase_shift_excess_label)
+        ax.plot_raw(0, 0, '.', color='lightblue')
 
         # loop over raw_data points
         for i, wl_shift_i in enumerate(self.wl_shift):
@@ -304,10 +304,10 @@ class WrapFitPosterior(object):
                 phase_shift_ambiguity = phase_shift_i + idx
 
                 if i == 1 and k == 0:
-                    ax.plot(wl_shift_i, phase_shift_ambiguity, '.', fillstyle='none', color='#1f77b4',
-                            label=phase_shift_ambiguous_label)
+                    ax.plot_raw(wl_shift_i, phase_shift_ambiguity, '.', fillstyle='none', color='#1f77b4',
+                                label=phase_shift_ambiguous_label)
                 else:
-                    ax.plot(wl_shift_i, phase_shift_ambiguity, '.', fillstyle='none', color='#1f77b4')
+                    ax.plot_raw(wl_shift_i, phase_shift_ambiguity, '.', fillstyle='none', color='#1f77b4')
 
         return
 
@@ -334,7 +334,7 @@ class WrapFitPosterior(object):
             phase_shift_model[i, :] = (gd0_axis / kappa_0) * (biref * self.wl_0 / (biref_0 * wl_i) - 1)
             phase_shift_residual[i, :] = abs(pycis.demod.wrap(phase_shift_i - phase_shift_model[i, :], units='fringes'))
 
-            ax.plot(gd0_axis, phase_shift_residual[i, :], color = plt.cm.cool(color_idx[i]), **kwargs)
+            ax.plot_raw(gd0_axis, phase_shift_residual[i, :], color = plt.cm.cool(color_idx[i]), **kwargs)
 
 
         # ax_exacfrac.set_xlabel('Group Delay (waves)', fontsize=self.fsize)

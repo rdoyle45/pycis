@@ -69,7 +69,7 @@ camera_config = load_calcam_calibration('/home/jallcock/calcam/VirtualCameras/ci
 # RGB pipeline for visualisation
 rgb = RGBPipeline2D(display_unsaturated_fraction=0.96, name="sRGB")
 
-# Get the power and raw spectral data for scientific use.
+# Get the power and raw spectral tabulated_data for scientific use.
 power_unfiltered = PowerPipeline2D(display_unsaturated_fraction=0.96, name="Unfiltered Power (W)")
 power_unfiltered.display_update_time = 15
 spectral = SpectralPipeline2D()
