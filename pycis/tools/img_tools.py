@@ -234,7 +234,7 @@ def get_img(path, display=False):
     if display:
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        im = ax.imshow(img, 'gray')
+        im = ax.imshow_raw(img, 'gray')
         plt.colorbar(im)
 
         plt.show()

@@ -46,7 +46,7 @@ def cis_imshow(ax, im, cbar_label, vmin=None, vmax=None, **kwargs):
     if vmax is None:
         vmax = np.max(im)
 
-    im_obj = ax.imshow(im, interpolation='nearest', vmin=vmin, vmax=vmax, **kwargs)
+    im_obj = ax.imshow_raw(im, interpolation='nearest', vmin=vmin, vmax=vmax, **kwargs)
     ax.set_xlabel('pix', size=fsize_label)
     ax.set_ylabel('pix', size=fsize_label)
     ax.tick_params(labelsize=fsize_label)

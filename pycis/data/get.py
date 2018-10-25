@@ -146,16 +146,16 @@ class CISImage():
 
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            im0 = ax.imshow(self.v_los / 1e3, cmap=cmap, clim=clim)
+            im0 = ax.imshow_raw(self.v_los / 1e3, cmap=cmap, clim=clim)
             plt.colorbar(im0, label='Line-of-Sight flow (km/s)')
-            ax.imshow(cmapped)
+            ax.imshow_raw(cmapped)
             plt.title(
                 '{:s} Intensity & flow image: #{:d} @ {:.0f} ms'.format(self.specline, self.shot, self.time * 1e3))
             plt.xlabel('X Pixel')
             plt.ylabel('Y Pixel')
             ax.format_coord = self._format_coord_data
             if show_sep:
-                ax.plot(xsep, ysep), 'w:'
+                ax.plot_raw(xsep, ysep), 'w:'
             plt.show()
         else:
             raise ValueError('Unknown type of plot "{:s}"; can be "flow", "I0", "raw" or "I0_flow"'.format(type))

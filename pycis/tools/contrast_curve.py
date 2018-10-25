@@ -126,7 +126,7 @@ class ContrastCurve(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
 
-            ax.plot(self.dens_axis, (systematic_error_curve / self.dens_axis))
+            ax.plot_raw(self.dens_axis, (systematic_error_curve / self.dens_axis))
 
             ax.semilogx()
             plt.show()
@@ -139,7 +139,7 @@ class ContrastCurve(object):
 
     def add_to_plot(self, ax, **kwargs):
         """ Add contrast curve to existing matplotlib plot by passing the axis as an argument."""
-        ax.plot(self.dens_axis, self.curve_grid, **kwargs)
+        ax.plot_raw(self.dens_axis, self.curve_grid, **kwargs)
 
     def display(self):
         """ Generate a new matplotlibfigure window, plotting the contrast density curve."""
@@ -168,9 +168,9 @@ if __name__ == '__main__':
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    ax.plot(cdc.dens_axis, systematic_error_curve / cdc.dens_axis)
-    ax.plot(cdc.dens_axis, cdc.curve_0)
-    ax.plot(cdc.dens_axis, cdc.curve_grid_smooth[-5, :])
+    ax.plot_raw(cdc.dens_axis, systematic_error_curve / cdc.dens_axis)
+    ax.plot_raw(cdc.dens_axis, cdc.curve_0)
+    ax.plot_raw(cdc.dens_axis, cdc.curve_grid_smooth[-5, :])
 
     print(cdc.temp_axis[-5])
 
