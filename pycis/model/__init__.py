@@ -11,7 +11,7 @@ from .yttrium_ortho_vanadate import *
 from .calcite import *
 
 from .component import load_component, list_components
-# from .image import SynthImage, SynthImageCherab, SynthImageCalib, create_synth_image, load_synth_image
+from .image import SynthImage, SynthImageCherab, SynthImageCalib, create_synth_image, load_synth_image
 from .phase_delay import uniaxial_crystal, uniaxial_crystal_2D, savart_plate, savart_plate_2D, uniaxial_crystal_3d, savart_plate_3d
 from .spectra import SpectraCalib, SpectraCherab
 from .degree_coherence import degree_coherence_numerical, degree_coherence_analytical

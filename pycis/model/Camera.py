@@ -42,14 +42,14 @@ class Camera(object):
         # account for quantum efficiency
         electron_fluence = photon_fluence * self.qe
 
-        # add shot noise
-        shot_noise = np.random.poisson(electron_fluence) - electron_fluence
-        electron_fluence += shot_noise
-
         if not clean:
+
+            # add shot noise
+            shot_noise = np.random.poisson(electron_fluence) - electron_fluence
+            electron_fluence += shot_noise
+
             # add camera noise
-            if self.cam_noise != 0:
-                electron_fluence += np.random.normal(0, self.cam_noise, self.sensor_dim)
+            electron_fluence += np.random.normal(0, self.cam_noise, self.sensor_dim)
 
         # apply gain
         signal = electron_fluence / self.epercount
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     bit_depth = 12
     sensor_dim = [1024, 1024]
     pix_size = 20e-6
-    qe = 0.45
+    qe = 0.3
     epercount = 11.6
     cam_noise = 41.2
 
