@@ -5,7 +5,6 @@ import os.path
 from pycis.model.Lineshape import Lineshape
 
 
-
 class SpectraCherab(object):
     """ Creates a 'spectral raw_data cube' for input into 'SynthImage' class.
 
@@ -15,6 +14,7 @@ class SpectraCherab(object):
 
         # take absolute intensity (need to ask Matt Carr about negative intensities!)
         spectra = abs(spectra)
+        spectra = np.rot90(spectra)
 
         self.wavelength_axis = wavelength_axis
         self.spectra = spectra

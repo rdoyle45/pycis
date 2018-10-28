@@ -100,7 +100,7 @@ pycis_spectra.save()
 pycis_image = pycis.model.create_synth_image(cis_instrument, pycis_spectra, pycis_name)
 
 
-pycis_image.img_raw()
+pycis_image.img_igram()
 plt.show()
 
 pycis_image.save()

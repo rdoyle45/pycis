@@ -30,7 +30,7 @@ def camera():
     spectra = pycis.model.SpectraCalib(line_name, I0, vi, ti, inst)
     image = pycis.model.create_synth_image(inst, spectra, 'demo_calib')
 
-    image.img_raw()
+    image.img_igram()
     plt.show()
     image.save()
 
@@ -61,8 +61,8 @@ def cd_calib():
     spectra_468nm = pycis.model.SpectraCalib(line_name_468nm, i0_468nm, vi, ti_468nm, inst_468nm)
     image_468nm = pycis.model.create_synth_image(inst_468nm, spectra_468nm, 'Cd_calib_468nm')
 
-    image_508nm.img_raw(limits=[0, 100])
-    image_468nm.img_raw(limits=[0, 100])
+    image_508nm.img_igram(limits=[0, 100])
+    image_468nm.img_igram(limits=[0, 100])
 
     plt.show()
 
