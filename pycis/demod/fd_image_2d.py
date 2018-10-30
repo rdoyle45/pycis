@@ -74,13 +74,14 @@ def fd_image_2d(img, noise_calc=False, nfringes=None, despeckle=False, display=F
         pg_carrier_window = abs(window_2d) ** 2
 
         area = np.trapz(np.trapz(np.ones_like(window_2d), y_mesh_window, axis=0), x_arr_window)
-        sigma_carrier = sigma * np.sqrt(np.trapz(np.trapz(pg_carrier_window, y_mesh_window, axis=0), x_arr_window) / area)
-        sigma_dc = sigma * np.sqrt(np.trapz(np.trapz(pg_dc_window, y_mesh_window, axis=0), x_arr_window) / area)
+
+        carrier_noise_coeff = np.sqrt(np.trapz(np.trapz(pg_carrier_window, y_mesh_window, axis=0), x_arr_window) / area)
+        dc_noise_coeff = np.sqrt(np.trapz(np.trapz(pg_dc_window, y_mesh_window, axis=0), x_arr_window) / area)
+        sigma_carrier = sigma * carrier_noise_coeff
+        sigma_dc = sigma * dc_noise_coeff
 
         sigma_contrast = abs(contrast) * np.sqrt((sigma_dc / dc) ** 2 + (sigma_carrier / (contrast * dc)) ** 2)
         sigma_phase = sigma_carrier / (contrast * dc)
-        sigma_flow = sigma_phase * 3e5 / (2 * np.pi * 1400)
-
 
 
     if display:
@@ -118,11 +119,11 @@ def fd_image_2d(img, noise_calc=False, nfringes=None, despeckle=False, display=F
         pycis.demod.display(img, dc, phase, contrast)
 
         if noise_calc:
-            sigma_flow[sigma_flow > 5] = np.nan
+
 
             fig3 = plt.figure(figsize=(10, 6), facecolor='white')
             ax31 = fig3.add_subplot(1, 2, 1)
-            im31 = ax31.imshow(sigma_flow, vmax=2)
+            im31 = ax31.imshow(sigma_phase)
             cbar31 = fig3.colorbar(im31, ax=ax31)
             ax31.set_title('phase noise')
 
@@ -132,9 +133,13 @@ def fd_image_2d(img, noise_calc=False, nfringes=None, despeckle=False, display=F
             ax32.set_title('contrast noise')
 
 
+
         plt.show()
 
-    return dc, phase, contrast
+    if noise_calc:
+        return dc, phase, contrast, dc_noise_coeff, carrier_noise_coeff
+    else:
+        return dc, phase, contrast
 
 
 

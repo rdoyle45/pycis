@@ -1,12 +1,6 @@
 from . import paths
 
 try:
-    from . import tools
-except ImportError as e:
-    print(e)
-    print('--pycis ImportError: could not import pycis.tools')
-
-try:
     from . import model
 except ImportError as e:
     print(e)
@@ -30,5 +24,12 @@ except ImportError as e:
     print(e)
     print('--pycis ImportError: could not import pycis.demod')
 
-from . import demo
+try:
+    from . import tools
+except ImportError as e:
+    print(e)
+    print('--pycis ImportError: could not import pycis.tools')
+
+
+
 

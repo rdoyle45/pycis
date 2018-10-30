@@ -1,8 +1,6 @@
 
 from pycis.model.bbo import bbo
-
 import numpy as np
-
 import pycis
 
 
