@@ -5,6 +5,7 @@ from .to_precision import to_precision
 from .find_peaks import indexes
 from .log_trapz import log_trapz
 
+from .logsumexp import *
 from .fit_functions import *
 from .pdf_functions import *
 from .camera_noise_lookup import *

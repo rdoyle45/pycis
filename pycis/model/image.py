@@ -9,6 +9,7 @@ import numpy as np
 from matplotlib.colors import LogNorm
 import matplotlib
 from scipy.constants import c, e, k
+import scipy.signal
 
 import pycis
 from pycis.model.degree_coherence import degree_coherence_analytical, degree_coherence_numerical
@@ -119,16 +120,15 @@ class SynthImage(object):
             vmax = 2 ** self.instrument.camera.bit_depth
 
         savename = 'img'
-        self._imshow(igram_intensity_image, 'gray', 'camera signal (ADU)', save, savename, vmin=vmin, vmax=vmax)
+        self._imshow(scipy.signal.medfilt(np.fliplr(self.igram_intensity), kernel_size=3), 'gray', 'camera signal (ADU)', save, savename, vmin=vmin, vmax=vmax)
         return
 
-    def img_intensity(self, save=False, vmin=0, vmax=None):
+    def img_intensity(self, fliplr=False, save=False, vmin=0, vmax=None):
         if vmax is None:
             vmax = 2 ** self.instrument.camera.bit_depth
 
         savename = 'signal_no_interferometer'
-        self._imshow(self.bg_intensity, 'gray', 'camera signal (ADU)', save, savename,
-                     limits=[0, (2 ** self.instrument.camera.bit_depth)])
+        self._imshow(scipy.signal.medfilt(np.fliplr(self.bg_intensity), kernel_size=3), 'gray', 'camera signal (ADU)', save, savename,vmin=vmin, vmax=vmax)
         return
 
     def img_phase(self, save=False):
@@ -738,14 +738,14 @@ class SynthImageCalib(SynthImage):
 
         return
 
-    def img_intensity(self, save=False):
+    def img_intensity(self, fliplr=False, save=False):
         """ Image DC intensity image 
 
         as would be detected by the camera without interferometric config (but with the
         same throughput). Comparison for the demodulated intensity:."""
 
         savename = 'intensity'
-        self._imshow(self.signal_no_interferometer, 'gray', 'Intensity [Camera ADU]', save, savename,
+        self._imshow(np.fliplr(self.signal_no_interferometer), 'gray', 'Intensity [Camera ADU]', save, savename,
                      limits=[0, (2 ** self.instrument.camera.bit_depth)])
         return
 

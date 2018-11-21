@@ -70,7 +70,8 @@ class CISImage():
 
     # Fancy plotting!
     # type can be 'flow', 'I0', 'raw' or 'I0_flow'
-    def show(self, type='I0_flow', vmax=None, cmap=flow, show_sep=True):
+    def show(self, type='I0_flow', ax=None, vmax=None, cmap=flow, show_sep=False):
+        """ edited by jallcock to allow for passage of ax kwarg, a matplotlib axis"""
 
         if show_sep:
             xsep = []
@@ -109,28 +110,40 @@ class CISImage():
             clim = [-vmax, vmax]
 
         if type == 'flow':
-            plt.imshow(self.v_los / 1e3, cmap=cmap, clim=clim)
-            plt.colorbar(label='Line-of-Sight flow (km/s)')
-            plt.title('{:s} Flow image: #{:d} @ {:.0f} ms'.format(self.specline, self.shot, self.time * 1e3))
-            plt.xlabel('X Pixel')
-            plt.ylabel('Y Pixel')
-            plt.show()
+            if ax is not None:
+                im = ax.imshow(self.v_los / 1e3, cmap=cmap, clim=clim)
+                cbar = plt.colorbar(im, ax=ax, label='Line-of-Sight flow (km/s)')
+            else:
+                plt.imshow(self.v_los / 1e3, cmap=cmap, clim=clim)
+                plt.colorbar(label='Line-of-Sight flow (km/s)')
+                plt.title('{:s} Flow image: #{:d} @ {:.0f} ms'.format(self.specline, self.shot, self.time * 1e3))
+                plt.xlabel('X Pixel')
+                plt.ylabel('Y Pixel')
+                plt.show()
 
         elif type == 'I0':
-            plt.imshow(self.I0, cmap='gray')
-            plt.colorbar(label='I0 (DL)')
-            plt.title('{:s} Intensity image: #{:d} @ {:.0f} ms'.format(self.specline, self.shot, self.time * 1e3))
-            plt.xlabel('X Pixel')
-            plt.ylabel('Y Pixel')
-            plt.show()
+            if ax is not None:
+                im = ax.imshow(self.I0, cmap='gray', clim=clim)
+                cbar = plt.colorbar(im, ax=ax, label='I0 (DL)')
+            else:
+                plt.imshow(self.I0, cmap='gray')
+                plt.colorbar(label='I0 (DL)')
+                plt.title('{:s} Intensity image: #{:d} @ {:.0f} ms'.format(self.specline, self.shot, self.time * 1e3))
+                plt.xlabel('X Pixel')
+                plt.ylabel('Y Pixel')
+                plt.show()
 
         elif type == 'raw':
-            plt.imshow(self.raw_data, cmap='gray')
-            plt.title('Raw image: #{:d} @ {:.0f} ms'.format(self.shot, self.time * 1e3))
-            plt.colorbar(label='Raw raw_data (DL)')
-            plt.xlabel('X Pixel')
-            plt.ylabel('Y Pixel')
-            plt.show()
+            if ax is not None:
+                im = ax.imshow(pycis.demod.despeckle(self.raw_data), cmap='gray')
+                # cbar = plt.colorbar(im, ax=ax, label='Raw (DL)')
+            else:
+                plt.imshow(self.raw_data, cmap='gray')
+                plt.title('Raw image: #{:d} @ {:.0f} ms'.format(self.shot, self.time * 1e3))
+                plt.colorbar(label='Raw raw_data (DL)')
+                plt.xlabel('X Pixel')
+                plt.ylabel('Y Pixel')
+                plt.show()
 
         elif type == 'I0_flow':
             cm = matplotlib.cm.get_cmap(cmap)
@@ -141,30 +154,39 @@ class CISImage():
             cmapped = cm(vmap)
             Inorm = self.I0 / self.I0.max()
             Inorm = np.minimum(Inorm * 2, 1)
-            for ax in range(3):
-                cmapped[:, :, ax] = cmapped[:, :, ax] * Inorm
-
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            im0 = ax.imshow_raw(self.v_los / 1e3, cmap=cmap, clim=clim)
-            plt.colorbar(im0, label='Line-of-Sight flow (km/s)')
-            ax.imshow_raw(cmapped)
-            plt.title(
-                '{:s} Intensity & flow image: #{:d} @ {:.0f} ms'.format(self.specline, self.shot, self.time * 1e3))
-            plt.xlabel('X Pixel')
-            plt.ylabel('Y Pixel')
-            ax.format_coord = self._format_coord_data
-            if show_sep:
-                ax.plot_raw(xsep, ysep), 'w:'
-            plt.show()
+            for ax_idx in range(3):
+                cmapped[:, :, ax_idx] = cmapped[:, :, ax_idx] * Inorm
+            if ax is not None:
+                print(ax)
+                im0 = ax.imshow(self.v_los / 1e3, cmap=cmap, clim=clim)
+                cbar = plt.colorbar(im0, ax=ax, fraction=0.046, pad=0.04)
+                cbar.set_label(label='flow (km/s)', size=14)
+                ax.imshow(cmapped)
+                ax.format_coord = self._format_coord_data
+                if show_sep:
+                    ax.plot_raw(xsep, ysep), 'w:'
+            else:
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                im0 = ax.imshow(self.v_los / 1e3, cmap=cmap, clim=clim)
+                plt.colorbar(im0, label='Line-of-Sight flow (km/s)')
+                ax.imshow(cmapped)
+                plt.title(
+                    '{:s} Intensity & flow image: #{:d} @ {:.0f} ms'.format(self.specline, self.shot, self.time * 1e3))
+                plt.xlabel('X Pixel')
+                plt.ylabel('Y Pixel')
+                ax.format_coord = self._format_coord_data
+                if show_sep:
+                    ax.plot_raw(xsep, ysep), 'w:'
+                plt.show()
         else:
             raise ValueError('Unknown type of plot "{:s}"; can be "flow", "I0", "raw" or "I0_flow"'.format(type))
 
     def _demodulate(self):
 
         # Do the demodulation!
-        self.I0, self.phi, self.xi = pycis.demod.fd_image_1d(self.raw_data, despeckle=True,
-                                                          tilt_angle=0)  # self.fringe_tilt)
+        self.I0, self.phi, self.xi = pycis.demod.fd_image_2d(self.raw_data, despeckle=True)
+                                                          #tilt_angle=0)  # self.fringe_tilt)
 
         # Subtract calib phase and wrap in to [-pi,pi]
         self.deltaphi = self.phi - self.cal_dict['phi0']
@@ -216,9 +238,17 @@ class CISImage():
         matfile_data = loadmat(matfile_path)
 
         # Put the main quantities of interest in to our calib dictionary
-        caldict['phi0'] = matfile_data['calib'][0][0][0].copy()
-        caldict['xi0'] = matfile_data['calib'][0][0][1].copy()
-        caldict['N'] = matfile_data['calib'][0][0][4][0][0]
+
+        # inspecting the matfile_data dict:
+        # print('----------')
+        # for key, value in matfile_data.items():
+        #     print(key, value)
+        # print('----------')
+
+        caldict['phi0'] = matfile_data['calibration'][0][0][0].copy()
+        caldict['phi0'] = matfile_data['calibration'][0][0][0].copy()
+        caldict['xi0'] = matfile_data['calibration'][0][0][1].copy()
+        caldict['N'] = matfile_data['calibration'][0][0][4][0][0]
         # caldict['flatfield'] = matfile_data['calib'][0][0][9].copy()
 
         del matfile_data

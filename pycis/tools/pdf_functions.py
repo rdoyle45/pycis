@@ -2,6 +2,7 @@ import numpy as np
 import scipy.special
 import scipy.stats
 import matplotlib.pyplot as plt
+import pycis
 
 
 def phase_pdf(amplitude, sigma, npts=3001, display=False):
@@ -25,7 +26,7 @@ def phase_pdf(amplitude, sigma, npts=3001, display=False):
         q = amplitude * np.cos(phase_err_axis) / (np.sqrt(2) * sigma)
 
         log_pdf = np.log(1 / (2 * np.pi)) - (q / np.cos(phase_err_axis)) ** 2 + \
-                  scipy.special.logsumexp(np.array([np.zeros_like(q), np.log(q * np.sqrt(np.pi)) + q ** 2 + np.log(1 + scipy.special.erf(q))]), axis=0)
+                  pycis.tools.logsumexp(np.array([np.zeros_like(q), np.log(q * np.sqrt(np.pi)) + q ** 2 + np.log(1 + scipy.special.erf(q))]), axis=0)
 
         phase_pdf = np.exp(log_pdf)
     else:
