@@ -6,7 +6,6 @@ from pycis.model.bbo import bbo
 import numpy as np
 cimport numpy as np
 from libc.math cimport sin, cos, sqrt
-
 import pycis
 
 

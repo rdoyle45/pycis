@@ -36,8 +36,8 @@ class SynthImage(object):
         self.name = name
 
         # Initialise attributes
-        self.raw = None
-        self.brightness_img = None
+        self.igram_intensity = None
+        self.bg_intensity = None
 
         self.phase = None
         self.contrast = None
@@ -60,10 +60,14 @@ class SynthImage(object):
         """ Generate synthetic image. """
         raise NotImplementedError()
 
+    def measure(self, clean=False):
+        """ Generate synthetic image. """
+        raise NotImplementedError()
+
     def _demod(self):
         """ Demodulate synthetic image. """
 
-        intensity_demod, phase_demod, contrast_demod = pycis.demod.fd_image_1d(self.raw)
+        intensity_demod, phase_demod, contrast_demod = pycis.demod.fd_image_1d(self.igram_intensity)
         phase_demod = pycis.demod.unwrap(phase_demod)
 
         return intensity_demod, phase_demod, contrast_demod
@@ -71,7 +75,7 @@ class SynthImage(object):
     def update_demod(self):
         """ Update the demodulated quantities using latest version of uncertainty. """
 
-        self.intensity_demod, phase_demod, self.contrast_demod = pycis.demod.fd_image_1d(self.raw)
+        self.intensity_demod, phase_demod, self.contrast_demod = pycis.demod.fd_image_1d(self.igram)
         self.phase_demod = pycis.demod.unwrap(phase_demod)
         self.save()
 
@@ -106,22 +110,24 @@ class SynthImage(object):
             plt.close()
         return
 
-    def img_raw(self, save=False, vmin=0, vmax=None):
+    def img_igram_intensity(self, save=False, vmin=0, vmax=None, clean=False):
         """ Image synthetic image. """
+
+        igram_intensity_image, bg_intensity_image = self.measure(clean=clean)
 
         if vmax is None:
             vmax = 2 ** self.instrument.camera.bit_depth
 
         savename = 'img'
-        self._imshow(self.raw, 'gray', 'camera signal (ADU)', save, savename, vmin=vmin, vmax=vmax)
+        self._imshow(igram_intensity_image, 'gray', 'camera signal (ADU)', save, savename, vmin=vmin, vmax=vmax)
         return
 
-    def img_brightness(self, save=False, vmin=0, vmax=None):
+    def img_intensity(self, save=False, vmin=0, vmax=None):
         if vmax is None:
             vmax = 2 ** self.instrument.camera.bit_depth
 
         savename = 'signal_no_interferometer'
-        self._imshow(self.brightness_img, 'gray', 'camera signal (ADU)', save, savename,
+        self._imshow(self.bg_intensity, 'gray', 'camera signal (ADU)', save, savename,
                      limits=[0, (2 ** self.instrument.camera.bit_depth)])
         return
 
@@ -137,7 +143,7 @@ class SynthImage(object):
     def img_fft(self, save=False):
         savename='fft'
 
-        ft = np.fft.fft2(self.raw)
+        ft = np.fft.fft2(self.igram)
         self.ft = np.fft.fftshift(ft)
 
         plt.figure(figsize=(10, 8))
@@ -234,7 +240,7 @@ class SynthImage(object):
         #plt.tight_layout()
         plt.show()
 
-        _, _, _ = pycis.demod.fd_column(self.raw[:, column], display=True)
+        _, _, _ = pycis.demod.fd_column(self.igram[:, column], display=True)
 
         return
 
@@ -288,7 +294,7 @@ class SynthImage(object):
         return
 
     def slice(self, col):
-        plt.plot(self.raw[:, col])
+        plt.plot(self.igram[:, col])
         plt.xlabel('ypix', size=9)
         plt.ylabel('Intensity [camera ADU]', size=9)
         plt.show()
@@ -308,20 +314,19 @@ class SynthImageCherab(SynthImage):
 
     INPUT_SPECTRA_TYPE = SpectraCherab
 
-    def __init__(self, instrument, spectra, name):
-        super().__init__(instrument, spectra, name)
+    def __init__(self, inst, spectra, name):
+        super().__init__(inst, spectra, name)
 
-        self._threshold()
-        self.igram, self.intensity, self.phase, self.contrast = self._make()
+        self.inst = self.instrument
+        self.cam = inst.camera
+
+        # generate the line-integrated coherence properties, and the resulting interferogram intensity
+        self.igram_intensity, self.bg_intensity, self.phase, self.contrast = self._make()
+
         self.instrument_phase = self._instrument_coherence()
-
         self.doppler_phase = pycis.demod.wrap(self.phase - self.instrument_phase, units='rad')
 
         self.doppler_flow = c * self.doppler_phase / 1400  # TODO fix this hack
-
-
-
-
         # self.intensity_demod, self.phase_demod, self.contrast_demod = self._demod()
 
     def _instrument_coherence(self):
@@ -358,35 +363,41 @@ class SynthImageCherab(SynthImage):
     def _make(self):
         """ Create synthetic image. """
 
-        # Define some shorthand:
-        inst = self.instrument
-        cam = inst.camera
-
-        t_wp = inst.waveplate.thickness
-        t_sp = inst.savartplate.thickness
+        t_wp = self.inst.waveplate.thickness
+        t_sp = self.inst.savartplate.thickness
         wls = self.spectra.wavelength_axis
         spectra = self.spectra.spectra
 
-        inc_angles, azim_angles_wp, azim_angles_sp = inst.get_angles()
+        inc_angles, azim_angles_wp, azim_angles_sp = self.inst.get_angles()
 
         I0 = np.trapz(spectra, axis=-1)
         normalised_spectra = spectra / np.moveaxis(np.tile(I0, [len(wls), 1, 1]), 0, -1)
+        print('here we go')
+        normalised_spectra[np.isnan(normalised_spectra)] = 0.
 
+        print('there we are')
         phase = pycis.model.uniaxial_crystal_3d_python(wls, t_wp, inc_angles, azim_angles_wp) + \
                 pycis.model.savart_plate_3d_python(wls, t_sp, inc_angles, azim_angles_sp)
 
+        print('and there')
         degree_coherence = np.trapz(normalised_spectra * np.exp(2 * np.pi * 1j * phase), axis=-1)
 
-        raw = (I0 / 2) * (1 - np.real(degree_coherence))
+        igram_intensity = (I0 / 2) * (1 - np.real(degree_coherence))
         brightness = (I0 / 2)
         phase = np.angle(degree_coherence)
         contrast = np.abs(degree_coherence)
 
-        print('-- Calculating camera effects...')
-        raw = cam.capture(raw)
-        brightness = cam.capture(brightness)
+        return igram_intensity, I0, phase, contrast
 
-        return raw, brightness, phase, contrast
+    def measure(self, clean=False):
+        """ measure the stored interferogram intensity pattern using the modelled camera sensor. """
+
+        # simulate the camera capture process
+        print('-- Calculating camera effects...')
+        igram_intensity_image = self.cam.capture(self.igram_intensity, clean=clean)
+        bg_intensity_image = self.cam.capture(self.bg_intensity, clean=clean)
+
+        return igram_intensity_image, bg_intensity_image
 
     def _threshold(self):
         """ return only the pixels for which the intensity meets some threshold value -- to speed up loop."""
@@ -727,7 +738,7 @@ class SynthImageCalib(SynthImage):
 
         return
 
-    def img_brightness(self, save=False):
+    def img_intensity(self, save=False):
         """ Image DC intensity image 
 
         as would be detected by the camera without interferometric config (but with the

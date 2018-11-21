@@ -3,6 +3,12 @@ from libc.math cimport exp, cos, M_PI, fabs, sqrt
 from pycis.model.phase_delay import uniaxial_crystal, savart_plate
 from pycis.model.bbo import bbo
 
+# functions from complex.h c library
+cdef extern from "<complex.h>":
+
+    double creal(double complex z)
+    double complex cexp(double complex z)
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -26,13 +32,6 @@ cpdef degree_coherence_analytical(double[:] lines_wl, double [:] raw_lines_wl,
     :param v_thermal: (m/s)
     :return: 
     """
-
-    # functions from complex.h c library
-
-    cdef extern from "<complex.h>":
-
-        double creal(double complex z)
-        double complex cexp(double complex z)
 
     # static type declaration
 
