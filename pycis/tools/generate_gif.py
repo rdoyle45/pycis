@@ -4,6 +4,8 @@ import os
 import numpy as np
 from pprint import pprint
 
+# imageio.plugins.freeimage.download()
+
 try:
     from natsort import natsorted as sorted
 except ImportError:
@@ -80,7 +82,7 @@ def gen_gif(path_in, pattern='.*', fn_out='movie.gif', duration=0.5, file_range=
             print('gif was not produced')
             return  ## return from function without renaming
 
-    with imageio.get_writer(os.path.join(path_out, fn_out), mode='I', duration=duration) as writer:  # duration = 0.4
+    with imageio.get_writer(os.path.join(path_out, fn_out), mode='I', format='GIF-FI', duration=duration) as writer:  # duration = 0.4
 
         for i, filename in enumerate(filenames):
             image = imageio.imread(os.path.join(path_in, filename))
