@@ -22,7 +22,7 @@ class ContrastCurve(object):
 
         self.l_wp = l_wp
         self.n_upper = n_upper
-        self.ls_model = line_model
+        self.line_model = line_model
 
         self.n_lower = 2  # only Balmer series supported
         self.dens_axis = np.logspace(19., 21.99, 50)  # [m^-3]
@@ -30,9 +30,8 @@ class ContrastCurve(object):
         self.dens_mesh, self.temp_mesh = np.meshgrid(self.dens_axis, self.temp_axis)
 
         # check valid input
-        ls_models = {'lomanowski': pystark.simple_profile, 'stehle': pystark.stehle_profile,
-                     'rosato': pystark.rosato_profile}
-        assert line_model in ls_models
+        valid_line_models = ['rosato', 'stehle', 'stehle_param', 'voigt']
+        assert line_model in valid_line_models
 
         # get line name
         assert n_upper > 2
@@ -71,17 +70,8 @@ class ContrastCurve(object):
 
                 wl_axis = pystark.generate_wavelength_axis(self.n_upper, temp, dens, npts=LEN_WL_AXIS)
 
-                if self.ls_model == 'lomanowski':
-                    ls_m, _, _ = pystark.simple_profile(self.n_upper, self.n_lower, temp, dens, wl_axis, model='lomanowski', display=False)
-
-                elif self.ls_model == 'stehle':
-                    ls_m = pystark.stehle_profile(self.n_upper, self.n_lower, temp, dens, wl_axis, display=False)
-
-                elif self.ls_model == 'rosato':
-                    ls_m = pystark.rosato_profile(self.n_upper, dens, temp, 0., 0., wl_axis, display=False)
-
-                else:
-                    raise Exception('enter valid model.')
+                bls = pystark.BalmerLineshape(self.n_upper, dens, temp, 0., line_model=self.line_model, wl_axis=wl_axis)
+                ls_m = bls.ls_szd
 
                 # calculate interferometer delay time
                 degree_coherence, abbo_axis = pycis.model.degree_coherence_general(ls_m, wl_axis, display=False)
@@ -144,14 +134,36 @@ class ContrastCurve(object):
     def display(self):
         """ Generate a new matplotlibfigure window, plotting the contrast density curve."""
 
-        fig = plt.figure()
+        fsize = 14
+
+        fig = plt.figure(figsize=(8, 4.5))
         ax = fig.add_subplot(111)
         im = ax.pcolor(self.dens_mesh, self.temp_mesh, self.curve_grid_smooth)
+        contour_contrast = 0.8
+        CS = ax.contour(self.dens_mesh, self.temp_mesh, self.curve_grid_smooth, levels=[contour_contrast], colors='red', linestyles='solid', linewidths=[3])
+
+        fmt = {}
+        strs = [str(contour_contrast)]
+        for l, s in zip(CS.levels, strs):
+            fmt[l] = s
+
+        # manual_locations = [(3e19, 4e0)]
+        # plt.clabel(CS, CS.levels, inline=False, fmt=fmt, colors='red', fontsize=fsize,
+        #            manual=manual_locations)  # contour line labels
 
         ax.semilogx()
         ax.semilogy()
+        ax.set_xlim([1e19, 2e21])
 
-        cbar = plt.colorbar(im, ax=ax)
+        ax.set_xlabel('density (m$^{-3}$)', size=fsize)
+        ax.set_ylabel('temperature (eV)', size=fsize)
+
+        cbar = plt.colorbar(im, ax=ax, ticks=[0., np.max(self.curve_grid_smooth)])
+        cbar.set_label(label='contrast', size=fsize)
+        cbar.ax.set_yticklabels(['0', '1'])
+
+        # ax.annotate('0.8', )
+
 
         plt.show()
 

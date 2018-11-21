@@ -5,7 +5,7 @@ import pandas as pd
 import os.path
 import pycis
 from pycis.tools.to_precision import to_precision
-# from pycis.tools.phys_constants import *
+from scipy.constants import e, c, k, atomic_mass
 from matplotlib import pyplot as plt
 
 
@@ -173,7 +173,7 @@ class Lineshape(object):
 
         self.name = name
         self.raw_lines = get_lines(name)  # retrieve line raw_data
-        self.m_i = self.raw_lines.loc[0, 'mass_number'] * amu_kg
+        self.m_i = self.raw_lines.loc[0, 'mass_number'] * atomic_mass
 
         self.I0 = I0
         self.vi = vi  # m/s
@@ -298,7 +298,6 @@ class Lineshape(object):
 
         norm_factor_lambda = np.trapz(lineshape_lambda, wlaxis)
         lambda_0 = (np.trapz(lineshape_lambda * wlaxis, wlaxis)) / (norm_factor_lambda)
-
 
         # Normalise such that integral over spectrum = I0:
         lineshape_nu = (lineshape_nu * self.I0) / (norm_factor_nu)
@@ -561,16 +560,11 @@ class Lineshape(object):
         return
 
 
-
-
-
 if __name__ == '__main__':
     # ls = Lineshape(line_name='HeII', I0=1e19, vi=10000, Ti=1, B=0, theta=0)
     # ls.plot(1000)
 
     create_arbitrary_lines('Cd_508nm', 508.58e-9, 1, 112)
-
-
 
     # wlaxis = np.linspace(464e-9, 465e-9, 20)
     # I = 1e5 * np.ones_like(wlaxis)
