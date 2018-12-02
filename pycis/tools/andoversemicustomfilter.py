@@ -7,12 +7,12 @@ class AndoverSemiCustomFilter(object):
 
     def __init__(self, centre, fwhm, peak_tx, type, tilt_angle=0.):
         """ set the normalised transmission values, and the corresponding fwhm coefficients based on info from:
-        https://www.andovercorp.com/technical/bandpass-filter-fundamentals/filter-types/
+        https://www.andovercorp.com/technical/bandpass-filters-fundamentals/filters-types/
 
         :param centre: centre wavelength [m]
         :param fwhm: full width half max. wavelength [m]
         :param peak_tx: transmission at centre, as a fraction. 
-        :param type: type of semi-custom filter, according to Andover, basically, number of cavities.
+        :param type: type of semi-custom filters, according to Andover, basically, number of cavities.
         :param tilt_angle: [deg]
         """
 
@@ -25,7 +25,7 @@ class AndoverSemiCustomFilter(object):
         self.name = 'centre_' + str(centre * 1e9) + 'nm_fwhm_' + str(fwhm * 1e9) + 'nm_type_' + str(type)
         self.n = 2.05  # refractive index
 
-        # account for filter tilt
+        # account for filters tilt
         self.tilt_angle_rad = self.tilt_angle * (np.pi / 180)
         self.centre = centre * np.sqrt(1 - (np.sin(self.tilt_angle_rad) / self.n) ** 2)
 
@@ -78,32 +78,31 @@ class AndoverSemiCustomFilter(object):
         return interp_wavelength_axis, interp_transmission
 
     def get_transmission(self, target_wavelength):
-        """ interpolation filter transmission window at given wavelength and for given incidence angle."""
+        """ interpolation filters transmission window at given wavelength and for given incidence angle."""
 
-        # interpolate filter transmission profile
+        # interpolate filters transmission profile
         transmission_interp = np.interp(target_wavelength, self.wls, self.tx)
 
         return transmission_interp
 
     def apply(self, target_wavelength, target_spectrum, display=False):
-        """ Apply filter to user specified spectrum.
+        """ Apply filters to user specified spectrum.
 
         :param target_wavelength: in metres
         :param target_spectrum: 
         :param inc_angle: (defaults to degrees)
-        :param display: Boolean, plots interpolated filter profile and spectrum before and after filtering - handy!
+        :param display: Boolean, plots interpolated filters profile and spectrum before and after filtering - handy!
         :return: 
         """
 
-
         transmission_interp = self.get_transmission(target_wavelength)
 
-        # apply filter
+        # apply filters
         filtered_spectrum = target_spectrum * transmission_interp
 
         if display:
             display_norm_factor = np.max(target_spectrum)
-            filter_profile_label = 'filter profile '
+            filter_profile_label = 'filters profile '
 
             plt.figure()
             plt.plot(self.wls, self.tx, 'k', label=filter_profile_label)

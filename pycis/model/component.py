@@ -12,8 +12,8 @@ def load_component(name, type):
         load_path = pp.instrument_path
     elif type == 'camera':
         load_path = pp.camera_path
-    elif type == 'filter':
-        load_path = pp.filter_path
+    elif type == 'filters':
+        load_path = pp.filters_path
     elif type == 'lens':
         load_path = pp.lens_path
     elif type == 'crystal':
@@ -34,7 +34,7 @@ def list_components():
     """ print list of all available model config of each type currently available to local pycis package. """
 
     component_paths = {'SynthImage': pp.synth_images_path, 'Lines': pp.lines_path, 'Instrument': pp.instrument_path,
-                       'Camera': pp.camera_path, 'Filter': pp.filter_path, 'Crystal': pp.crystal_path,
+                       'Camera': pp.camera_path, 'Filter': pp.filters_path, 'Crystal': pp.crystal_path,
                        'Lens': pp.lens_path}
 
     for key, value in component_paths.items():

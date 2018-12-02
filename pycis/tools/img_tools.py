@@ -111,7 +111,7 @@ def get_background_signal(intensity):
 
 
 def get_filter_transmission(filter_name, type='measured_12122017_color_slit'):
-    """ Load the measured transmission profile of a particular ccfe filter.
+    """ Load the measured transmission profile of a particular ccfe filters.
     
     filter_name = 'CIII', 'HeII', 'CII'
     
@@ -168,7 +168,7 @@ def get_filter_transmission(filter_name, type='measured_12122017_color_slit'):
 
 
 def compare_filters():
-    """ Plot all three of the ccfe CIS filter band pass profiles, from manufacturer and measured. """
+    """ Plot all three of the ccfe CIS filters band pass profiles, from manufacturer and measured. """
 
     filter_list = ['CIII', 'HeII', 'CII']
     type_list = ['measured_04122017', 'measured_12122017_color_slit', 'measured_12122017_mirror_slit', 'from_manufacturer']

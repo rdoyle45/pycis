@@ -10,7 +10,7 @@ try:
     from . import data
 except ImportError as e:
     print(e)
-    print('--pycis ImportError: could not import pycis.data')
+    print('--pycis ImportError: could not import pycis.raw_data')
 
 try:
     from . import calib

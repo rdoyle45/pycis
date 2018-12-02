@@ -8,7 +8,7 @@ fns = {'hanning': scipy.signal.hanning,
 
 
 def window(rfft_length, nfringes, fn='tukey', width_factor=1.):
-    """ Generate a filter window for isolating the carrier (fringe) frequency. 
+    """ Generate a filters window for isolating the carrier (fringe) frequency. 
     
     :param rfft_length: length of the real FFT to be filtered
     :type rfft_length: int.
@@ -16,7 +16,7 @@ def window(rfft_length, nfringes, fn='tukey', width_factor=1.):
     :type nfringes: int.
     :param fn: Specifies the window function to use, see the 'fns' dict at the top of the script for the 
     :type fn: str.
-    :param width_factor: a multiplicative factor determining the width of the filter, multiplies nfringes, which is found to work reasonably well.
+    :param width_factor: a multiplicative factor determining the width of the filters, multiplies nfringes, which is found to work reasonably well.
     :type width_factor: float
     
     :return: generated window as an array.

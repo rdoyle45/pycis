@@ -42,7 +42,7 @@ class Instrument(object):
         return
 
     def add_filter(self, name):
-        self.optical_filter = pycis.model.load_component(name, type='filter')
+        self.optical_filter = pycis.model.load_component(name, type='filters')
         return
 
     def add_crystal(self, name, orientation):
@@ -142,8 +142,8 @@ class Instrument(object):
         _, _, _, wavelength_com = line.make(1000)
 
         if self.optical_filter is not None:
-            # estimate filter transmission at line wavelength
-            t_filter = self.optical_filter.get_transmission(wavelength_com)
+            # estimate filters transmission at line wavelength
+            t_filter = self.optical_filter.interp_tx(wavelength_com)
         else:
             t_filter = 1
 
