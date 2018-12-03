@@ -10,7 +10,7 @@ import pystark
 
 
 class ContrastCurve(object):
-    """ Look-up table between plasma properties and inferred contrast. Key analysis tool for contrast measurements. """
+    """ Look-up table  contrast. Key analysis tool for contrast measurements. """
 
     def __init__(self, l_wp, n_upper, line_model, overwrite=False):
         """
@@ -30,15 +30,13 @@ class ContrastCurve(object):
         self.dens_mesh, self.temp_mesh = np.meshgrid(self.dens_axis, self.temp_axis)
 
         # check valid input
-        valid_line_models = ['rosato', 'stehle', 'stehle_param', 'voigt']
-        assert line_model in valid_line_models
+        assert line_model in pystark.line_models
 
         # get line name
         assert n_upper > 2
         line_names = ['', '', '', 'Ba_alpha', 'Ba_beta', 'Ba_gamma', 'Ba_delta', 'Ba_epsilon']
         self.line_name = line_names[n_upper]
 
-        # save_dir = '/Users/jsallcock/Documents/physics/phd/code/CIS/pycis_stark/saved_contrast_curves/'
         save_dir = os.path.join(pycis.paths.tools_path, 'saved_contrast_curves')
         self.fname = os.path.join(save_dir, self.line_name + '_' + line_model + '_' + pycis.tools.to_precision(l_wp * 1e3, 3) + 'mm.npy')
 
@@ -53,7 +51,7 @@ class ContrastCurve(object):
         self.curve_interp = scipy.interpolate.RectBivariateSpline(self.temp_axis, self.dens_axis, self.curve_grid, s=0.03)
         self.curve_grid_smooth = self.curve_interp(self.temp_axis, self.dens_axis)
 
-        # extract the density dependence of the contrast curve at the lowest avaiolabel temperature
+        # extract the density dependence of the contrast curve at the lowest available temperature
         self.curve_0 = self.curve_grid_smooth[0, :]
 
     def make(self):
@@ -62,13 +60,15 @@ class ContrastCurve(object):
 
         contrast_curve = np.zeros_like(self.dens_mesh)
 
+        print('--pycis: making contrast curve')
+
         # populate ls_mesh at all densities
         for idx_dens, dens in enumerate(self.dens_axis):
             for idx_temp, temp in enumerate(self.temp_axis):
 
-                print(idx_dens, idx_temp)
+                # print(idx_dens, idx_temp)
 
-                wl_axis = pystark.generate_wavelength_axis(self.n_upper, temp, dens, npts=LEN_WL_AXIS)
+                wl_axis = pystark.get_wl_axis(self.n_upper, dens, temp, 0., npts=LEN_WL_AXIS)
 
                 bls = pystark.BalmerLineshape(self.n_upper, dens, temp, 0., line_model=self.line_model, wl_axis=wl_axis)
                 ls_m = bls.ls_szd
@@ -87,7 +87,6 @@ class ContrastCurve(object):
 
     def measure_contrast(self, dens, temp):
         """ Given a plasma density, look up the measured contrast value. """
-
         return self.curve_interp.ev(temp, dens)
 
     def infer_density(self, measured_contrast):
@@ -95,7 +94,6 @@ class ContrastCurve(object):
 
         inferred_density = np.interp(measured_contrast, self.curve_0[::-1], self.dens_axis[::-1])
         return inferred_density
-
 
     def systematic_error_curve(self, real_temp, display=False):
         """ Given """
@@ -124,12 +122,11 @@ class ContrastCurve(object):
 
         return systematic_error_curve
 
-
     # Plotting methods
 
     def add_to_plot(self, ax, **kwargs):
         """ Add contrast curve to existing matplotlib plot by passing the axis as an argument."""
-        ax.plot_raw(self.dens_axis, self.curve_grid, **kwargs)
+        ax.plot(self.dens_axis, self.curve_0, **kwargs)
 
     def display(self):
         """ Generate a new matplotlibfigure window, plotting the contrast density curve."""
@@ -166,7 +163,6 @@ class ContrastCurve(object):
 
 
         plt.show()
-
 
 
 if __name__ == '__main__':

@@ -57,6 +57,7 @@ class Filter(object):
 
         if display:
             display_norm_factor = np.max(target_spectrum)
+            print('display_norm_factor', display_norm_factor)
             filter_profile_label = 'filter profile ' + pycis.tools.to_precision(inc_angle, 2) + ' deg tilt'
 
             plt.figure()

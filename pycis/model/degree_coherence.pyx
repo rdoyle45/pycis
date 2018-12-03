@@ -128,10 +128,6 @@ cpdef degree_coherence_numerical(double[:] wavelength_axis, double[:] spectrum, 
     #
     # return phase, contrast
 
-
-
-
-
     # Integrate over spectrum using trapezoidal rule on non-uniform grid
 
     igram = 0

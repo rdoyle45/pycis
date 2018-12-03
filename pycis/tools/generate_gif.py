@@ -94,23 +94,16 @@ def gen_gif(path_in, pattern='.*', fn_out='movie.gif', duration=0.5, file_range=
     print('Wrote gif containing {} frames to: {}'.format(nframes, os.path.join(path_in, fn_out)))
 
 if __name__ == '__main__':
-    # path of images to be compiled into a gif (also the output dir)
-    # path = '/home/tfarley/elzar/results/experimental/C001H001S0001-02/Rtor/geo_mean2_exp/'
-    # path_in = '/home/tfarley/elzar/results/synthetic/Nfil_1_scan-nR_15-nphi_8/Rtor/geo2/'
-    # path_in = '/home/tfarley/elzar/images/frames/elm_no_bgsub/'
-    # path_in = '/home/tfarley/elzar/images/frames/elm_bgsub/'
-    path_in = '/home/tfarley/elzar/results/synthetic/grid_set-dr_0.05_dtor_0.05_amp_1-01_17_errors_3/Rtor/geo_mean2_err_grid2/'
-    # fn_out = '{range}.gif'  # Output file name
+    path_in = '/home/jallcock/projects/density_imaging/density_imaging/JET/saved_kt3b_data/saved_images/demo_gif/81484/'
     fn_out = 'movie.gif'  # Output file name
 
     # pattern = '.*f{number}.png'
     # pattern = '.*{}.png'.format(regexp_range(*file_number_range) if file_number_range else '')
     pattern = '.*.png'
 
-    # file_number_range = [350, 469]  # range of numbers permitted in filename filter
     file_number_range = None  # No number filter
 
-    repeat = {0: 3, -1: 0}  # Number of aditional times to repeat each frame number
-    duration = 0.3  # Frame duration in seconds
+    repeat = {0: 5, -1: 10}  # Number of additional times to repeat each frame number
+    duration = 0.05  # Frame duration in seconds
 
     gen_gif(path_in, pattern, duration=duration, fn_out=fn_out, file_range=file_number_range, repeat=repeat)

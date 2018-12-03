@@ -95,7 +95,6 @@ class AndoverSemiCustomFilter(object):
         :return: 
         """
 
-
         transmission_interp = self.get_transmission(target_wavelength)
 
         # apply filter

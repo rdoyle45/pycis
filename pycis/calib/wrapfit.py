@@ -8,7 +8,7 @@ import inference_tools.inference.mcmc
 
 
 def wrapfit(wls, phase, phase_std, l_wp_guess, idx_0=0, num_steps=120000, polynomial_order=2, display=True):
-    """ Given on-axis, wrapped phase measurements and wavelength shift values, calculate the group delay using a polynomial fit.
+    """ Fit to wrapped phase measurements.
 
     :param wls: wavelength values (m)
     :param phase: wrapped phase values (waves)
@@ -73,7 +73,6 @@ def wrapfit(wls, phase, phase_std, l_wp_guess, idx_0=0, num_steps=120000, polyno
         ax1.plot_raw(wl_shift_axis, phase_shift_mode, 'r', lw=1, label='mode')
         ax1.fill_between(wl_shift_axis, phase_shift_mode - phase_shift_std, phase_shift_mode + phase_shift_std, color='peachpuff',
                         label='1std')
-
 
         plt.show()
 
