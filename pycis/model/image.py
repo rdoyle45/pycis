@@ -504,7 +504,7 @@ class SynthImageCalib(SynthImage):
 
             for x, y in itertools.product(range(dim[1]), range(dim[0])):
 
-                # filter spectrum
+                # filters spectrum
                 if inst.optical_filter is not None:
                     lines_rel_int_filtered = optical_filter.apply(lines_wl, lines_rel_int, inc_angle=inc_angles[y, x])
                     filter_transmission_factor[y, x] = lines_rel_int_filtered.sum()
@@ -564,9 +564,9 @@ class SynthImageCalib(SynthImage):
                 for y in range(0, dim[0]):
                     lut_id = self.spectra.img_LUT[y, x]  # LUT id for this pixel
 
-                    # filter spectrum
+                    # filters spectrum
                     if inst.optical_filter is not None:
-                        lut_lines_rel_int_xy = optical_filter.apply(lut_lines_wl[lut_id], lut_lines_rel_int[lut_id], inc_angle=inc_angles[y, x])  # account for changes from the filter transmission to the lines multiplet structure
+                        lut_lines_rel_int_xy = optical_filter.apply(lut_lines_wl[lut_id], lut_lines_rel_int[lut_id], inc_angle=inc_angles[y, x])  # account for changes from the filters transmission to the lines multiplet structure
                         lut_lines_rel_int_xy /= lut_lines_rel_int_xy.sum()
                     else:
                         lut_lines_rel_int_xy = lut_lines_rel_int[lut_id]

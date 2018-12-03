@@ -8,7 +8,7 @@ from pycis.tools.find_peaks import indexes
 def despeckle(image, display=False):
     """ Remove random 'speckles' in a raw image caused by neutrons. 
     
-    Function uses a median filter to get rid of single pixels and a 1st derivative threshold test to remove larger 
+    Function uses a median filters to get rid of single pixels and a 1st derivative threshold test to remove larger 
     speckles. Tune the three '_lim' parameters if not getting desired results.
     
     :param image: Input image to be despeckled.
@@ -19,7 +19,7 @@ def despeckle(image, display=False):
     :return: The despeckled image.
     """
 
-    # apply median filter (smooths while preserving edges)
+    # apply median filters (smooths while preserving edges)
     image_out = scipy.signal.medfilt(image, 3)
 
     # loop over image rows

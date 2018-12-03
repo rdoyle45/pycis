@@ -1,6 +1,6 @@
 from .Camera import Camera
 from .Crystal import Crystal, Uniaxial, Waveplate, Savartplate
-from .Filter import Filter
+from .bandpass_filter import *
 from .Instrument import Instrument
 from .Lens import Lens
 # from .Lineshape import Lineshape, get_lines, create_arbitrary_lines

@@ -3,7 +3,7 @@ import inspect
 
 # get pycis paths:
 root_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-demod_path = os.path.join(root_path, 'uncertainty')
+demod_path = os.path.join(root_path, 'demod')
 model_path = os.path.join(root_path, 'model')
 demos_path = os.path.join(root_path, 'demo')
 tools_path = os.path.join(root_path, 'tools')
@@ -16,7 +16,7 @@ camera_path = os.path.join(config_path, 'camera')
 instrument_path = os.path.join(config_path, 'instrument')
 lines_path = os.path.join(config_path, 'lines')
 images_path = os.path.join(config_path, 'images')
-filter_path = os.path.join(config_path, 'filter')
+filters_path = os.path.join(config_path, 'filters')
 crystal_path = os.path.join(config_path, 'crystal')
 lens_path = os.path.join(config_path, 'lens')
 spectra_path = os.path.join(config_path, 'spectra')
@@ -28,7 +28,7 @@ if not os.path.isdir(config_path):
     os.makedirs(config_path)
 
 # Check whether individual sub directories exist, create them if they don't:
-sub_directory_paths = [synth_images_path, camera_path, instrument_path, lines_path, images_path, filter_path,
+sub_directory_paths = [synth_images_path, camera_path, instrument_path, lines_path, images_path, filters_path,
                        crystal_path, lens_path, spectra_path]
 
 for path in sub_directory_paths:
