@@ -239,7 +239,7 @@ class FilterFromName(FilterFromFile):
         :param name: 
         """
 
-        if name[-4:] is not '.csv':
+        if name[-4:] != '.csv':
             name += '.csv'
 
         valid_names = self.get_valid_names()

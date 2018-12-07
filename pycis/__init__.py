@@ -3,32 +3,37 @@ from . import paths
 try:
     from . import model
 except ImportError as e:
+    print('--pycis ImportError: could not import pycis.model:')
     print(e)
-    print('--pycis ImportError: could not import pycis.model')
+
 
 try:
     from . import data
 except ImportError as e:
+    print('--pycis ImportError: could not import pycis.raw_data:')
     print(e)
-    print('--pycis ImportError: could not import pycis.raw_data')
+
 
 try:
     from . import calib
 except ImportError as e:
+    print('--pycis ImportError: could not import pycis.calib:')
     print(e)
-    print('--pycis ImportError: could not import pycis.calib')
+
 
 try:
     from . import demod
 except ImportError as e:
+    print('--pycis ImportError: could not import pycis.demod:')
     print(e)
-    print('--pycis ImportError: could not import pycis.demod')
+
 
 try:
     from . import tools
 except ImportError as e:
+    print('--pycis ImportError: could not import pycis.tools:')
     print(e)
-    print('--pycis ImportError: could not import pycis.tools')
+
 
 
 
