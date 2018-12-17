@@ -30,7 +30,7 @@ def window(rfft_length, nfringes, fn='tukey', width_factor=1.):
     pre_zeros = [0] * int(nfringes - window_width / 2)
 
     if fn == 'tukey':
-        window_fn = fn(window_width, alpha=0.7)
+        window_fn = fn(window_width, alpha=1.0)
     else:
         window_fn = fn(window_width)
 

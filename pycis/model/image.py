@@ -374,8 +374,8 @@ class SynthImageCherab(SynthImage):
         normalised_spectra = spectra / np.moveaxis(np.tile(I0, [len(wls), 1, 1]), 0, -1)
         normalised_spectra[np.isnan(normalised_spectra)] = 0.
 
-        phase = pycis.model.uniaxial_crystal_3d_python(wls, t_wp, inc_angles, azim_angles_wp) + \
-                pycis.model.savart_plate_3d_python(wls, t_sp, inc_angles, azim_angles_sp)
+        phase = pycis.model.uniaxial_crystal_python(wls, t_wp, inc_angles, azim_angles_wp) + \
+                pycis.model.savart_plate_python(wls, t_sp, inc_angles, azim_angles_sp)
 
         degree_coherence = np.trapz(normalised_spectra * np.exp(2 * np.pi * 1j * phase), axis=-1)
 

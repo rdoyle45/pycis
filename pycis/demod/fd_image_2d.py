@@ -5,11 +5,13 @@ import time
 import pycis
 
 
-def fd_image_2d(img, noise_calc=False, nfringes=None, despeckle=False, display=False):
-    """ 2-D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast 
-    components.
+def fd_image_2d(img, despeckle=False, end_region_mask=False, uncertainty_params_out=False, camera_params=None,
+                nfringes=None, display=False):
+    """ 
+    2D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast 
+    components. Option to output uncertainty too.
     
-    Marginally faster than fd_image_1d (when fd_image_1d is running in parallel).
+    Marginally faster than using a 1D FT run in parallel.
     
     :param img: CIS interferogram image to be demodulated.
     :type img: array_like
@@ -27,62 +29,98 @@ def fd_image_2d(img, noise_calc=False, nfringes=None, despeckle=False, display=F
     start_time = time.time()
     pp_img = np.copy(img)
 
-    # pre-processing: remove neutron speckles
+    # pre-processing (pp): remove neutron speckles
     if despeckle:
         pp_img = pycis.demod.despeckle(pp_img)
 
-    # since the input image is real, its FFT output is Hermitian -- all info contained in +ve frequencies: use rfft2()
+    # since the input image is real, its FT is Hermitian -- all info contained in +ve frequencies: use rfft2()
     fft_img = np.fft.rfft2(pp_img, axes=(1, 0))
 
-    # locate carrier (fringe) frequency
+    # estimate carrier (fringe) frequency, if not supplied
     if nfringes is None:
-        nfringes = np.unravel_index(fft_img[15:][:].argmax(), fft_img.shape)[0] + 15  # find carrier freq. position
+        nfringes = np.unravel_index(fft_img[15:][:].argmax(), fft_img.shape)[0] + 15
 
     # generate window function
     fft_length = int(img.shape[0] / 2)
     window_1d = pycis.demod.window(fft_length, nfringes, width_factor=0.75, fn='tukey')
     window_2d = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
 
-    # isolate DC
-    fft_dc = fft_img * (1 - window_2d)
-    dc = np.fft.irfft2(fft_dc, axes=(1, 0))
+    if end_region_mask:
+        pp_img_erm_dc = pycis.demod.end_region_mask(pp_img, alpha=0.15, mean_subtract=True)
+        pp_img_erm_phase = pycis.demod.end_region_mask(pp_img, alpha=(3 / nfringes), mean_subtract=True)
 
-    # isolate carrier
-    fft_carrier = fft_img * window_2d
-    carrier = np.fft.irfft2(fft_carrier, axes=(1, 0))
+        fft_img_erm_dc = np.fft.rfft2(pp_img_erm_dc, axes=(1, 0))
+        fft_img_erm_phase = np.fft.rfft2(pp_img_erm_phase, axes=(1, 0))
 
-    # Hilbert transform extracts phase and contrast from carrier
-    analytic_signal = scipy.signal.hilbert(carrier, axis=-2)
-    phase = np.angle(analytic_signal)
-    contrast = abs(analytic_signal) / dc
+        # isolate DC
+        fft_dc = fft_img_erm_dc * (1 - window_2d)
+        dc = np.fft.irfft2(fft_dc, axes=(1, 0))
 
-    # Noise calculation
-    if noise_calc:
-        # this part actually assumes the camera is the Photron SA-4, will need changing if using a different camera
+        # isolate carrier
+        fft_carrier_phase = fft_img_erm_phase * window_2d
+        fft_carrier_contrast = fft_img * window_2d
+
+        fft_carrier = fft_carrier_phase  # for the plotting, change
+
+        carrier_phase = np.fft.irfft2(fft_carrier_phase, axes=(1, 0))
+        carrier_contrast = np.fft.irfft2(fft_carrier_contrast, axes=(1, 0))
+
+        # Hilbert transform to extract phase and contrast from carrier
+        analytic_signal_phase = scipy.signal.hilbert(carrier_phase, axis=-2)
+        analytic_signal_contrast = scipy.signal.hilbert(carrier_contrast, axis=-2)
+
+        phase = np.angle(analytic_signal_phase)
+        contrast = np.abs(analytic_signal_contrast) / dc
+
+    else:
+        # isolate DC
+        fft_dc = fft_img * (1 - window_2d)
+        dc = np.fft.irfft2(fft_dc, axes=(1, 0))
+
+        # isolate carrier
+        fft_carrier = fft_img * window_2d
+        carrier = np.fft.irfft2(fft_carrier, axes=(1, 0))
+
+        # Hilbert transform to extract phase and contrast from carrier
+        analytic_signal = scipy.signal.hilbert(carrier, axis=-2)
+        phase = np.angle(analytic_signal)
+        contrast = np.abs(analytic_signal) / dc
+
+    # uncertainty calculation
+    if uncertainty_params_out:
+
+        if camera_params is None:
+            # with no information supplied on the camera used, assume it's the Photron SA-4
+            camera_params = {'gain': 0.0086,  # [DN / e]
+                             'cam_noise_var': 1700,  # [e ^ 2]
+                             }
+
+        # estimate standard deviation of the noise
         i0 = 2 * dc
-        gain = 0.0086  # [DN / e]
-        cam_noise_var = 1700  # [e ^ 2]
-        sigma = np.sqrt(gain ** 2 * cam_noise_var + gain * i0)
+        std = np.sqrt(camera_params['gain'] ** 2 * camera_params['cam_noise_var'] + camera_params['gain'] * i0)
 
-        # calculate 'power gain' of the windows used
+        # calculate 'power gain' of the filter windows used
         y_arr_window = np.arange(0, fft_length + 1)
         x_arr_window = np.arange(0, np.shape(img)[0]) - fft_length
 
         x_mesh_window, y_mesh_window = np.meshgrid(x_arr_window, y_arr_window)
 
-        pg_dc_window = abs(1 - window_2d) ** 2
-        pg_carrier_window = abs(window_2d) ** 2
+        pg_dc_window = np.abs(1 - window_2d) ** 2
+        pg_carrier_window = np.abs(window_2d) ** 2
 
         area = np.trapz(np.trapz(np.ones_like(window_2d), y_mesh_window, axis=0), x_arr_window)
 
         carrier_noise_coeff = np.sqrt(np.trapz(np.trapz(pg_carrier_window, y_mesh_window, axis=0), x_arr_window) / area)
         dc_noise_coeff = np.sqrt(np.trapz(np.trapz(pg_dc_window, y_mesh_window, axis=0), x_arr_window) / area)
-        sigma_carrier = sigma * carrier_noise_coeff
-        sigma_dc = sigma * dc_noise_coeff
+        std_carrier = std * carrier_noise_coeff
 
-        sigma_contrast = abs(contrast) * np.sqrt((sigma_dc / dc) ** 2 + (sigma_carrier / (contrast * dc)) ** 2)
-        sigma_phase = sigma_carrier / (contrast * dc)
+        std_dc = std * dc_noise_coeff
+        std_contrast = abs(contrast) * np.sqrt((std_dc / dc) ** 2 + (std_carrier / (contrast * dc)) ** 2)
+        std_phase = std_carrier / (contrast * dc)
 
+        uncertainty_params = {'std_dc': std_dc,
+                              'std_phase': std_phase,
+                              'std_contrast': std_contrast}
 
     if display:
         print('-- fd_image_2d: nfringes = {}'.format(nfringes))
@@ -118,26 +156,23 @@ def fd_image_2d(img, noise_calc=False, nfringes=None, despeckle=False, display=F
 
         pycis.demod.display(img, dc, phase, contrast)
 
-        if noise_calc:
-
+        if uncertainty_params_out:
 
             fig3 = plt.figure(figsize=(10, 6), facecolor='white')
             ax31 = fig3.add_subplot(1, 2, 1)
-            im31 = ax31.imshow(sigma_phase)
+            im31 = ax31.imshow(std_phase)
             cbar31 = fig3.colorbar(im31, ax=ax31)
             ax31.set_title('phase noise')
 
             ax32 = fig3.add_subplot(1, 2, 2)
-            im32 = ax32.imshow(np.log10(sigma_contrast), vmax=np.log10(10))
+            im32 = ax32.imshow(np.log10(std_contrast), vmax=np.log10(10))
             cbar32 = fig3.colorbar(im32, ax=ax32)
             ax32.set_title('contrast noise')
 
-
-
         plt.show()
 
-    if noise_calc:
-        return dc, phase, contrast, dc_noise_coeff, carrier_noise_coeff
+    if uncertainty_params_out:
+        return dc, phase, contrast, uncertainty_params
     else:
         return dc, phase, contrast
 

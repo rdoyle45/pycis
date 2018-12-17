@@ -7,6 +7,7 @@ from .unwrap import unwrap
 from .wrap import *
 from .mask import *
 from .window import *
+from .end_region_mask import *
 
 # from composite_create import composite_create
 

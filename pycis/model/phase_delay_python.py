@@ -4,7 +4,7 @@ import numpy as np
 import pycis
 
 
-def uniaxial_crystal_3d_python(wl_axis, thickness, theta, omega, alpha=0):
+def uniaxial_crystal_python(wl_axis, thickness, theta, omega, alpha=0):
     """
 
     phase delay due to uniaxial crystal across 2D grid of incidence and azimuthal angles, for a range of wavelengths
@@ -47,7 +47,16 @@ def uniaxial_crystal_3d_python(wl_axis, thickness, theta, omega, alpha=0):
     return (thickness / wl_axis_cube) * (term_1 + term_2 + term_3)
 
 
-def savart_plate_3d_python(wl_axis, thickness, theta, omega):
+def savart_plate_python(wl_axis, thickness, theta, omega):
+    """
+    
+    :param wl_axis: 
+    :param thickness: 
+    :param theta: 
+    :param omega: 
+    :return: 
+    """
+
     img_dim = theta.shape
     wl_axis_length = len(wl_axis)
 

@@ -1,17 +1,12 @@
 import copy
-import csv
 import glob
 import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io
 import scipy.ndimage
 from PIL import Image
-
 import pycis
-import calibration as calib
-import inference_tools
 
 # target plasma line rest wavelengths:
 wl_CIII = 464.9e-9
@@ -32,9 +27,15 @@ lamp_wl = np.sort(np.array([wl_CdI_1, wl_ZnI_1, wl_ZnI_2, wl_CdI_2, wl_ZnI_3]))
 
 default_roi_dim = (50, 50)
 
-# choose demodulation function
-demod_function = pycis.demod.fd_image_2d
-# demod_function = pycis.uncertainty.fd_image_1d
+# manually set demodulation function
+def demod_function(img, display=False):
+    return pycis.demod.fd_image_2d(img, display=display)
+
+
+def linearity_correction():
+
+
+    return
 
 
 def get_lamp_data(units='m'):
@@ -108,7 +109,6 @@ def get_background_signal(intensity):
     idx_lim = int(length * subtract_factor)
 
     return np.mean(np.append(intensity[0: idx_lim], intensity[-idx_lim: -1]))
-
 
 
 def convert_predicted_cis_vignetting_from_matlab_to_npy():
@@ -186,7 +186,7 @@ def get_img_stack(path, rot90=0, fmt='tif', display=False, overwrite=False):
         img_stack = 0
 
         for imgpath in flist:
-            img_stack += np.array(Image.open(imgpath), dtype=np.float64)
+            img_stack += get_img(imgpath)
 
         if rot90 != 0:
             img_stack = np.rot90(img_stack, k=rot90)
@@ -211,11 +211,9 @@ def get_phase_img_stack(path, rot90=0, fmt='tif', overwrite=False):
     phase_img_stack_path = os.path.join(path, 'phase_img_stack.npy')
 
     if os.path.isfile(phase_img_stack_path) and overwrite is False:
-        print('if')
         phase_img_stack = np.load(phase_img_stack_path)
 
     else:
-        print('else')
 
         img_stack = get_img_stack(path, rot90=rot90, fmt=fmt, overwrite=overwrite)
         img_stack = np.flipud(np.fliplr(img_stack))
@@ -249,6 +247,28 @@ def get_contrast_img_stack(path, rot90=0, fmt='tif', overwrite=False):
         np.save(contrast_img_stack_path, contrast_img_stack)
 
     return contrast_img_stack
+
+
+def get_dc_img_stack(path, rot90=0, fmt='tif', overwrite=False):
+
+    assert os.path.isdir(path)
+
+    dc_img_stack_path = os.path.join(path, 'dc_img_stack.npy')
+
+    if os.path.isfile(dc_img_stack_path) and overwrite is False:
+        dc_img_stack = np.load(dc_img_stack_path)
+
+    else:
+
+        img_stack = get_img_stack(path, rot90=rot90, fmt=fmt, overwrite=overwrite)
+
+        intensity, phase, contrast = demod_function(img_stack, display=False)
+
+        dc_img_stack = intensity
+
+        np.save(dc_img_stack_path, dc_img_stack)
+
+    return dc_img_stack
 
 
 def get_contrast_roi_mean(path, roi_dim=default_roi_dim, overwrite=False):

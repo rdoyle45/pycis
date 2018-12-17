@@ -16,5 +16,5 @@ from .phase_delay import uniaxial_crystal, uniaxial_crystal_2D, savart_plate, sa
 from .spectra import SpectraCalib, SpectraCherab
 from .degree_coherence import degree_coherence_numerical, degree_coherence_analytical
 
-from .phase_delay_python import savart_plate_3d_python, uniaxial_crystal_3d_python
+from .phase_delay_python import savart_plate_python, uniaxial_crystal_python
 from .degree_coherence_general import degree_coherence_general
