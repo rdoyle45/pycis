@@ -28,5 +28,3 @@ setuptools.setup(
     # cmdclass={'build_ext': build_ext},
     ext_modules=ext_modules,  # generate .c files from .pyx
 )
-
-

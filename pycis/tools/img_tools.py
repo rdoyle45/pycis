@@ -29,7 +29,7 @@ default_roi_dim = (50, 50)
 
 # manually set demodulation function
 def demod_function(img, display=False):
-    return pycis.demod.fd_image_2d(img, display=display)
+    return pycis.demod.fourier_demod_2d(img, display=display)
 
 
 def linearity_correction():
@@ -375,7 +375,7 @@ def get_phase_pixel_stack_std(path, rot90=0, fmt='tif', img_lim=30, overwrite=Fa
             if rot90 != 0:
                 img = np.rot90(img, k=rot90)
 
-            intensity, phase, contrast = pycis.demod.fd_image_2d(img)
+            intensity, phase, contrast = pycis.demod.fourier_demod_2d(img)
 
             phase_pixel.append(phase[pix_y, pix_x])
 
@@ -429,7 +429,7 @@ def get_contrast_pixel_stack_std(path, fmt='tif', img_lim=30, overwrite=False):
             print(imgpath)
             img = np.array(Image.open(imgpath), dtype=np.float64)
 
-            intensity, phase, contrast = pycis.demod.fd_image_2d(img)
+            intensity, phase, contrast = pycis.demod.fourier_demod_2d(img)
 
             contrast_pixel.append(contrast[pix_y, pix_x])
 
@@ -482,7 +482,7 @@ def get_phase_roi_std_err(path, rot90=0, fmt='tif', roi_dim=default_roi_dim, img
             if rot90 != 0:
                 img = np.rot90(img, k=rot90)
 
-            intensity, phase, contrast = pycis.demod.fd_image_2d(img)
+            intensity, phase, contrast = pycis.demod.fourier_demod_2d(img)
             phase = pycis.demod.unwrap(phase)
 
             phase_roi_mean.append(pycis.demod.wrap(np.mean(pycis.tools.get_roi(phase, roi_dim=roi_dim))))
@@ -534,7 +534,7 @@ def get_contrast_roi_std(path, fmt='tif', roi_dim=default_roi_dim, img_lim=25, o
             print(imgpath)
             img = np.array(Image.open(imgpath), dtype=np.float64)
 
-            intensity, phase, contrast = pycis.demod.fd_image_2d(img)
+            intensity, phase, contrast = pycis.demod.fourier_demod_2d(img)
             # phase = pycis.uncertainty.unwrap(phase)
 
             contrast_roi_mean.append(pycis.demod.wrap(np.mean(pycis.tools.get_roi(phase, roi_dim=roi_dim))))

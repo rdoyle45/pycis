@@ -185,7 +185,7 @@ class CISImage():
     def _demodulate(self):
 
         # Do the demodulation!
-        self.I0, self.phi, self.xi = pycis.demod.fd_image_2d(self.raw_data, despeckle=True)
+        self.I0, self.phi, self.xi = pycis.demod.fourier_demod_2d(self.raw_data, despeckle=True)
                                                           #tilt_angle=0)  # self.fringe_tilt)
 
         # Subtract calib phase and wrap in to [-pi,pi]

@@ -125,7 +125,7 @@ if __name__ == '__main__':
     raw_image_path = os.path.join(pycis.paths.demos_path, 'raw_image.tif')
     raw_image = plt.imread(raw_image_path)
 
-    intensity, phase, contrast = pycis.demod.fd_image_1d(raw_image, mask=False, despeckle=True, display=False)
+    intensity, phase, contrast = pycis.demod.fourier_demod_1d(raw_image, mask=False, despeckle=True, display=False)
     phase = pycis.demod.unwrap(phase)
 
     mask, devim, tolim = get_mask_old(phase, intensity, display=True)

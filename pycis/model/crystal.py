@@ -55,15 +55,15 @@ class Savartplate(Crystal):
 
 if __name__ == '__main__':
 
-    # # create 'ccfe_4.6mm_waveplate'  crystal:
-    #
-    # crystal = pycis.model.Waveplate('ccfe_4.6mm_waveplate', 4.48e-3)
-    # crystal.save()
-    #
-    # # create 'ccfe_6.2mm_savartplate'  crystal:
-    #
-    # crystal = pycis.model.Savartplate('ccfe_6.2mm_savartplate', 6.2e-3)
-    # crystal.save()
+    # create 'ccfe_4.6mm_waveplate'  crystal:
+
+    crystal = pycis.model.Waveplate('ccfe_4.6mm_waveplate', 4.48e-3)
+    crystal.save()
+
+    # create 'ccfe_6.2mm_savartplate'  crystal:
+
+    crystal = pycis.model.Savartplate('ccfe_6.2mm_savartplate', 6.2e-3)
+    crystal.save()
 
     # create 'ccfe_6.2mm_savartplate'  crystal:
 

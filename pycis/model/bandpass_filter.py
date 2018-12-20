@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.interpolate
 import os, csv, glob
 import matplotlib.pyplot as plt
 import pycis

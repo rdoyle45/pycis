@@ -68,7 +68,7 @@ class SynthImage(object):
     def _demod(self):
         """ Demodulate synthetic image. """
 
-        intensity_demod, phase_demod, contrast_demod = pycis.demod.fd_image_1d(self.igram_intensity)
+        intensity_demod, phase_demod, contrast_demod = pycis.demod.fourier_demod_1d(self.igram_intensity)
         phase_demod = pycis.demod.unwrap(phase_demod)
 
         return intensity_demod, phase_demod, contrast_demod
@@ -76,7 +76,7 @@ class SynthImage(object):
     def update_demod(self):
         """ Update the demodulated quantities using latest version of uncertainty. """
 
-        self.intensity_demod, phase_demod, self.contrast_demod = pycis.demod.fd_image_1d(self.igram)
+        self.intensity_demod, phase_demod, self.contrast_demod = pycis.demod.fourier_demod_1d(self.igram)
         self.phase_demod = pycis.demod.unwrap(phase_demod)
         self.save()
 
@@ -240,7 +240,7 @@ class SynthImage(object):
         #plt.tight_layout()
         plt.show()
 
-        _, _, _ = pycis.demod.fd_column(self.igram[:, column], display=True)
+        _, _, _ = pycis.demod.fourier_demod_column(self.igram[:, column], display=True)
 
         return
 
@@ -695,7 +695,7 @@ class SynthImageCalib(SynthImage):
                 total_signal = self.instrument.camera.capture_stack(self.photon_fluence, num_stack=num_stack)
 
             # demodulate
-            intensity_demod, phase_demod, contrast_demod = pycis.demod.fd_image_1d(total_signal, column_range=[400, 600])
+            intensity_demod, phase_demod, contrast_demod = pycis.demod.fourier_demod_1d(total_signal, column_range=[400, 600])
 
             phase_demod = pycis.demod.unwrap(phase_demod)
 

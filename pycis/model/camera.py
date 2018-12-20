@@ -2,8 +2,6 @@ import numpy as np
 import pickle
 import pycis
 import os.path
-import multiprocessing as mp
-import random
 import matplotlib.pyplot as plt
 
 

@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import pycis
-from defunct.bbo import bbo_slo
+
 
 
 def plot_bbo_dispersion(wavelength_range=(400e-9, 700e-9)):

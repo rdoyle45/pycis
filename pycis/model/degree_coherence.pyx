@@ -1,7 +1,7 @@
 import cython
 from libc.math cimport exp, cos, M_PI, fabs, sqrt
 from pycis.model.phase_delay import uniaxial_crystal, savart_plate
-from pycis.model.bbo import bbo
+from pycis.model import dispersion
 
 # functions from complex.h c library
 cdef extern from "<complex.h>":
@@ -57,7 +57,7 @@ cpdef degree_coherence_analytical(double[:] lines_wl, double [:] raw_lines_wl,
 
         norm_freq_shift = (freq_md - freq_m) / freq_m
 
-        biref_m, n_e_m, n_o_m = bbo(wavelength_m, 1)
+        biref_m, n_e_m, n_o_m = dispersion(wavelength_m, 1)
 
         phase_wp_m = uniaxial_crystal(wavelength_m, n_e_m, n_o_m, l_wp, inc_angle, azim_angle_wp)  # waveplate delay (waves)
         phase_sp_m = savart_plate(wavelength_m, n_e_m, n_o_m, l_sp, inc_angle, azim_angle_sp)  # Savart plate delay (waves)
@@ -137,7 +137,7 @@ cpdef degree_coherence_numerical(double[:] wavelength_axis, double[:] spectrum, 
 
         d_wavelength_i = wavelength_axis[i] - wavelength_axis[i-1]
 
-        biref_i, n_e_i, n_o_i = bbo(wavelength_i, 1)
+        biref_i, n_e_i, n_o_i = dispersion(wavelength_i, 1)
 
         phase_wp_i = uniaxial_crystal(wavelength_i, n_e_i, n_o_i, l_wp, inc_angle, azim_angle_wp)  # (waves)
         phase_sp_i = savart_plate(wavelength_i, n_e_i, n_o_i, l_sp, inc_angle, azim_angle_sp)  # (waves)

@@ -7,10 +7,8 @@ from pycis.model.phase_delay import uniaxial_crystal, savart_plate
 import scipy.interpolate
 
 
-
 class Instrument(object):
-    """ Stores information on CIS optical componenents + optical setup. Currently, only the presence of the added
-    config can be specified, not the position within the instrument.
+    """ Stores basic information on CIS instrument and facilitates synthetic image generation.
      
      Currently, must have Waveplate, Savart plate, an final lens added in order to be used. """
 
@@ -22,8 +20,8 @@ class Instrument(object):
         self.name = name
 
         self.camera = None
-        self.lens_3 = None
-        self.optical_filter = None
+        self.back_lens = None
+        self.bandpass_filter = None
         self.waveplate = None
         self.wp_orientation = None
         self.savartplate = None
@@ -33,16 +31,59 @@ class Instrument(object):
 
         self.chi = [0, 0]  # placeholder, this will be gotten rid of in time
 
+    def add_camera(self, camera):
+        """
+        specify instrument camera.
+        
+        :param camera: either a pycis.model.Camera object or a string-type camera name. 
+        :return: 
+        """
 
-    def add_camera(self, name):
-        self.camera = pycis.model.load_component(name, type='camera')
+        if isinstance(camera, pycis.model.Camera):
+            self.camera = camera
 
-    def add_lens_3(self, name):
-        self.lens_3 = pycis.model.load_component(name, type='lens')
+        elif isinstance(camera, str):
+            self.camera = pycis.model.load_component(camera, type='camera')
+
+        else:
+            raise Exception('argument: camera must be of type pycis.model.Camera or string')
+
+    def add_back_lens(self, lens):
+        """
+        specify instrument back lens
+        
+        :param lens: 
+        :return: 
+        """
+
+        if isinstance(lens, pycis.model.Lens):
+            self.back_lens = lens
+
+        elif isinstance(lens, str):
+            self.back_lens = pycis.model.load_component(lens, type='lens')
+
+        else:
+            raise Exception('argument: lens must be of type pycis.model.Camera or string')
+
         return
 
-    def add_filter(self, name):
-        self.optical_filter = pycis.model.load_component(name, type='filters')
+    def add_bandpass_filter(self, bandpass_filter):
+        """
+        specify instrument bandpass filter
+    
+        :param bandpass_filter: 
+        :return: 
+        """
+        if isinstance(bandpass_filter, pycis.model.BandpassFilter):
+            self.bandpass_filter = bandpass_filter
+
+        elif isinstance(bandpass_filter, str):
+            self.bandpass_filter = pycis.model.FilterFromName(bandpass_filter)
+
+        else:
+            raise Exception('argument: bandpass_filter must be of type pycis.model.Camera or string')
+
+        self.bandpass_filter = pycis.model.load_component(name, type='filters')
         return
 
     def add_crystal(self, name, orientation):
@@ -69,7 +110,7 @@ class Instrument(object):
 
     def get_angles(self, display=False):
         """
-        Calculates the distributions of incidence angle and azimuthal angle for each crystal component, as projected onto
+        Calculates the incidence angles and azimuthal angles for each crystal component, as projected onto
         the camera's sensor.
         
         returns in radians.
@@ -78,7 +119,7 @@ class Instrument(object):
         # some shorthand:
 
         cam = self.camera
-        f_3 = self.lens_3.focal_length
+        f_3 = self.back_lens.focal_length
 
         # Define x,y detector coordinates:
 
@@ -114,20 +155,19 @@ class Instrument(object):
         azim_angles_wp = np.arctan2(x_rot_wp, y_rot_wp)
         azim_angles_sp = np.arctan2(x_rot_sp, y_rot_sp)
 
-
         if display:
 
             fig1 = plt.figure()
             ax1 = fig1.add_subplot(121)
             ax2 = fig1.add_subplot(122)
 
-            im1 = ax1.imshow_raw(inc_angles)
+            im1 = ax1.imshow(inc_angles)
             cbar = plt.colorbar(im1, ax=ax1)
 
-            im2 = ax2.imshow_raw(azim_angles_wp)
+            im2 = ax2.imshow(azim_angles_wp)
             cbar = plt.colorbar(im2, ax=ax2)
 
-
+            plt.tight_layout()
             plt.show()
 
         return inc_angles, azim_angles_wp, azim_angles_sp
@@ -141,9 +181,9 @@ class Instrument(object):
 
         _, _, _, wavelength_com = line.make(1000)
 
-        if self.optical_filter is not None:
+        if self.bandpass_filter is not None:
             # estimate filters transmission at line wavelength
-            t_filter = self.optical_filter.interp_tx(wavelength_com)
+            t_filter = self.bandpass_filter.interp_tx(wavelength_com)
         else:
             t_filter = 1
 

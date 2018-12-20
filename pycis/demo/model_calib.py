@@ -14,8 +14,8 @@ def camera():
 
     # add components
     inst.add_camera('photron_SA4')
-    inst.add_lens_3('sigma_150mm')
-    inst.add_filter('ccfe_HeII_m')
+    inst.add_back_lens('sigma_150mm')
+    inst.add_bandpass_filter('ccfe_HeII_m')
 
     inst.add_crystal('ccfe_4.6mm_waveplate', orientation=3 * np.pi / 4)
     inst.add_crystal('ccfe_6.2mm_savartplate', orientation=1 * np.pi / 4)

@@ -1,3 +1,4 @@
+import traceback
 from . import paths
 
 try:
@@ -10,6 +11,7 @@ try:
     from . import model
 except ImportError as e:
     print('--pycis ImportError: could not import pycis.model:')
+    print(traceback.format_exc())
     print(e)
 
 try:
@@ -29,7 +31,6 @@ try:
 except ImportError as e:
     print('--pycis ImportError: could not import pycis.tools:')
     print(e)
-
 
 
 

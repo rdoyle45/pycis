@@ -8,7 +8,7 @@ from functools import partial
 
 
 
-def fd_image_1d(img, nfringes=None, column_range=None, despeckle=False, tilt_angle=0, multiproc=True, display=False):
+def fourier_demod_1d(img, nfringes=None, column_range=None, despeckle=False, tilt_angle=0, multiproc=True, display=False):
     """ 1-D Fourier demodulation of a coherence imaging interferogram image, looped over image columns to extract the DC, phase and contrast components.
     
     :param img: Input interferogram image to be demodulated.
@@ -53,7 +53,7 @@ def fd_image_1d(img, nfringes=None, column_range=None, despeckle=False, tilt_ang
         print('-- demodulating...')
 
     pool = mp.Pool(processes=4)
-    fd_column_results = pool.map(partial(pycis.demod.fd_column, nfringes=nfringes), list(pp_img[:, column_range[0]:column_range[1]].T))
+    fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, nfringes=nfringes), list(pp_img[:, column_range[0]:column_range[1]].T))
     dc, phase, contrast = zip(*fd_column_results)
     pool.close()
 
