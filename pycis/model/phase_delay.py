@@ -2,27 +2,37 @@ import numpy as np
 import pycis
 
 
-def uniaxial_crystal(wl, thickness, theta, omega, alpha=0., material='a-BBO'):
+def uniaxial_crystal(wl, thickness, inc_angle, azim_angle, cut_angle=0., material='a-BBO'):
     """
-    phase delay due to uniaxial crystal
+    calculate phase delay due to uniaxial crystal.
+    
+    Vectorised. If inc_angle and azim_angle are arrays, they must have the same dimensions.  
+    source: Francisco E Veiras, Liliana I Perez, and María T Garea. “Phase shift formulas in uniaxial media: an 
+    application to waveplates”
 
     :param wl: wavelength [ m ]
+    :type wl: scalar or array-like
     :param thickness: [ m ]
-    :param theta: incidence angle [ rad ]
-    :param omega: azimuthal angle [ rad ]
-    :param alpha: angle between crystal optic axis and crystal front face [ rad ]
-    :param material
-    
-    :return: phase delay [ fringes ]
+    :type thickness: scalar
+    :param inc_angle: incidence angle [ rad ]
+    :type inc_angle: scalar or array-like
+    :param azim_angle: azimuthal angle [ rad ]
+    :type azim_angle: scalar or array-like
+    :param cut_angle: angle between crystal optic axis and crystal front face [ rad ]
+    :type cut_angle: scalar
+    :param material:
+    :type material: string
+
+    :return: phase delay [ rad ]
     """
 
     biref, n_e, n_o = pycis.model.dispersion(wl, material)
 
-    if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(theta) and not pycis.tools.is_scalar(omega):
+    if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(inc_angle) and not pycis.tools.is_scalar(azim_angle):
         # wl, theta and omega are arrays
 
-        img_dim = theta.shape
-        assert img_dim == omega.shape
+        img_dim = inc_angle.shape
+        assert img_dim == azim_angle.shape
 
         wl_length = len(wl)
 
@@ -33,114 +43,91 @@ def uniaxial_crystal(wl, thickness, theta, omega, alpha=0., material='a-BBO'):
         n_e = np.tile(n_e, reps_axis)
         n_o = np.tile(n_o, reps_axis)
 
-        theta = np.moveaxis(np.tile(theta, reps_img), 0, -1)
-        omega = np.moveaxis(np.tile(omega, reps_img), 0, -1)
+        inc_angle = np.moveaxis(np.tile(inc_angle, reps_img), 0, -1)
+        azim_angle = np.moveaxis(np.tile(azim_angle, reps_img), 0, -1)
 
-    term_1 = np.sqrt(n_o ** 2 - np.sin(theta) ** 2)
+    term_1 = np.sqrt(n_o ** 2 - np.sin(inc_angle) ** 2)
 
     term_2 = (n_o ** 2 - n_e ** 2) * \
-             (np.sin(alpha) * np.cos(alpha) * np.cos(omega) * np.sin(theta)) / \
-             (n_e ** 2 * np.sin(alpha) ** 2 + n_o ** 2 * np.cos(alpha) ** 2)
+             (np.sin(cut_angle) * np.cos(cut_angle) * np.cos(azim_angle) * np.sin(inc_angle)) / \
+             (n_e ** 2 * np.sin(cut_angle) ** 2 + n_o ** 2 * np.cos(cut_angle) ** 2)
 
     term_3 = - n_o * np.sqrt(
-        (n_e ** 2 * (n_e ** 2 * np.sin(alpha) ** 2 + n_o ** 2 * np.cos(alpha) ** 2)) -
-        ((n_e ** 2 - (n_e ** 2 - n_o ** 2) * np.cos(alpha) ** 2 * np.sin(
-            omega) ** 2) * np.sin(theta) ** 2)) / \
-             (n_e ** 2 * np.sin(alpha) ** 2 + n_o ** 2 * np.cos(alpha) ** 2)
+        (n_e ** 2 * (n_e ** 2 * np.sin(cut_angle) ** 2 + n_o ** 2 * np.cos(cut_angle) ** 2)) -
+        ((n_e ** 2 - (n_e ** 2 - n_o ** 2) * np.cos(cut_angle) ** 2 * np.sin(
+            azim_angle) ** 2) * np.sin(inc_angle) ** 2)) / \
+             (n_e ** 2 * np.sin(cut_angle) ** 2 + n_o ** 2 * np.cos(cut_angle) ** 2)
 
-    return (thickness / wl) * (term_1 + term_2 + term_3)
+    return 2 * np.pi * (thickness / wl) * (term_1 + term_2 + term_3)
 
 
-def savart_plate(wl, thickness, theta, omega, material='a-BBO'):
+def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='wu'):
     """
-    calculate the phase delay due to a Savart plate
+    calculate phase delay due to Savart plate.
+    
+    Vectorised. If inc_angle and azim_angle are arrays, they must have the same dimensions.  
+    source: Lei Wu, Chunmin Zhang, and Baochang Zhao. “Analysis of the lateral displacement and optical path difference
+    in wide-field-of-view polarization interference imaging spectrometer”. In: Optics Communications 273.1 (2007), 
+    pp. 67–73. issn: 00304018. doi: 10.1016/j.optcom.2006.12.034.
     
     :param wl: wavelength [ m ]
+    :type wl: scalar or array-like
     :param thickness: [ m ]
-    :param theta: incidence angle [ rad ]
-    :param omega: azimuthal angle [ rad ]
+    :type thickness: scalar
+    :param inc_angle: incidence angle [ rad ]
+    :type inc_angle: scalar or array-like
+    :param azim_angle: azimuthal angle [ rad ]
+    :type azim_angle: scalar or array-like
     :param material: 
+    :type material: string
+    :param mode: source for the equation for phase delay: 'wu' or 'veiras'
+    :type mode: bool
     
-    :return: phase delay [ fringes ]
+    :return: phase delay [ rad ]
     """
 
-    biref, n_e, n_o = pycis.model.dispersion(wl, material)
+    if mode == 'wu':
 
-    a = 1 / n_e
-    b = 1 / n_o
+        biref, n_e, n_o = pycis.model.dispersion(wl, material)
 
-    if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(theta) and not pycis.tools.is_scalar(omega):
-        # wl, theta and omega are arrays
+        a = 1 / n_e
+        b = 1 / n_o
 
-        img_dim = theta.shape
-        assert img_dim == omega.shape
+        if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(inc_angle) and not pycis.tools.is_scalar(azim_angle):
+            # wl, theta and omega are arrays
 
-        wl_length = len(wl)
+            img_dim = inc_angle.shape
+            assert img_dim == azim_angle.shape
 
-        reps_img = [wl_length, 1, 1]
-        reps_axis = [img_dim[0], img_dim[1], 1]
+            wl_length = len(wl)
 
-        wl = np.tile(wl, reps_axis)
-        a = np.tile(a, reps_axis)
-        b = np.tile(b, reps_axis)
+            reps_img = [wl_length, 1, 1]
+            reps_axis = [img_dim[0], img_dim[1], 1]
 
-        theta = np.moveaxis(np.tile(theta, reps_img), 0, -1)
-        omega = np.moveaxis(np.tile(omega, reps_img), 0, -1)
+            wl = np.tile(wl, reps_axis)
+            a = np.tile(a, reps_axis)
+            b = np.tile(b, reps_axis)
 
-    term_1 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2)) * (np.cos(omega) + np.sin(omega)) * np.sin(theta)
+            inc_angle = np.moveaxis(np.tile(inc_angle, reps_img), 0, -1)
+            azim_angle = np.moveaxis(np.tile(azim_angle, reps_img), 0, -1)
 
-    term_2 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2) ** (3 / 2)) * ((a ** 2) / np.sqrt(2)) * \
-             (np.cos(omega) ** 2 - np.sin(omega) ** 2) * np.sin(theta) ** 2
+        term_1 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2)) * (np.cos(azim_angle) + np.sin(azim_angle)) * np.sin(inc_angle)
 
-    return (thickness / (2 * wl)) * (term_1 + term_2)
+        term_2 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2) ** (3 / 2)) * ((a ** 2) / np.sqrt(2)) * \
+                 (np.cos(azim_angle) ** 2 - np.sin(azim_angle) ** 2) * np.sin(inc_angle) ** 2
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    import time
+        phase_sp = 2 * np.pi * (thickness / (2 * wl)) * (term_1 + term_2)
 
-    theta = np.linspace(0, 7, 1000) * np.pi / 180
-    omega = np.linspace(0, 2 * np.pi, 1000)
-    alpha = 0 * np.pi / 180
-    wl = np.linspace(465e-9, 469e-9, 2)
-    biref, n_e, n_o = pycis.model.dispersion(wl, material='a-BBO')
+    elif mode == 'veiras':
+        omega_plate1 = azim_angle
+        omega_plate2 = azim_angle - (np.pi / 2)
+        thickness_plate = thickness / 2
 
-    theta_m, omega_m = np.meshgrid(theta, omega)
+        phase_sp = -(pycis.model.uniaxial_crystal(wl, thickness_plate, inc_angle, omega_plate1, cut_angle=-np.pi / 4) - \
+                     pycis.model.uniaxial_crystal(wl, thickness_plate, inc_angle, omega_plate2, cut_angle=np.pi / 4))
 
-    l_wp = 4.48e-3
-    l_sp = 6.2e-3
+    else:
+        raise Exception('invalid mode')
 
-    s_new = time.time()
-    phase_wp_new = uniaxial_crystal(wl, l_wp, theta_m, omega_m, alpha=alpha)
-    phase_sp_new = savart_plate(wl, l_sp, theta_m, omega_m)
-    e_new = time.time()
-    time_new = e_new - s_new
-    print(time_new)
-
-    s_old = time.time()
-    phase_wp_old = pycis.model.uniaxial_crystal_3d(wl, l_wp, theta_m, omega_m, alpha=alpha)
-    phase_sp_old = pycis.model.savart_plate_3d(wl, l_sp, theta_m, omega_m)
-    e_old = time.time()
-    time_old = e_old - s_old
-
-    print(time_old)
-
-    # plt.figure()
-    # plt.imshow(phase_wp_new[:, :, 0] - phase_wp_old[:, :, 0])
-    # plt.colorbar()
-
-    plt.figure()
-    plt.imshow(phase_sp_new[:, :, 0])
-    plt.colorbar()
-
-    plt.figure()
-    plt.imshow(phase_sp_old[:, :, 0])
-    plt.colorbar()
-
-    plt.figure()
-    plt.imshow(phase_sp_new[:, :, 0] - phase_sp_old[:, :, 0])
-    plt.colorbar()
-
-    plt.show()
-
-    a = 5
+    return phase_sp
 

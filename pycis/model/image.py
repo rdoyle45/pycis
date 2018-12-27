@@ -16,19 +16,14 @@ from pycis.model.degree_coherence import degree_coherence_analytical, degree_coh
 from pycis.model.spectra import SpectraCalib, SpectraCherab
 
 
-########## This script still needs tidying up, January 2018,
-
-# uniform mode is only working mode at the moment!
-
-
 class SynthImage(object):
     """ Base class for CIS synthetic image."""
 
     def __init__(self, instrument, spectra, name):
         """
-        :param instrument:
-        :param spectra:
-        :param name
+        :param instrument: pycis.model.Instrument
+        :param spectra: 
+        :param name: string
 
         """
 
@@ -53,8 +48,8 @@ class SynthImage(object):
 
         # timing
         self.start_time = time.time()
-        self.DOB = time.strftime("%a, %d %b %Y %H:%M:%S")
-        self.DOB_sf = time.strftime("%y%m%d")
+        self.dob = time.strftime("%a, %d %b %Y %H:%M:%S")
+        self.dob_sf = time.strftime("%y%m%d")
 
 
     def _make(self):
@@ -107,7 +102,7 @@ class SynthImage(object):
                 labelleft='off')
 
         if save:
-            plt.savefig(os.path.join(pycis.paths.images_path, savename + '_' + self.name + '_' + self.DOB_sf + '.png'), bbox_inches='tight', pad_inches=0)
+            plt.savefig(os.path.join(pycis.paths.images_path, savename + '_' + self.name + '_' + self.dob_sf + '.png'), bbox_inches='tight', pad_inches=0)
             plt.close()
         return
 
@@ -153,7 +148,7 @@ class SynthImage(object):
         cbar.set_label(r'ft [/pixel]', size=9)
 
         if save:
-            plt.savefig(pycis.paths.images_path + savename + '_' + self.line_name + '_' + self.DOB_sf + '.eps')
+            plt.savefig(pycis.paths.images_path + savename + '_' + self.line_name + '_' + self.dob_sf + '.eps')
             plt.close()
         else:
             plt.show()
@@ -344,7 +339,7 @@ class SynthImageCherab(SynthImage):
         wls = self.spectra.wavelength_axis
         spectra = self.spectra.spectra
 
-        inc_angles, azim_angles_wp, azim_angles_sp = inst.get_angles()
+        inc_angles, azim_angles_wp, azim_angles_sp = inst.calculate_angles()
 
         I0 = np.trapz(spectra, axis=-1)
         norm_spectra = spectra / np.moveaxis(np.tile(I0, [len(wls), 1, 1]), 0, -1)
@@ -357,7 +352,6 @@ class SynthImageCherab(SynthImage):
 
         instrument_phase = np.angle(instrument_degree_coherence)
 
-
         return instrument_phase
 
     def _make(self):
@@ -368,14 +362,14 @@ class SynthImageCherab(SynthImage):
         wls = self.spectra.wavelength_axis
         spectra = self.spectra.spectra
 
-        inc_angles, azim_angles_wp, azim_angles_sp = self.inst.get_angles()
+        inc_angles, azim_angles_wp, azim_angles_sp = self.inst.calculate_angles()
 
         I0 = np.trapz(spectra, axis=-1)
         normalised_spectra = spectra / np.moveaxis(np.tile(I0, [len(wls), 1, 1]), 0, -1)
         normalised_spectra[np.isnan(normalised_spectra)] = 0.
 
-        phase = pycis.model.uniaxial_crystal_python(wls, t_wp, inc_angles, azim_angles_wp) + \
-                pycis.model.savart_plate_python(wls, t_sp, inc_angles, azim_angles_sp)
+        phase = pycis.model.uniaxial_crystal(wls, t_wp, inc_angles, azim_angles_wp) + \
+                pycis.model.savart_plate(wls, t_sp, inc_angles, azim_angles_sp)
 
         degree_coherence = np.trapz(normalised_spectra * np.exp(2 * np.pi * 1j * phase), axis=-1)
 
@@ -421,7 +415,6 @@ class SynthImageCalib(SynthImage):
 
     INPUT_SPECTRA_TYPE = SpectraCalib
 
-
     def __init__(self, instrument, spectra, name, n=30):
         super().__init__(instrument, spectra, name)
 
@@ -429,7 +422,6 @@ class SynthImageCalib(SynthImage):
 
         # generate synthetic image:
         signal_terms, photon_terms, phase, contrast, angles, filter_transmission_factor = self._make()
-
 
         # unpack grouped terms
 
@@ -471,7 +463,7 @@ class SynthImageCalib(SynthImage):
         t_wp = inst.waveplate.thickness
         t_sp = inst.savartplate.thickness
 
-        inc_angles, azim_angles_wp, azim_angles_sp = inst.get_angles()
+        inc_angles, azim_angles_wp, azim_angles_sp = inst.calculate_angles()
 
         if inst.optical_filter is not None:
             optical_filter = self.instrument.optical_filter
@@ -759,11 +751,92 @@ class SynthImageCalib(SynthImage):
         return
 
 
+class SynthImagePhaseCalib(SynthImage):
+    """ Synthetic image """
+
+    INPUT_SPECTRA_TYPE = dict
+
+    def __init__(self, instrument, spectra, name):
+        super().__init__(instrument, spectra, name)
+
+        # generate synthetic image:
+        signal_terms, photon_terms, phase, contrast, angles, filter_transmission_factor = self._make()
+
+        # unpack grouped terms
+
+        self.signal = signal_terms['signal']
+        self.signal_no_interferometer = signal_terms['signal_no_interferometer']
+
+        self.photon_fluence = photon_terms['photon_fluence']
+        self.photon_fluence_no_interferometer = photon_terms['photon_fluence_no_interferometer']
+
+        self.phase = phase
+        self.contrast = contrast
+
+        self.inc_angles = angles['inc_angles']
+        self.azim_angles_wp = angles['azim_angles_wp']
+        self.azim_angles_sp = angles['azim_angles_sp']
+
+        self.filter_transmission_factor = filter_transmission_factor
+
+        # wrap-unwrap
+        self.phase = pycis.demod.wrap(self.phase)
+        self.phase = pycis.demod.unwrap(self.phase)
+
+        # uncertainty
+        self.intensity_demod, self.phase_demod, self.contrast_demod = self._demod()
+
+        # timing
+        duration = time.time() - self.start_time
+        print('-- Duration: {0} seconds...'.format(pycis.tools.to_precision(duration, 3)))
+        self.gestation_time = duration
+
+    def _make(self):
+        """ Create synthetic image."""
+
+        # Define some shorthand:
+        inst = self.instrument
+        cam = inst.camera
+        dim = cam.sensor_dim
+
+        t_wp = inst.waveplate.thickness
+        t_sp = inst.savartplate.thickness
+
+        inc_angles, azim_angles_wp, azim_angles_sp = inst.calculate_angles()
+
+
+        photon_fluence_no_interferometer = np.ones(dim) * self.spectra.spec_cube.I0
+
+        degree_coherence = np.exp(2 * np.pi * 1j * )
+
+
+        phase = np.angle(degree_coherence)  # (radians)
+        contrast = np.abs(degree_coherence) * inst.instrument_contrast
+
+        photon_fluence_no_interferometer = photon_fluence_no_interferometer * filter_transmission_factor
+        photon_fluence = (photon_fluence_no_interferometer / 2) * (1 + contrast * np.cos(phase))
+
+        # account for vignetting
+        photon_fluence = inst.apply_vignetting(photon_fluence)
+        photon_fluence_no_interferometer = inst.apply_vignetting(photon_fluence_no_interferometer)
+
+        # model camera capture
+        print('-- Calculating camera effects...')
+        signal = cam.capture(photon_fluence)
+        signal_no_interferometer = cam.capture(photon_fluence_no_interferometer, clean=True)
+
+        # group output terms
+        signal_terms = {'signal': signal, 'signal_no_interferometer': signal_no_interferometer}
+        intensity_terms = {'photon_fluence': photon_fluence, 'photon_fluence_no_interferometer': photon_fluence_no_interferometer}
+        angle_terms = {'inc_angles': inc_angles, 'azim_angles_wp': azim_angles_wp, 'azim_angles_sp': azim_angles_sp}
+
+        return signal_terms, intensity_terms, phase, contrast, angle_terms, filter_transmission_factor
+
 
 def create_synth_image(instrument, spectra, name):
     """ Factory function creates SynthImage instance of correct type.  """
 
-    SYNTH_IMAGE_TYPES = [SynthImageCalib, SynthImageCherab]
+    SYNTH_IMAGE_TYPES = [SynthImageCalib, SynthImageCherab, SynthImagePhaseCalib]
 
     for type in SYNTH_IMAGE_TYPES:
         if type.check_spectra(spectra):

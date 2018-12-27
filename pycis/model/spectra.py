@@ -33,7 +33,7 @@ class SpectraCalib(object):
     """
 
     def __init__(self, line_name, I0, vi, Ti, instrument, b_field=0, theta=0, LUT=False):
-        """    Three modes of operation:
+        """    modes of operation:
 
                'UNIFORM': When all inputs are given as single floats, uniform input is modelled across camera. Saves BIGLY on
                computation time for SynthImage since only a single instance of Lineshape need be evaluated. Intended for testing.

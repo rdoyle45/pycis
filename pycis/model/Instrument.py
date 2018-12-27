@@ -2,79 +2,68 @@ import numpy as np
 import pickle
 import os.path
 import pycis.paths
-from pycis.tools import *
-from pycis.model.phase_delay import uniaxial_crystal, savart_plate
+import matplotlib.pyplot as plt
+
 import scipy.interpolate
 
 
 class Instrument(object):
-    """ Stores basic information on CIS instrument and facilitates synthetic image generation.
+    """ CIS instrument class. Facilitates synthetic image generation.
      
-     Currently, must have Waveplate, Savart plate, an final lens added in order to be used. """
+     Currently, only supports single waveplate and Savartplate """
 
-    def __init__(self, name, instrument_contrast):
+    def __init__(self, name, camera, back_lens, crystals, crystal_orientations, bandpass_filter=None,
+                 instrument_contrast=0.5):
         """
+        
         :param name: 
-     
+        :param camera: pycis.model.Camera or a string-type camera name
+        :param back_lens: pycis.model.Lens or a string-type lens name
+        :param crystals: list of pycis.model.Crystal
+        :param crystal_orientations: corresponding list of orientations in radians
+        :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name
+        :param instrument_contrast: 
         """
+
         self.name = name
-
-        self.camera = None
-        self.back_lens = None
-        self.bandpass_filter = None
-        self.waveplate = None
-        self.wp_orientation = None
-        self.savartplate = None
-        self.sp_orientation = None
-
         self.instrument_contrast = instrument_contrast
 
-        self.chi = [0, 0]  # placeholder, this will be gotten rid of in time
-
-    def add_camera(self, camera):
-        """
-        specify instrument camera.
-        
-        :param camera: either a pycis.model.Camera object or a string-type camera name. 
-        :return: 
-        """
-
+        # camera
         if isinstance(camera, pycis.model.Camera):
             self.camera = camera
-
         elif isinstance(camera, str):
             self.camera = pycis.model.load_component(camera, type='camera')
-
         else:
             raise Exception('argument: camera must be of type pycis.model.Camera or string')
 
-    def add_back_lens(self, lens):
-        """
-        specify instrument back lens
-        
-        :param lens: 
-        :return: 
-        """
+        # back_lens
+        if isinstance(back_lens, pycis.model.Lens):
+            self.back_lens = back_lens
 
-        if isinstance(lens, pycis.model.Lens):
-            self.back_lens = lens
-
-        elif isinstance(lens, str):
-            self.back_lens = pycis.model.load_component(lens, type='lens')
-
+        elif isinstance(back_lens, str):
+            self.back_lens = pycis.model.load_component(back_lens, type='lens')
         else:
             raise Exception('argument: lens must be of type pycis.model.Camera or string')
 
-        return
+        # crystals
+        for crystal, orientation in zip(crystals, crystal_orientations):
+            if isinstance(crystal, str):
+                crystal = pycis.model.load_component(crystal, type='crystal')
 
-    def add_bandpass_filter(self, bandpass_filter):
-        """
-        specify instrument bandpass filter
-    
-        :param bandpass_filter: 
-        :return: 
-        """
-        if isinstance(bandpass_filter, pycis.model.BandpassFilter):
+            # check waveplate or Savartplate:
+            if isinstance(crystal, pycis.model.Waveplate):
+                self.waveplate = crystal
+                self.wp_orientation = orientation
+
+            elif isinstance(crystal, pycis.model.Savartplate):
+                self.savartplate = crystal
+                self.sp_orientation = orientation
+
+        # bandpass_filter
+        if bandpass_filter is None:
+            pass
+
+        elif isinstance(bandpass_filter, pycis.model.BandpassFilter):
             self.bandpass_filter = bandpass_filter
 
         elif isinstance(bandpass_filter, str):
@@ -83,40 +72,17 @@ class Instrument(object):
         else:
             raise Exception('argument: bandpass_filter must be of type pycis.model.Camera or string')
 
-        self.bandpass_filter = pycis.model.load_component(name, type='filters')
-        return
+        # TODO include crystal misalignment
+        self.chi = [0, 0]  # placeholder, this will be gotten rid of in time
 
-    def add_crystal(self, name, orientation):
+
+    def calculate_angles(self, display=False):
         """
-
-        :param name: name of saved instance of Crystal
-        :param orientation: orientation of crystal relative to instrument y-axis, see docs.
-        :return: 
-        """
-
-        crystal = pycis.model.load_component(name, type='crystal')
-
-        # check crystal type:
-
-        if isinstance(crystal, pycis.model.Waveplate):
-            self.waveplate = crystal
-            self.wp_orientation = orientation
-
-        elif isinstance(crystal, pycis.model.Savartplate):
-            self.savartplate = crystal
-            self.sp_orientation = orientation
-
-        return
-
-    def get_angles(self, display=False):
-        """
-        Calculates the incidence angles and azimuthal angles for each crystal component, as projected onto
+        Calculate incidence angles and azimuthal angles for each crystal, as projected onto
         the camera's sensor.
         
         returns in radians.
         """
-
-        # some shorthand:
 
         cam = self.camera
         f_3 = self.back_lens.focal_length
@@ -171,6 +137,22 @@ class Instrument(object):
             plt.show()
 
         return inc_angles, azim_angles_wp, azim_angles_sp
+
+    def calculate_phase(self, wl):
+        """
+        accounting for crystal orientation + alignment
+        
+        :param wl: [ m ]
+        :return: 
+        """
+
+        inc_angles, azim_angles_wp, azim_angles_sp = self.calculate_angles()
+
+        phase_wp = pycis.model.uniaxial_crystal(wl, self.waveplate.thickness, inc_angles, azim_angles_wp)
+        phase_sp = pycis.model.savart_plate(wl, self.savartplate.thickness, inc_angles, azim_angles_sp)
+
+
+        pass
 
     def get_snr_intensity(self, line_name, snr):
         """ Given spectral line and desired approximate image snr (central ROI), return the necessary input intensity I0 in units 
@@ -310,18 +292,6 @@ class Instrument(object):
         pickle.dump(self, open(os.path.join(pycis.paths.instrument_path, self.name + '.p'), 'wb'))
         return
 
-if __name__ == '__main__':
-
-    # inst = pycis.model.Instrument('mastu_cdi_508nm')
-    #
-    # inst.add_camera('photron_SA4')
-    # inst.add_lens_3('sigma_150mm')
-    # inst.add_filter('ccfe_CII_m')
-    #
-    # inst.add_crystal('ccfe_4.6mm_waveplate', orientation=3 * np.pi / 4)
-    # inst.add_crystal('ccfe_6.2mm_savartplate', orientation=1 * np.pi / 4)
-    #
-    # inst.save()
-    inst = pycis.model.load_component('mastu_ciii', type='instrument')
-    inst.apply_vignetting()
+# if __name__ == '__main__':
+#     ...
 
