@@ -41,7 +41,6 @@ class Camera(object):
         electron_fluence = photon_fluence * self.qe
 
         if not clean:
-
             # add shot noise
             shot_noise = np.random.poisson(electron_fluence) - electron_fluence
             electron_fluence += shot_noise
@@ -56,9 +55,9 @@ class Camera(object):
         signal = np.digitize(signal, np.arange(0, 2 ** self.bit_depth))
 
         if display:
-            plt.figure()
-            plt.imshow(signal, 'gray')
-            plt.colorbar()
+            fig, ax = plt.subplots()
+            im = ax.imshow(signal, 'gray')
+            cbar = fig.colorbar(im, ax=ax)
             plt.show()
 
         return signal

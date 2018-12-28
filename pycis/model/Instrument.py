@@ -75,7 +75,6 @@ class Instrument(object):
         # TODO include crystal misalignment
         self.chi = [0, 0]  # placeholder, this will be gotten rid of in time
 
-
     def calculate_angles(self, display=False):
         """
         Calculate incidence angles and azimuthal angles for each crystal, as projected onto
@@ -143,7 +142,9 @@ class Instrument(object):
         accounting for crystal orientation + alignment
         
         :param wl: [ m ]
-        :return: 
+        :type wl: scalar or array-like
+        
+        :return: phase [ rad ]
         """
 
         inc_angles, azim_angles_wp, azim_angles_sp = self.calculate_angles()
@@ -151,8 +152,7 @@ class Instrument(object):
         phase_wp = pycis.model.uniaxial_crystal(wl, self.waveplate.thickness, inc_angles, azim_angles_wp)
         phase_sp = pycis.model.savart_plate(wl, self.savartplate.thickness, inc_angles, azim_angles_sp)
 
-
-        pass
+        return phase_wp + phase_sp
 
     def get_snr_intensity(self, line_name, snr):
         """ Given spectral line and desired approximate image snr (central ROI), return the necessary input intensity I0 in units 
@@ -243,7 +243,6 @@ class Instrument(object):
 
         # convert sensor distance to (m)
         sensor_distance *= 1e-3
-
 
         sensor_distance_sym = np.concatenate([-sensor_distance[1:][::-1], sensor_distance])
 

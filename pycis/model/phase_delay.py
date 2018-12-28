@@ -23,7 +23,7 @@ def uniaxial_crystal(wl, thickness, inc_angle, azim_angle, cut_angle=0., materia
     :param material:
     :type material: string
 
-    :return: phase delay [ rad ]
+    :return: phase [ rad ]
     """
 
     biref, n_e, n_o = pycis.model.dispersion(wl, material)
@@ -81,9 +81,9 @@ def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='w
     :param material: 
     :type material: string
     :param mode: source for the equation for phase delay: 'wu' or 'veiras'
-    :type mode: bool
+    :type mode: string
     
-    :return: phase delay [ rad ]
+    :return: phase [ rad ]
     """
 
     if mode == 'wu':
@@ -116,18 +116,18 @@ def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='w
         term_2 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2) ** (3 / 2)) * ((a ** 2) / np.sqrt(2)) * \
                  (np.cos(azim_angle) ** 2 - np.sin(azim_angle) ** 2) * np.sin(inc_angle) ** 2
 
-        phase_sp = 2 * np.pi * (thickness / (2 * wl)) * (term_1 + term_2)
+        phase = 2 * np.pi * (thickness / (2 * wl)) * (term_1 + term_2)
 
     elif mode == 'veiras':
         omega_plate1 = azim_angle
         omega_plate2 = azim_angle - (np.pi / 2)
         thickness_plate = thickness / 2
 
-        phase_sp = -(pycis.model.uniaxial_crystal(wl, thickness_plate, inc_angle, omega_plate1, cut_angle=-np.pi / 4) - \
+        phase = -(pycis.model.uniaxial_crystal(wl, thickness_plate, inc_angle, omega_plate1, cut_angle=-np.pi / 4) - \
                      pycis.model.uniaxial_crystal(wl, thickness_plate, inc_angle, omega_plate2, cut_angle=np.pi / 4))
 
     else:
         raise Exception('invalid mode')
 
-    return phase_sp
+    return phase
 
