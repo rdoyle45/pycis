@@ -2,7 +2,7 @@ import numpy as np
 import pycis
 
 
-def uniaxial_crystal(wl, thickness, inc_angle, azim_angle, cut_angle=0., material='a-BBO'):
+def uniaxial_crystal(wl, thickness, inc_angle, azim_angle, cut_angle=0., material='a-BBO', n_e=None, n_o=None):
     """
     calculate phase delay due to uniaxial crystal.
     
@@ -11,25 +11,40 @@ def uniaxial_crystal(wl, thickness, inc_angle, azim_angle, cut_angle=0., materia
     application to waveplates”
 
     :param wl: wavelength [ m ]
-    :type wl: scalar or array-like
+    :type wl: float or array-like
+    
     :param thickness: [ m ]
-    :type thickness: scalar
+    :type thickness: float
+    
     :param inc_angle: incidence angle [ rad ]
-    :type inc_angle: scalar or array-like
+    :type inc_angle: float or array-like
+    
     :param azim_angle: azimuthal angle [ rad ]
-    :type azim_angle: scalar or array-like
+    :type azim_angle: float or array-like
+    
     :param cut_angle: angle between crystal optic axis and crystal front face [ rad ]
-    :type cut_angle: scalar
+    :type cut_angle: float
+    
     :param material:
     :type material: string
+    
+    :param n_e: manually set extraordinary refractive index (for fitting)
+    :type n_e: float
+    
+    :param n_o: manually set ordinary refractive index (for fitting)
+    :type n_o: float
 
     :return: phase [ rad ]
     """
 
-    biref, n_e, n_o = pycis.model.dispersion(wl, material)
+    # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
+    if n_e and n_o == None:
+        biref, n_e, n_o = pycis.model.dispersion(wl, material)
+    else:
+        assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
 
+    # if wl, theta and omega are arrays, vectorise
     if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(inc_angle) and not pycis.tools.is_scalar(azim_angle):
-        # wl, theta and omega are arrays
 
         img_dim = inc_angle.shape
         assert img_dim == azim_angle.shape
@@ -46,6 +61,7 @@ def uniaxial_crystal(wl, thickness, inc_angle, azim_angle, cut_angle=0., materia
         inc_angle = np.moveaxis(np.tile(inc_angle, reps_img), 0, -1)
         azim_angle = np.moveaxis(np.tile(azim_angle, reps_img), 0, -1)
 
+    # calculation
     term_1 = np.sqrt(n_o ** 2 - np.sin(inc_angle) ** 2)
 
     term_2 = (n_o ** 2 - n_e ** 2) * \
@@ -61,7 +77,7 @@ def uniaxial_crystal(wl, thickness, inc_angle, azim_angle, cut_angle=0., materia
     return 2 * np.pi * (thickness / wl) * (term_1 + term_2 + term_3)
 
 
-def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='wu'):
+def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='francon', n_e=None, n_o=None):
     """
     calculate phase delay due to Savart plate.
     
@@ -71,30 +87,45 @@ def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='w
     pp. 67–73. issn: 00304018. doi: 10.1016/j.optcom.2006.12.034.
     
     :param wl: wavelength [ m ]
-    :type wl: scalar or array-like
+    :type wl: float or array-like
+    
     :param thickness: [ m ]
-    :type thickness: scalar
+    :type thickness: float
+    
     :param inc_angle: incidence angle [ rad ]
-    :type inc_angle: scalar or array-like
+    :type inc_angle: float or array-like
+    
     :param azim_angle: azimuthal angle [ rad ]
-    :type azim_angle: scalar or array-like
+    :type azim_angle: float or array-like
+    
     :param material: 
     :type material: string
+    
     :param mode: source for the equation for phase delay: 'wu' or 'veiras'
     :type mode: string
+    
+    :param n_e: manually set extraordinary refractive index (for fitting)
+    :type n_e: float
+    
+    :param n_o: manually set ordinary refractive index (for fitting)
+    :type n_o: float
     
     :return: phase [ rad ]
     """
 
-    if mode == 'wu':
+    if mode == 'francon':
 
-        biref, n_e, n_o = pycis.model.dispersion(wl, material)
+        # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
+        if n_e and n_o == None:
+            biref, n_e, n_o = pycis.model.dispersion(wl, material)
+        else:
+            assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
 
         a = 1 / n_e
         b = 1 / n_o
 
+        # if wl, theta and omega are arrays, vectorise
         if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(inc_angle) and not pycis.tools.is_scalar(azim_angle):
-            # wl, theta and omega are arrays
 
             img_dim = inc_angle.shape
             assert img_dim == azim_angle.shape
@@ -111,6 +142,7 @@ def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='w
             inc_angle = np.moveaxis(np.tile(inc_angle, reps_img), 0, -1)
             azim_angle = np.moveaxis(np.tile(azim_angle, reps_img), 0, -1)
 
+        # calculation
         term_1 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2)) * (np.cos(azim_angle) + np.sin(azim_angle)) * np.sin(inc_angle)
 
         term_2 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2) ** (3 / 2)) * ((a ** 2) / np.sqrt(2)) * \
@@ -119,12 +151,13 @@ def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='w
         phase = 2 * np.pi * (thickness / (2 * wl)) * (term_1 + term_2)
 
     elif mode == 'veiras':
-        omega_plate1 = azim_angle
-        omega_plate2 = azim_angle - (np.pi / 2)
-        thickness_plate = thickness / 2
 
-        phase = -(pycis.model.uniaxial_crystal(wl, thickness_plate, inc_angle, omega_plate1, cut_angle=-np.pi / 4) - \
-                     pycis.model.uniaxial_crystal(wl, thickness_plate, inc_angle, omega_plate2, cut_angle=np.pi / 4))
+        omega_1 = azim_angle
+        omega_2 = azim_angle - (np.pi / 2)
+        t = thickness / 2
+
+        phase = uniaxial_crystal(wl, t, inc_angle, omega_1, cut_angle=-np.pi / 4, n_e=n_e, n_o=n_o) - \
+                uniaxial_crystal(wl, t, inc_angle, omega_2, cut_angle=np.pi / 4, n_e=n_e, n_o=n_o)
 
     else:
         raise Exception('invalid mode')
