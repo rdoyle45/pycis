@@ -75,30 +75,44 @@ class Instrument(object):
         # TODO include crystal misalignment
         self.chi = [0, 0]  # placeholder, this will be gotten rid of in time
 
-    def calculate_angles(self, display=False):
+    def calculate_angles(self, downsample=None, display=False):
         """
         Calculate incidence angles and azimuthal angles for each crystal, as projected onto
         the camera's sensor.
         
         returns in radians.
+        
+        :param downsample: defaults to None, downsample the data for fitting
+        :param display: 
+        :return: 
         """
 
         cam = self.camera
         f_3 = self.back_lens.focal_length
 
         # Define x,y detector coordinates:
+        #
+        # tilt_offset_y = f_3 * np.tan(self.chi[0])  # vertical tilt
+        # tilt_offset_x = f_3 * np.tan(self.chi[1])  # horizontal tilt
 
-        tilt_offset_y = f_3 * np.tan(self.chi[0])  # vertical tilt
-        tilt_offset_x = f_3 * np.tan(self.chi[1])  # horizontal tilt
+        centre = [(cam.pix_size * (cam.sensor_dim[0] - 2) / 2),  # + tilt_offset_y,
+                  (cam.pix_size * (cam.sensor_dim[1] - 2) / 2)]  # + tilt_offset_x]
 
-        centre = [(cam.pix_size * (cam.sensor_dim[0] - 2) / 2) + tilt_offset_y,
-                  (cam.pix_size * (cam.sensor_dim[1] - 2) / 2) + tilt_offset_x]
+
         y_pos = np.arange(0, cam.sensor_dim[0])
-        y_pos = (y_pos - 0.5) * cam.pix_size - centre[0]  # [m]
         x_pos = np.arange(0, cam.sensor_dim[1])
+        # else:
+        #     y_pos = np.arange(0, cam.sensor_dim[0])[::downsample]
+        #     x_pos = np.arange(0, cam.sensor_dim[1])[::downsample]
+
+        y_pos = (y_pos - 0.5) * cam.pix_size - centre[0]  # [m]
         x_pos = (x_pos - 0.5) * cam.pix_size - centre[1]  # [m]
 
         x, y = np.meshgrid(x_pos, y_pos)
+
+        if downsample is not None:
+            x = x[::downsample, ::downsample]
+            y = y[::downsample, ::downsample]
 
         # assuming for now that waveplate and Savart plate are parallel and perfectly alligned, their incidence angle
         # projections are now the same.
@@ -137,7 +151,7 @@ class Instrument(object):
 
         return inc_angles, azim_angles_wp, azim_angles_sp
 
-    def calculate_phase(self, wl):
+    def calculate_phase(self, wl, n_e=None, n_o=None, downsample=None):
         """
         accounting for crystal orientation + alignment
         
@@ -147,10 +161,12 @@ class Instrument(object):
         :return: phase [ rad ]
         """
 
-        inc_angles, azim_angles_wp, azim_angles_sp = self.calculate_angles()
+        inc_angles, azim_angles_wp, azim_angles_sp = self.calculate_angles(downsample=downsample)
 
-        phase_wp = pycis.model.uniaxial_crystal(wl, self.waveplate.thickness, inc_angles, azim_angles_wp)
-        phase_sp = pycis.model.savart_plate(wl, self.savartplate.thickness, inc_angles, azim_angles_sp)
+        phase_wp = pycis.model.uniaxial_crystal(wl, self.waveplate.thickness, inc_angles, azim_angles_wp, n_e=n_e,
+                                                n_o=n_o)
+        phase_sp = pycis.model.savart_plate(wl, self.savartplate.thickness, inc_angles, azim_angles_sp, n_e=n_e,
+                                            n_o=n_o)
 
         return phase_wp + phase_sp
 

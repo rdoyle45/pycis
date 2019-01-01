@@ -71,7 +71,7 @@ class SynthImage(object):
         """"""
 
         plt.figure(figsize=(8, 6))
-        plt.imshow(param, colormap, interpolation='nearest', **kwargs)
+        plt.imshow(param, colormap, origin='lower', interpolation='nearest', **kwargs)
 
         label_size = 15
         plt.xlabel('x pixel', size=label_size)

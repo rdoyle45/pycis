@@ -38,7 +38,7 @@ def uniaxial_crystal(wl, thickness, inc_angle, azim_angle, cut_angle=0., materia
     """
 
     # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
-    if n_e and n_o == None:
+    if n_e is None and n_o is None:
         biref, n_e, n_o = pycis.model.dispersion(wl, material)
     else:
         assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
@@ -116,7 +116,7 @@ def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='f
     if mode == 'francon':
 
         # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
-        if n_e and n_o == None:
+        if n_e is None and n_o is None:
             biref, n_e, n_o = pycis.model.dispersion(wl, material)
         else:
             assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
@@ -148,7 +148,8 @@ def savart_plate(wl, thickness, inc_angle, azim_angle, material='a-BBO', mode='f
         term_2 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2) ** (3 / 2)) * ((a ** 2) / np.sqrt(2)) * \
                  (np.cos(azim_angle) ** 2 - np.sin(azim_angle) ** 2) * np.sin(inc_angle) ** 2
 
-        phase = 2 * np.pi * (thickness / (2 * wl)) * (term_1 + term_2)
+        # minus sign here makes the OPD calculation consistent with veiras
+        phase = 2 * np.pi * - (thickness / (2 * wl)) * (term_1 + term_2)
 
     elif mode == 'veiras':
 

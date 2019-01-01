@@ -42,7 +42,7 @@ def fourier_demod_2d(img, despeckle=False, end_region_mask=False, uncertainty_pa
 
     # generate window function
     fft_length = int(img.shape[0] / 2)
-    window_1d = pycis.demod.window(fft_length, nfringes, width_factor=0.75, fn='tukey')
+    window_1d = pycis.demod.window(fft_length, nfringes, width_factor=0.9, fn='tukey')
     window_2d = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
 
     if end_region_mask:

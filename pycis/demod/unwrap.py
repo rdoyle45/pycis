@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def unwrap(phase, centre=True):
+def unwrap(phase, flipwrap=False, centre=True):
     """ 
     1D and 2D phase unwrapping for CIS interferograms.
      
@@ -20,7 +20,7 @@ def unwrap(phase, centre=True):
     :param phase: Input phase in radians, 1-D or 2-D.
     :type phase: array_like
     :param centre: Unwrap the phase such that the centre of the input array is wrapped. 
-    :type centre: bool.
+    :type centre: bool
     
     :return: Unwrapped phase (radians).
     """
@@ -45,6 +45,9 @@ def unwrap(phase, centre=True):
 
     elif phase.ndim == 2:
         # pseudo 2D phase unwrap:
+
+        if flipwrap:
+            phase = np.flipud(phase)
 
         y_pix, x_pix = np.shape(phase)
         phase_contour = -np.unwrap(phase[int(np.round(y_pix / 2)), :])
@@ -72,6 +75,11 @@ def unwrap(phase, centre=True):
                 while abs(phase_uw_centre) > np.pi:
                     phase_uw += 2 * np.pi
                     phase_uw_centre = phase_uw[y_centre_idx, x_centre_idx]
+
+        if flipwrap:
+            phase_uw = np.flipud(phase_uw)
+                    
+
 
     else:
         raise Exception('# ERROR #   Phase input must be 1D or 2D array_like.')
