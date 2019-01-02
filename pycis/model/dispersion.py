@@ -46,13 +46,13 @@ default_sources = {'a-BBO': 'newlightphotonics',
                    'YVO': 'shi'}
 
 
-def dispersion(wl, material, output_higher_order_terms=False, source=None):
+def dispersion(wl, material, output_derivatives=False, source=None):
     """
     
     :param wl: [ m ]
     :param material: 'a-BBO', 'b-BBO', 'calcite', 'YVO' 
     :param source: 
-    :param output_higher_order_terms: If derivative info is needed select True
+    :param output_derivatives: If info on birefringence derivatives wrt. wavelength is needed, smash True
     :return: 
     """
 
@@ -61,27 +61,28 @@ def dispersion(wl, material, output_higher_order_terms=False, source=None):
 
     dd = d[source]
     sellmeier_coefs = dd['sellmeier_coefs']
+    form = dd['sellmeier_eqn_form']
     sc_e = sellmeier_coefs['e']
     sc_o = sellmeier_coefs['o']
 
     wl_mic = wl * 1e6
-    n_e = sellmeier_eqn(wl_mic, sc_e, form=dd['sellmeier_eqn_form'])
-    n_o = sellmeier_eqn(wl_mic, sc_o, form=dd['sellmeier_eqn_form'])
+    n_e = sellmeier_eqn(wl_mic, sc_e, form=form)
+    n_o = sellmeier_eqn(wl_mic, sc_o, form=form)
 
     biref = n_e - n_o
     
-    if output_higher_order_terms is False:
+    if output_derivatives is False:
         return biref, n_e, n_o
 
     # first symmetric derivative of birefringence wrt. wavelength
-    biref_deriv1 = (biref_dif(wl_mic, 1, sc_e, sc_o) - biref_dif(wl_mic, -1, sc_e, sc_o)) / (2 * d_lambda)
+    biref_deriv1 = (biref_dif(wl_mic, 1, sc_e, sc_o, form) - biref_dif(wl_mic, -1, sc_e, sc_o, form)) / (2 * d_lambda)
 
     # second symmetric derivative of birefringence wrt. wavelength
-    biref_deriv2 = (biref_dif(wl_mic, 1, sc_e, sc_o) - (2 * biref) + biref_dif(wl_mic, -1, sc_e, sc_o)) / (d_lambda ** 2)
+    biref_deriv2 = (biref_dif(wl_mic, 1, sc_e, sc_o, form) - (2 * biref) + biref_dif(wl_mic, -1, sc_e, sc_o, form)) / (d_lambda ** 2)
 
     # third symmetric derivative of birefringence wrt. wavelength
-    biref_deriv3 = (biref_dif(wl_mic, 1.5, sc_e, sc_o) - (3 * biref_dif(wl_mic, 0.5, sc_e, sc_o)) + (
-                   3. * biref_dif(wl_mic, -0.5, sc_e, sc_o)) - biref_dif(wl_mic, -1.5, sc_e, sc_o)) / (d_lambda ** 3)
+    biref_deriv3 = (biref_dif(wl_mic, 1.5, sc_e, sc_o, form) - (3 * biref_dif(wl_mic, 0.5, sc_e, sc_o, form)) + (
+                   3. * biref_dif(wl_mic, -0.5, sc_e, sc_o, form)) - biref_dif(wl_mic, -1.5, sc_e, sc_o, form)) / (d_lambda ** 3)
 
     # first order dispersion factor kappa:
     kappa = 1 - (wl / biref) * biref_deriv1
@@ -104,13 +105,13 @@ def sellmeier_eqn(wl_mic, sellmeier_coefs, form):
         return (sellmeier_coefs[0] + (sellmeier_coefs[1] / ((wl_mic ** 2) + sellmeier_coefs[2])) + (sellmeier_coefs[3] / ((wl_mic ** 2) + sellmeier_coefs[4]))) ** 0.5
 
 
-def biref_dif(wl_mic, dif_coef, sellmeier_coefs_e, sellmeier_coefs_o):
+def biref_dif(wl_mic, dif_coef, sellmeier_coefs_e, sellmeier_coefs_o, form):
     """ 
     calculate birefringence at some product of d_lambda distance from wavelength. 
     """
 
     wl_dif = wl_mic + (dif_coef * d_lambda_micron)
-    return sellmeier_eqn(wl_dif, sellmeier_coefs_e) - sellmeier_eqn(wl_dif, sellmeier_coefs_o)
+    return sellmeier_eqn(wl_dif, sellmeier_coefs_e, form=form) - sellmeier_eqn(wl_dif, sellmeier_coefs_o, form=form)
 
 
 

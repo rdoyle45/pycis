@@ -101,7 +101,7 @@ def fourier_demod_2d(img, despeckle=False, end_region_mask=False, uncertainty_pa
 
         # calculate 'power gain' of the filter windows used
         y_arr_window = np.arange(0, fft_length + 1)
-        x_arr_window = np.arange(0, np.shape(img)[0]) - fft_length
+        x_arr_window = np.arange(0, np.shape(img)[1]) - fft_length
 
         x_mesh_window, y_mesh_window = np.meshgrid(x_arr_window, y_arr_window)
 

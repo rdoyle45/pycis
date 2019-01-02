@@ -32,6 +32,33 @@ def demod_function(img, display=False):
     return pycis.demod.fourier_demod_2d(img, display=display)
 
 
+def downsample(img, f):
+    """
+    
+    :param img: input image
+    :param f: downsampling factor
+    :return: 
+    """
+
+    assert isinstance(img, np.ndarray)
+    assert img.ndim == 2
+
+    return img[::f, ::f]
+
+def letterbox(img, f):
+    """
+    
+    :param img: 
+    :param f: 
+    :return: 
+    """
+
+    assert isinstance(img, np.ndarray)
+    assert img.ndim == 2
+
+    return img[f:-f, :]
+
+
 def linearity_correction():
 
 

@@ -711,12 +711,11 @@ class SynthImagePhaseCalib(SynthImage):
         self.igram = self.measure(self.igram_ph)
         self.dc = self.measure(self.dc_ph, clean=True)
 
-        # wrap-unwrap
-        self.phase = pycis.demod.wrap(self.phase)
-        self.phase = pycis.demod.unwrap(self.phase)
+        phase_onaxis = pycis.model.uniaxial_crystal(self.spectra['wl'], self.instrument.waveplate.thickness, 0, 0, 0)
+        self.phase -= divmod(phase_onaxis, 2 * np.pi)[0] * 2 * np.pi
 
         # uncertainty
-        self.intensity_demod, self.phase_demod, self.contrast_demod = self._demod()
+        # self.intensity_demod, self.phase_demod, self.contrast_demod = self._demod()
 
     def _make(self):
         """ Create synthetic image."""
