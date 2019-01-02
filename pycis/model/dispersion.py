@@ -49,9 +49,9 @@ default_sources = {'a-BBO': 'newlightphotonics',
 def dispersion(wl, material, output_derivatives=False, source=None):
     """
     
-    :param wl: [ m ]
-    :param material: 'a-BBO', 'b-BBO', 'calcite', 'YVO' 
-    :param source: 
+    :param wl: wavelength [ m ]
+    :param material: valid: 'a-BBO', 'b-BBO', 'calcite', 'YVO' 
+    :param source: shorthand citation for author
     :param output_derivatives: If info on birefringence derivatives wrt. wavelength is needed, smash True
     :return: 
     """

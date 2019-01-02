@@ -49,11 +49,7 @@ def unwrap(phase, centre=True):
         y_pix, x_pix = np.shape(phase)
         phase_contour = -np.unwrap(phase[int(np.round(y_pix / 2)), :])
 
-        # sequentially unwrap image columns:
-        phase_uw_col = np.zeros_like(phase)
-        for i in range(0, x_pix):
-            phase_uw_col[:, i] = np.unwrap(phase[:, i])
-
+        phase_uw_col = np.unwrap(phase, axis=0)
         phase_contour = phase_contour + phase_uw_col[int(np.round(y_pix/2)), :]
         phase_0 = np.tile(phase_contour, [y_pix, 1])
         phase_uw = phase_uw_col - phase_0

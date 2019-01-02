@@ -15,12 +15,7 @@ raw_col = raw_img[:, 676]
 # dc_col, phase_col, contrast_col = pycis.uncertainty.fd_column(raw_col, display=True)
 
 # demodulate entire image:
-# dc_img, phase_img, contrast_img = pycis.uncertainty.fd_image_1d(raw_img, despeckle=False, display=True)
-dc_img, phase_img, contrast_img = pycis.demod.fourier_demod_2d(raw_img, despeckle=True, display=True)
-
-
-# DEMOD EXAMPLE 2: Generate and then demodulate synthetic CIS tabulated_data - with comparison to input to assess demodulation
-# accuracy
+dc_img, phase_img, contrast_img = pycis.fourier_demod_2d(raw_img, despeckle=True, display=True)
 
 
 

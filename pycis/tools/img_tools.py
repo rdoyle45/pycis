@@ -45,6 +45,7 @@ def downsample(img, f):
 
     return img[::f, ::f]
 
+
 def letterbox(img, f):
     """
     
@@ -612,17 +613,6 @@ def get_quick_mask(img, frac=0.2, display=False):
         plt.show()
 
     return mask
-
-
-if __name__ == '__main__':
-    # convert_predicted_cis_vignetting_from_matlab_to_npy()
-    # compare_filters()
-    plot_lamps()
-    # get_img('/Users/jsallcock/Documents/physics/phd/collaborations/SWIP_2018/tabulated_data/ambient_drift/2/001_05/001.tif', display=True)
-    # get_img_stack('/Users/jsallcock/Documents/physics/phd/collaborations/SWIP_2018/tabulated_data/group_delay/4.48mm_15/ZnI_', display=True)
-
-    pass
-
 
 
 
