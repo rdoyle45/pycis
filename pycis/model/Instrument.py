@@ -9,9 +9,9 @@ import scipy.interpolate
 
 
 class Instrument(object):
-    """ CIS instrument class. Facilitates synthetic image generation.
-     
-     Currently, only supports single waveplate and Savartplate """
+    """ 
+    CIS instrument class. Facilitates synthetic image generation.
+    """
 
     def __init__(self, name, camera, back_lens, crystals, crystal_orientations, bandpass_filter=None,
                  instrument_contrast=0.5):
@@ -47,18 +47,11 @@ class Instrument(object):
             raise Exception('argument: lens must be of type pycis.model.Camera or string')
 
         # crystals
-        for crystal, orientation in zip(crystals, crystal_orientations):
-            if isinstance(crystal, str):
-                crystal = pycis.model.load_component(crystal, type='crystal')
+        assert all(isinstance(c, pycis.model.Crystal) for c in crystals)
+        assert all(isinstance(co, float) for co in crystal_orientations)
 
-            # check waveplate or Savartplate:
-            if isinstance(crystal, pycis.model.Waveplate):
-                self.waveplate = crystal
-                self.wp_orientation = orientation
-
-            elif isinstance(crystal, pycis.model.Savartplate):
-                self.savartplate = crystal
-                self.sp_orientation = orientation
+        self.crystals = crystals
+        self.crystal_orientations = crystal_orientations
 
         # bandpass_filter
         if bandpass_filter is None:
@@ -76,21 +69,18 @@ class Instrument(object):
         # TODO include crystal misalignment
         self.chi = [0, 0]  # placeholder, this will be gotten rid of in time
 
-    def calculate_angles(self, downsample=None, letterbox=None, display=False):
+    def calculate_ray_angles(self, downsample=None, letterbox=None, display=False):
         """
-        Calculate incidence angles and azimuthal angles for each crystal, as projected onto
-        the camera's sensor.
-        
-        returns in radians.
+        Calculate incidence and azimuthal angles for each pixel's 'sightline' through each crystal
         
         :param downsample: defaults to None, downsample the data for fitting
+        :param letterbox:
         :param display: 
-        :return: 
+        :return: inc_angles, azim_angles [ rad ]
         """
 
         cam = self.camera
         f_3 = self.back_lens.focal_length
-
         sensor_dim = list(copy.copy(cam.sensor_dim))
 
         if letterbox is not None:
@@ -116,31 +106,25 @@ class Instrument(object):
 
         x, y = np.meshgrid(x_pos, y_pos)
 
-        # if downsample is not None:
-        #     x = x[::downsample, ::downsample]
-        #     y = y[::downsample, ::downsample]
-
         # assuming for now that waveplate and Savart plate are parallel and perfectly alligned, their incidence angle
         # projections are now the same.
 
         inc_angles = np.arctan2(np.sqrt(x ** 2 + y ** 2), f_3)
 
-        # azimuthal angles may differ so must be calculated separately:
+        # azimuthal angles vary with crystal so are calculated separately
+        crystal_azim_angles = []
 
-        # Rotate x, y coordinates by crystal orientation angle:
+        for crystal, crystal_orientation in zip(self.crystals, self.crystal_orientations):
 
-        x_rot_wp = (np.cos(self.wp_orientation) * x) + (np.sin(self.wp_orientation) * y)
-        y_rot_wp = (- np.sin(self.wp_orientation) * x) + (np.cos(self.wp_orientation) * y)
+            # Rotate x, y coordinates by crystal orientation:
+            x_rot = (np.cos(crystal_orientation) * x) + (np.sin(crystal_orientation) * y)
+            y_rot = (- np.sin(crystal_orientation) * x) + (np.cos(crystal_orientation) * y)
 
-        x_rot_sp = (np.cos(self.sp_orientation) * x) + (np.sin(self.sp_orientation) * y)
-        y_rot_sp = (- np.sin(self.sp_orientation) * x) + (np.cos(self.sp_orientation) * y)
-
-        # calculate incidence and azimuthal angles:
-
-        azim_angles_wp = np.arctan2(x_rot_wp, y_rot_wp)
-        azim_angles_sp = np.arctan2(x_rot_sp, y_rot_sp)
+            crystal_azim_angles.append(np.arctan2(x_rot, y_rot))
 
         if display:
+            # TODO account for multiple crystals
+            num_crystals = len(crystal_azim_angles)
 
             fig1 = plt.figure()
             ax1 = fig1.add_subplot(121)
@@ -149,15 +133,15 @@ class Instrument(object):
             im1 = ax1.imshow(inc_angles)
             cbar = plt.colorbar(im1, ax=ax1)
 
-            im2 = ax2.imshow(azim_angles_wp)
+            im2 = ax2.imshow(crystal_azim_angles)
             cbar = plt.colorbar(im2, ax=ax2)
 
             plt.tight_layout()
             plt.show()
 
-        return inc_angles, azim_angles_wp, azim_angles_sp
+        return inc_angles, crystal_azim_angles
 
-    def calculate_phase(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
+    def calculate_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
         """
         accounting for crystal orientation + alignment
         
@@ -171,21 +155,23 @@ class Instrument(object):
         """
 
         # calculate the angles of each pixel's line of sight through the interferometer
-        inc_angles, azim_angles_wp, azim_angles_sp = self.calculate_angles(downsample=downsample, letterbox=letterbox)
+        inc_angles, crystal_azim_angles = self.calculate_ray_angles(downsample=downsample, letterbox=letterbox)
 
-        # phase delay due to waveplate and savart plate
-        phase_wp = pycis.uniaxial_crystal(wl, self.waveplate.thickness, inc_angles, azim_angles_wp, n_e=n_e, n_o=n_o)
-        phase_sp = pycis.savart_plate(wl, self.savartplate.thickness, inc_angles, azim_angles_sp, n_e=n_e, n_o=n_o)
-
-        phase_tot = phase_wp + phase_sp
+        # calculate phase delay contribution due to each crystal
+        phase = 0
+        for crystal, azim_angles in zip(self.crystals, crystal_azim_angles):
+            phase += crystal.calculate_phase_delay(wl, inc_angles, azim_angles, n_e=n_e, n_o=n_o)
 
         if not output_components:
-            return phase_tot
+            return phase
 
         else:
             # calculate the phase_offset and phase_shape
-            phase_offset = pycis.uniaxial_crystal(wl, self.waveplate.thickness, 0, 0)
-            phase_shape = phase_tot - phase_offset
+            phase_offset = 0
+            for crystal in self.crystals:
+                phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
+
+            phase_shape = phase - phase_offset
 
             return phase_offset, phase_shape
 
@@ -211,7 +197,6 @@ class Instrument(object):
         a = (t_filter * qe) ** 2
         b = - snr ** 2 * t_filter * qe
         c = - (snr * sigma_cam_e) ** 2
-
 
         i0_1 = (-b + np.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
         i0_2 = (-b - np.sqrt(b ** 2 - 4 * a * c)) / (2 * a)

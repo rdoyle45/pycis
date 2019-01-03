@@ -322,7 +322,7 @@ class SynthImageCherab(SynthImage):
         wls = self.spectra.wavelength_axis
         spectra = self.spectra.spectra
 
-        inc_angles, azim_angles_wp, azim_angles_sp = inst.calculate_angles()
+        inc_angles, azim_angles_wp, azim_angles_sp = inst.calculate_ray_angles()
 
         I0 = np.trapz(spectra, axis=-1)
         norm_spectra = spectra / np.moveaxis(np.tile(I0, [len(wls), 1, 1]), 0, -1)
@@ -345,7 +345,7 @@ class SynthImageCherab(SynthImage):
         wls = self.spectra.wavelength_axis
         spectra = self.spectra.spectra
 
-        inc_angles, azim_angles_wp, azim_angles_sp = self.inst.calculate_angles()
+        inc_angles, azim_angles_wp, azim_angles_sp = self.inst.calculate_ray_angles()
 
         I0 = np.trapz(spectra, axis=-1)
         normalised_spectra = spectra / np.moveaxis(np.tile(I0, [len(wls), 1, 1]), 0, -1)
@@ -723,7 +723,7 @@ class SynthImagePhaseCalib(SynthImage):
         wl = self.spectra['wl']
         spec = self.spectra['spec']
         units = self.spectra['spec units']
-        phase = self.instrument.calculate_phase(wl)
+        phase = self.instrument.calculate_phase_delay(wl)
 
         if pycis.tools.is_scalar(wl):
 
@@ -800,7 +800,7 @@ if __name__ == '__main__':
 
     sp_name = 'ccfe_savart_plate_4mm'
     sp_thickness = 4e-3
-    sp = pycis.model.Savartplate(sp_name, sp_thickness)
+    sp = pycis.model.SavartPlate(sp_name, sp_thickness)
 
     wp_name = 'ccfe_wave_plate_4.48mm'
     wp_thickness = 4.48e-3
