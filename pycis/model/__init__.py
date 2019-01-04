@@ -1,5 +1,5 @@
 from .camera import *
-from .crystals import *
+from .interferometer import *
 from .bandpass_filter import *
 from .instrument import *
 from .lens import *

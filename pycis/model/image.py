@@ -711,8 +711,8 @@ class SynthImagePhaseCalib(SynthImage):
         self.igram = self.measure(self.igram_ph)
         self.dc = self.measure(self.dc_ph, clean=True)
 
-        phase_onaxis = pycis.model.uniaxial_crystal(self.spectra['wl'], self.instrument.waveplate.thickness, 0, 0, 0)
-        self.phase -= divmod(phase_onaxis, 2 * np.pi)[0] * 2 * np.pi
+        phase_offset = self.instrument.calculate_phase_offset(self.spectra['wl'])
+        self.phase -= divmod(phase_offset, 2 * np.pi)[0] * 2 * np.pi
 
         # uncertainty
         # self.intensity_demod, self.phase_demod, self.contrast_demod = self._demod()
@@ -759,7 +759,10 @@ class SynthImagePhaseCalib(SynthImage):
             dc_ph = np.trapz(spec, axis=-1) / 2
             normalised_spectra = spec / np.moveaxis(np.tile(2 * dc_ph, [len(wl), 1, 1]), 0, -1)
             normalised_spectra[np.isnan(normalised_spectra)] = 0.
+
             degree_coherence = np.trapz(normalised_spectra * np.exp(1j * phase), axis=-1)
+
+            phase = np.angle(degree_coherence)
             contrast = np.abs(degree_coherence) * self.instrument.instrument_contrast
 
         igram_ph = dc_ph * (1 + contrast * np.cos(phase))
