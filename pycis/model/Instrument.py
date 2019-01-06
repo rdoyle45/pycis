@@ -13,7 +13,7 @@ class Instrument(object):
     CIS instrument class. Facilitates synthetic image generation.
     """
 
-    def __init__(self, name, camera, back_lens, crystals, crystal_orientations, bandpass_filter=None,
+    def __init__(self, name, camera, back_lens, crystals, bandpass_filter=None,
                  instrument_contrast=0.5):
         """
         
@@ -48,10 +48,8 @@ class Instrument(object):
 
         # crystals
         assert all(isinstance(c, pycis.model.BirefringentComponent) for c in crystals)
-        assert all(isinstance(co, float) for co in crystal_orientations)
 
         self.crystals = crystals
-        self.crystal_orientations = crystal_orientations
 
         # bandpass_filter
         if bandpass_filter is None:
@@ -114,11 +112,13 @@ class Instrument(object):
         # azimuthal angles vary with crystal so are calculated separately
         crystal_azim_angles = []
 
-        for crystal, crystal_orientation in zip(self.crystals, self.crystal_orientations):
+        for crystal in self.crystals:
+
+            orientation = crystal.orientation
 
             # Rotate x, y coordinates by crystal orientation:
-            x_rot = (np.cos(crystal_orientation) * x) + (np.sin(crystal_orientation) * y)
-            y_rot = (- np.sin(crystal_orientation) * x) + (np.cos(crystal_orientation) * y)
+            x_rot = (np.cos(orientation) * x) + (np.sin(orientation) * y)
+            y_rot = (- np.sin(orientation) * x) + (np.cos(orientation) * y)
 
             crystal_azim_angles.append(np.arctan2(x_rot, y_rot))
 
@@ -140,6 +140,27 @@ class Instrument(object):
             plt.show()
 
         return inc_angles, crystal_azim_angles
+
+    def calculate_mueller_matrix(self, wl):
+        """ calculate the total Mueller matrix for the interferometer at specified wavelength / s """
+
+        # calculate the angles of each pixel's line of sight through the interferometer
+        inc_angles, crystal_azim_angles = self.calculate_ray_angles()
+
+        polariser_1 = pycis.LinearPolariser(0)
+        polariser_2 = pycis.LinearPolariser(0)
+
+        mueller_mat = polariser_1.calculate_mueller_mat()
+        fmt = 'ij...,jl...->il...'
+
+        for crystal, azim_angles in zip(self.crystals, crystal_azim_angles):
+            # matrix multiplication
+            mueller_mat = np.einsum(fmt, crystal.calculate_mueller_mat(wl, inc_angles, azim_angles), mueller_mat)
+
+        mueller_mat = np.einsum(fmt, polariser_2.calculate_mueller_mat(), mueller_mat)
+
+        return mueller_mat
+
 
     def calculate_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
         """

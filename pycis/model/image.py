@@ -706,13 +706,13 @@ class SynthImagePhaseCalib(SynthImage):
         super().__init__(instrument, spectra, name)
 
         # generate synthetic image:
-        self.igram_ph, self.dc_ph, self.phase, self.contrast = self._make()
+        self.igram_ph, self.dc_ph = self._make()
 
         self.igram = self.measure(self.igram_ph)
         self.dc = self.measure(self.dc_ph, clean=True)
 
-        phase_offset = self.instrument.calculate_phase_offset(self.spectra['wl'])
-        self.phase -= divmod(phase_offset, 2 * np.pi)[0] * 2 * np.pi
+        # phase_offset = self.instrument.calculate_phase_offset(self.spectra['wl'])
+        # self.phase -= divmod(phase_offset, 2 * np.pi)[0] * 2 * np.pi
 
         # uncertainty
         # self.intensity_demod, self.phase_demod, self.contrast_demod = self._demod()
@@ -760,14 +760,15 @@ class SynthImagePhaseCalib(SynthImage):
             normalised_spectra = spec / np.moveaxis(np.tile(2 * dc_ph, [len(wl), 1, 1]), 0, -1)
             normalised_spectra[np.isnan(normalised_spectra)] = 0.
 
-            degree_coherence = np.trapz(normalised_spectra * np.exp(1j * phase), axis=-1)
+        a0 = np.zeros_like(dc_ph)
+        stokes_vector_in = np.array([dc_ph, a0, a0, a0])
 
-            phase = np.angle(degree_coherence)
-            contrast = np.abs(degree_coherence) * self.instrument.instrument_contrast
+        fmt = 'ij...,j...->i...'
+        instrument_mueller_mat = self.instrument.calculate_mueller_matrix(wl)
+        stokes_vector_out = np.einsum(fmt, instrument_mueller_mat, stokes_vector_in)
+        igram_ph = stokes_vector_out[0]
 
-        igram_ph = dc_ph * (1 + contrast * np.cos(phase))
-
-        return igram_ph, dc_ph, phase, contrast
+        return igram_ph, dc_ph
 
 
 def create_synth_image(instrument, spectra, name):

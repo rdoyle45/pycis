@@ -11,19 +11,6 @@ class InterferometerComponent:
         """
 
         self.orientation = orientation
-        # rotation matrices account for component orientation
-        self.mueller_mat = self.calculate_rot_mat(-orientation) @ \
-                           self.calculate_mueller_mat() @ \
-                           self.calculate_rot_mat(orientation)
-
-    def __mul__(self, mat):
-        return np.matmul(self.mueller_mat, mat)
-
-    def __rmul__(self, mat):
-        return np.matmul(mat, self.mueller_mat)
-
-    def calculate_mueller_mat(self):
-        raise NotImplementedError()
 
     @staticmethod
     def calculate_rot_mat(angle):
@@ -36,7 +23,19 @@ class InterferometerComponent:
         return np.array([[1, 0, 0, 0],
                          [0, np.cos(angle), np.sin(angle), 0],
                          [0, -np.sin(angle), np.cos(angle), 0],
-                         [0, 0, 0, 1]], dtype=np.float)
+                         [0, 0, 0, 1]])
+
+    def orient(self, mat):
+        """
+        account for orientation of interferometer component with given vertical Mueller matrix
+        :param mueller_mat: 
+        :return: 
+        """
+
+        fmt = 'ij...,jl...->il...'
+        mat_rot = np.einsum(fmt, self.calculate_rot_mat(-self.orientation), mat)
+
+        return np.einsum(fmt, mat_rot, self.calculate_rot_mat(self.orientation))
 
 
 class LinearPolariser(InterferometerComponent):
@@ -45,11 +44,15 @@ class LinearPolariser(InterferometerComponent):
     def __init__(self, orientation):
         super().__init__(orientation)
 
+
     def calculate_mueller_mat(self):
-        return 0.5 * np.array([[1, -1, 0, 0],
-                               [-1, 1, 0, 0],
-                               [0, 0, 0, 0],
-                               [0, 0, 0, 0]], dtype=np.float)
+
+        m = 0.5 * np.array([[1, -1, 0, 0],
+                            [-1, 1, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0]])
+
+        return self.orient(m)
 
 
 class BirefringentComponent(InterferometerComponent):
@@ -61,8 +64,22 @@ class BirefringentComponent(InterferometerComponent):
         self.thickness = thickness
         self.material = material
 
-    def calculate_mueller_mat(self):
-        raise NotImplementedError()
+    def calculate_mueller_mat(self, wl, inc_angle, azim_angle):
+
+        phase = self.calculate_phase_delay(wl, inc_angle, azim_angle)
+
+        # TODO CHECK if this expression is applicable in the case of Savart plates, A. Thorman thesis suggests not.
+
+        # padding <- can i get rid of this using broadcasting?
+        a1 = np.ones_like(phase)
+        a0 = np.zeros_like(phase)
+
+        m = np.array([[a1, a0, a0, a0],
+                      [a0, a1, a0, a0],
+                      [a0, a0, np.cos(phase), np.sin(phase)],
+                      [a0, a0, -np.sin(phase), np.cos(phase)]])
+
+        return self.orient(m)
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
         raise NotImplementedError()
@@ -158,7 +175,7 @@ class UniaxialCrystal(BirefringentComponent):
 class SavartPlate(BirefringentComponent):
     """ Savart plate """
 
-    def __init__(self, thickness, material='a-BBO', mode='francon', name=None):
+    def __init__(self, orientation, thickness, material='a-BBO', mode='francon'):
         """
         :param thickness: [ m ]
         :type thickness: float
@@ -171,7 +188,7 @@ class SavartPlate(BirefringentComponent):
         
         :param name: 
         """
-        super().__init__(thickness, material, name)
+        super().__init__(orientation, thickness, material)
         self.mode = mode
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
