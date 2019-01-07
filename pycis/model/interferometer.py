@@ -15,42 +15,54 @@ class InterferometerComponent:
     @staticmethod
     def calculate_rot_mat(angle):
         """
-        generate matrix for frame rotation
+        generate Mueller matrix for frame rotation
         
         :param angle: [ rad ]
         :return: 
         """
+
+        angle2 = 2 * angle
         return np.array([[1, 0, 0, 0],
-                         [0, np.cos(angle), np.sin(angle), 0],
-                         [0, -np.sin(angle), np.cos(angle), 0],
+                         [0, np.cos(angle2), np.sin(angle2), 0],
+                         [0, -np.sin(angle2), np.cos(angle2), 0],
                          [0, 0, 0, 1]])
 
     def orient(self, mat):
         """
         account for orientation of interferometer component with given vertical Mueller matrix
-        :param mueller_mat: 
+        
+        :param mat: 4 x 4 Mueller matrix
         :return: 
         """
 
+        # matrix multiplication
         fmt = 'ij...,jl...->il...'
         mat_rot = np.einsum(fmt, self.calculate_rot_mat(-self.orientation), mat)
-
         return np.einsum(fmt, mat_rot, self.calculate_rot_mat(self.orientation))
 
 
 class LinearPolariser(InterferometerComponent):
-    """ linear polariser (vertical) """
+    """ linear polariser """
 
-    def __init__(self, orientation):
+    def __init__(self, orientation, tx_v=1, tx_h=0):
+        """
+        :param orientation: [ rad ] 0 aligns vertical polariser axis to vertical interferometer axis
+        :param tx_v: transmission vertical component. [0, 1] - defaults to 1
+        :param tx_h: transmission horizontal component. [0, 1] - defaults to 0
+        """
         super().__init__(orientation)
 
+        assert 0 <= tx_v <= 1
+        assert 0 <= tx_h <= 1
+        self.tx_v = tx_v
+        self.tx_h = tx_h
 
     def calculate_mueller_mat(self):
 
-        m = 0.5 * np.array([[1, -1, 0, 0],
-                            [-1, 1, 0, 0],
-                            [0, 0, 0, 0],
-                            [0, 0, 0, 0]])
+        m = 0.5 * np.array([[self.tx_h ** 2 + self.tx_v ** 2, self.tx_h ** 2 - self.tx_v ** 2, 0, 0],
+                            [self.tx_h ** 2 - self.tx_v ** 2, self.tx_h ** 2 + self.tx_v ** 2, 0, 0],
+                            [0, 0, 2 * self.tx_h * self.tx_v, 0],
+                            [0, 0, 0, 2 * self.tx_h * self.tx_v]])
 
         return self.orient(m)
 
@@ -112,7 +124,10 @@ class UniaxialCrystal(BirefringentComponent):
 
         Vectorised. If inc_angle and azim_angle are arrays, they must have the same dimensions.  
         source: Francisco E Veiras, Liliana I Perez, and María T Garea. “Phase shift formulas in uniaxial media: an 
-        application to waveplates”
+        application to waveplates
+        
+        Veiras defines optical path difference as OPL_o - OPL_e ie. +ve phase indicates a delayed extraordinary 
+        ray
 
         :param wl: wavelength [ m ]
         :type wl: float or array-like
@@ -143,6 +158,7 @@ class UniaxialCrystal(BirefringentComponent):
                 azim_angle):
             img_dim = inc_angle.shape
             assert img_dim == azim_angle.shape
+            # TODO can't this stuff be done using broadcasting?
 
             wl_len = len(wl)
 
@@ -254,7 +270,7 @@ class SavartPlate(BirefringentComponent):
             term_2 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2) ** (3 / 2)) * ((a ** 2) / np.sqrt(2)) * \
                      (np.cos(azim_angle) ** 2 - np.sin(azim_angle) ** 2) * np.sin(inc_angle) ** 2
 
-            # minus sign here makes the OPD calculation consistent with veiras
+            # minus sign here makes the OPD calculation consistent with Veiras' definition
             phase = 2 * np.pi * - (self.thickness / (2 * wl)) * (term_1 + term_2)
 
         elif self.mode == 'veiras':
@@ -276,6 +292,7 @@ class SavartPlate(BirefringentComponent):
         return phase
 
 
+# TODO class FieldWidenedSavartPlate(BirefringentComponent):
 
 
 

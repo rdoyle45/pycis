@@ -104,9 +104,7 @@ class Instrument(object):
 
         x, y = np.meshgrid(x_pos, y_pos)
 
-        # assuming for now that waveplate and Savart plate are parallel and perfectly alligned, their incidence angle
-        # projections are now the same.
-
+        # assuming crystals are perfectly alligned, their incidence angle projections are the same.
         inc_angles = np.arctan2(np.sqrt(x ** 2 + y ** 2), f_3)
 
         # azimuthal angles vary with crystal so are calculated separately
@@ -116,11 +114,13 @@ class Instrument(object):
 
             orientation = crystal.orientation
 
-            # Rotate x, y coordinates by crystal orientation:
+            # Rotate x, y coordinates by crystal orientation
             x_rot = (np.cos(orientation) * x) + (np.sin(orientation) * y)
             y_rot = (- np.sin(orientation) * x) + (np.cos(orientation) * y)
 
             crystal_azim_angles.append(np.arctan2(x_rot, y_rot))
+
+            # crystal_azim_angles.append(np.arctan2(x, y))
 
         if display:
             # TODO account for multiple crystals
@@ -141,25 +141,25 @@ class Instrument(object):
 
         return inc_angles, crystal_azim_angles
 
-    def calculate_mueller_matrix(self, wl):
-        """ calculate the total Mueller matrix for the interferometer at specified wavelength / s """
+    def calculate_transfer_matrix(self, wl):
+        """ calculate the Mueller matrix (polarisation transfer matrix) for the interferometer """
 
         # calculate the angles of each pixel's line of sight through the interferometer
         inc_angles, crystal_azim_angles = self.calculate_ray_angles()
 
-        polariser_1 = pycis.LinearPolariser(0)
-        polariser_2 = pycis.LinearPolariser(0)
+        polariser_1 = pycis.LinearPolariser(0, tx_h=0.3)
+        polariser_2 = pycis.LinearPolariser(0, tx_h=0.3)
 
-        mueller_mat = polariser_1.calculate_mueller_mat()
+        transfer_mat = polariser_1.calculate_mueller_mat()
         fmt = 'ij...,jl...->il...'
 
         for crystal, azim_angles in zip(self.crystals, crystal_azim_angles):
             # matrix multiplication
-            mueller_mat = np.einsum(fmt, crystal.calculate_mueller_mat(wl, inc_angles, azim_angles), mueller_mat)
+            transfer_mat = np.einsum(fmt, crystal.calculate_mueller_mat(wl, inc_angles, azim_angles), transfer_mat)
 
-        mueller_mat = np.einsum(fmt, polariser_2.calculate_mueller_mat(), mueller_mat)
+        transfer_mat = np.einsum(fmt, polariser_2.calculate_mueller_mat(), transfer_mat)
 
-        return mueller_mat
+        return transfer_mat
 
 
     def calculate_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
@@ -207,16 +207,6 @@ class Instrument(object):
             phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
 
         return phase_offset
-
-
-
-
-
-
-
-
-
-
 
 
     def get_snr_intensity(self, line_name, snr):
