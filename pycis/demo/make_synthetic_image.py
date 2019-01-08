@@ -17,14 +17,12 @@ lens_name = 'lens_name'
 flength = 85e-3
 backlens = pycis.Lens(lens_name, flength)
 
-# sp_1 = pycis.SavartPlate(np.pi / 4, 3.0e-3)
-wp_1 = pycis.UniaxialCrystal(np.pi / 4, 3.58e-3, 0)
-wp_2 = pycis.UniaxialCrystal(np.pi / 4, 3e-3, 0)
-# wp_2 = pycis.UniaxialCrystal(-np.pi / 8, 4.48e-3, np.pi / 4)
+sp_1 = pycis.SavartPlate(np.pi / 4, 4.0e-3)
+wp_1 = pycis.UniaxialCrystal(np.pi / 8, 4.48e-3, 0)
 
 inst_name = 'ga'
 inst_contrast = 1.0
-inst = pycis.model.Instrument(inst_name, cam, backlens, [wp_1, wp_2],
+inst = pycis.model.Instrument(inst_name, cam, backlens, [sp_1, wp_1],
                               instrument_contrast=inst_contrast)
 wl = 466e-9
 

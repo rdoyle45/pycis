@@ -44,18 +44,18 @@ class InterferometerComponent:
 class LinearPolariser(InterferometerComponent):
     """ linear polariser """
 
-    def __init__(self, orientation, tx_v=1, tx_h=0):
+    def __init__(self, orientation, tx_1=1, tx_2=0):
         """
         :param orientation: [ rad ] 0 aligns vertical polariser axis to vertical interferometer axis
-        :param tx_v: transmission vertical component. [0, 1] - defaults to 1
-        :param tx_h: transmission horizontal component. [0, 1] - defaults to 0
+        :param tx_1: transmission primary component. [0, 1] - defaults to 1
+        :param tx_2: transmission secondary (orthogonal) component. [0, 1] - defaults to 0
         """
         super().__init__(orientation)
 
-        assert 0 <= tx_v <= 1
-        assert 0 <= tx_h <= 1
-        self.tx_v = tx_v
-        self.tx_h = tx_h
+        assert 0 <= tx_1 <= 1
+        assert 0 <= tx_2 <= 1
+        self.tx_v = tx_1
+        self.tx_h = tx_2
 
     def calculate_mueller_mat(self):
 

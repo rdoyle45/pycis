@@ -120,8 +120,6 @@ class Instrument(object):
 
             crystal_azim_angles.append(np.arctan2(x_rot, y_rot))
 
-            # crystal_azim_angles.append(np.arctan2(x, y))
-
         if display:
             # TODO account for multiple crystals
             num_crystals = len(crystal_azim_angles)
@@ -147,20 +145,19 @@ class Instrument(object):
         # calculate the angles of each pixel's line of sight through the interferometer
         inc_angles, crystal_azim_angles = self.calculate_ray_angles()
 
-        polariser_1 = pycis.LinearPolariser(0, tx_h=0.3)
-        polariser_2 = pycis.LinearPolariser(0, tx_h=0.3)
-
+        polariser_1 = pycis.LinearPolariser(np.pi / 2, tx_2=0.6)
+        polariser_2 = pycis.LinearPolariser(np.pi / 2, tx_2=0.6)
         transfer_mat = polariser_1.calculate_mueller_mat()
-        fmt = 'ij...,jl...->il...'
 
+        subscripts = 'ij...,jl...->il...'
         for crystal, azim_angles in zip(self.crystals, crystal_azim_angles):
-            # matrix multiplication
-            transfer_mat = np.einsum(fmt, crystal.calculate_mueller_mat(wl, inc_angles, azim_angles), transfer_mat)
 
-        transfer_mat = np.einsum(fmt, polariser_2.calculate_mueller_mat(), transfer_mat)
+            # matrix multiplication
+            transfer_mat = np.einsum(subscripts, crystal.calculate_mueller_mat(wl, inc_angles, azim_angles), transfer_mat)
+
+        transfer_mat = np.einsum(subscripts, polariser_2.calculate_mueller_mat(), transfer_mat)
 
         return transfer_mat
-
 
     def calculate_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
         """

@@ -438,9 +438,9 @@ class SynthImagePhaseCalib(SynthImage):
         a0 = np.zeros_like(dc_ph)
         stokes_vector_in = np.array([dc_ph, a0, a0, a0])
 
-        fmt = 'ij...,j...->i...'
+        subscripts = 'ij...,j...->i...'
         instrument_mueller_mat = self.instrument.calculate_transfer_matrix(wl)
-        stokes_vector_out = np.einsum(fmt, instrument_mueller_mat, stokes_vector_in)
+        stokes_vector_out = np.einsum(subscripts, instrument_mueller_mat, stokes_vector_in)
         igram_ph = stokes_vector_out[0]
 
         return igram_ph, dc_ph
