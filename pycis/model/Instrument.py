@@ -2,32 +2,26 @@ import numpy as np
 import pickle
 import os.path
 import pycis.paths
-import matplotlib.pyplot as plt
 import copy
-
 import scipy.interpolate
 
 
 class Instrument(object):
     """ 
-    CIS instrument class. Facilitates synthetic image generation.
+    Coherence imaging instrument class, facilitates synthetic image generation
     """
 
-    def __init__(self, name, camera, back_lens, crystals, bandpass_filter=None,
-                 instrument_contrast=0.5):
+    def __init__(self, name, camera, back_lens, crystals, bandpass_filter=None):
         """
         
         :param name: 
         :param camera: pycis.model.Camera or a string-type camera name
         :param back_lens: pycis.model.Lens or a string-type lens name
-        :param crystals: list of pycis.model.Crystal
-        :param crystal_orientations: corresponding list of orientations in radians
+        :param crystals: list of instances of pycis.model.BirefringentComponent
         :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name
-        :param instrument_contrast: 
         """
 
         self.name = name
-        self.instrument_contrast = instrument_contrast
 
         # camera
         if isinstance(camera, pycis.model.Camera):
@@ -46,23 +40,26 @@ class Instrument(object):
         else:
             raise Exception('argument: lens must be of type pycis.model.Camera or string')
 
+        # polarisers
+        # set manually for now
+        self.pol_1 = pycis.LinearPolariser(0, tx_2=0.)
+        self.pol_2 = pycis.LinearPolariser(0, tx_2=0.)
+
         # crystals
         assert all(isinstance(c, pycis.model.BirefringentComponent) for c in crystals)
-
         self.crystals = crystals
 
         # bandpass_filter
         if bandpass_filter is None:
             pass
-
         elif isinstance(bandpass_filter, pycis.model.BandpassFilter):
             self.bandpass_filter = bandpass_filter
-
         elif isinstance(bandpass_filter, str):
             self.bandpass_filter = pycis.model.FilterFromName(bandpass_filter)
-
         else:
             raise Exception('argument: bandpass_filter must be of type pycis.model.Camera or string')
+
+        self.inst_type = self.check_instrument_type()
 
         # TODO include crystal misalignment
         self.chi = [0, 0]  # placeholder, this will be gotten rid of in time
@@ -120,23 +117,6 @@ class Instrument(object):
 
             crystal_azim_angles.append(np.arctan2(x_rot, y_rot))
 
-        if display:
-            # TODO account for multiple crystals
-            num_crystals = len(crystal_azim_angles)
-
-            fig1 = plt.figure()
-            ax1 = fig1.add_subplot(121)
-            ax2 = fig1.add_subplot(122)
-
-            im1 = ax1.imshow(inc_angles)
-            cbar = plt.colorbar(im1, ax=ax1)
-
-            im2 = ax2.imshow(crystal_azim_angles)
-            cbar = plt.colorbar(im2, ax=ax2)
-
-            plt.tight_layout()
-            plt.show()
-
         return inc_angles, crystal_azim_angles
 
     def calculate_transfer_matrix(self, wl):
@@ -144,10 +124,7 @@ class Instrument(object):
 
         # calculate the angles of each pixel's line of sight through the interferometer
         inc_angles, crystal_azim_angles = self.calculate_ray_angles()
-
-        polariser_1 = pycis.LinearPolariser(np.pi / 2, tx_2=0.6)
-        polariser_2 = pycis.LinearPolariser(np.pi / 2, tx_2=0.6)
-        transfer_mat = polariser_1.calculate_mueller_mat()
+        transfer_mat = self.pol_1.calculate_mueller_mat()
 
         subscripts = 'ij...,jl...->il...'
         for crystal, azim_angles in zip(self.crystals, crystal_azim_angles):
@@ -155,11 +132,11 @@ class Instrument(object):
             # matrix multiplication
             transfer_mat = np.einsum(subscripts, crystal.calculate_mueller_mat(wl, inc_angles, azim_angles), transfer_mat)
 
-        transfer_mat = np.einsum(subscripts, polariser_2.calculate_mueller_mat(), transfer_mat)
+        transfer_mat = np.einsum(subscripts, self.pol_2.calculate_mueller_mat(), transfer_mat)
 
         return transfer_mat
 
-    def calculate_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
+    def calculate_ideal_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
         """
         TAKE CARE -- method assumes that all instances of pycis.model.InterferomterComponent supplied to 
         Instrument are aligned, such that their phase delays add constructively. If you are playing with arbitrary 
@@ -188,12 +165,51 @@ class Instrument(object):
 
         else:
             # calculate the phase_offset and phase_shape
-            phase_offset = self.calculate_phase_offset(wl, n_e=n_e, n_o=n_o)
+            phase_offset = self.calculate_ideal_phase_offset(wl, n_e=n_e, n_o=n_o)
             phase_shape = phase - phase_offset
 
             return phase_offset, phase_shape
 
-    def calculate_phase_offset(self, wl, n_e=None, n_o=None):
+    def calculate_ideal_contrast(self):
+
+        contrast = 1
+        for crystal in self.crystals:
+            contrast *= crystal.contrast
+
+        return contrast
+
+    def calculate_ideal_transmission(self):
+        """ transmission is decreased due to polarisers, calculate this factor analytically for the special case of 
+        ideal interferometer"""
+
+        return
+
+    def check_instrument_type(self):
+        """
+        find the best way to generate the observed interference pattern
+        
+        in the case of a perfectly aligned coherence imaging diagnostic in a simple 'two-beam' configuration, skip the 
+        Mueller matrix calculation to the final result.
+        
+        :return: type
+        """
+
+        orientations = []
+        for crystal in self.crystals:
+            orientations.append(crystal.orientation)
+
+        # if all crystal orientations are the same and are at 45 degrees to the polarisers, perform a simplified 2-beam
+        # interferometer calculation -- avoiding the full Mueller matrix treatment
+        # TODO account for arbitrary rotation of interferometer
+        if all(o == orientations[0] for o in orientations) and (orientations[0] + np.pi / 4) % (np.pi / 2) == 0:
+            inst_type = 'two-beam'
+        else:
+            inst_type = 'general'
+
+        print(inst_type)
+        return inst_type
+
+    def calculate_ideal_phase_offset(self, wl, n_e=None, n_o=None):
         """
         
         :param wl: 
@@ -204,7 +220,7 @@ class Instrument(object):
 
         phase_offset = 0
         for crystal in self.crystals:
-            phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
+            phase_offset += crystal.calculate_ideal_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
 
         return phase_offset
 
@@ -344,7 +360,3 @@ class Instrument(object):
     def save(self):
         pickle.dump(self, open(os.path.join(pycis.paths.instrument_path, self.name + '.p'), 'wb'))
         return
-
-# if __name__ == '__main__':
-#     ...
-
