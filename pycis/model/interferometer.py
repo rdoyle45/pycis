@@ -36,9 +36,9 @@ class InterferometerComponent:
         """
 
         # matrix multiplication
-        fmt = 'ij...,jl...->il...'
-        mat_rot = np.einsum(fmt, self.calculate_rot_mat(-self.orientation), mat)
-        return np.einsum(fmt, mat_rot, self.calculate_rot_mat(self.orientation))
+        subscripts = 'ij...,jl...->il...'
+        mat_rot = np.einsum(subscripts, self.calculate_rot_mat(-self.orientation), mat)
+        return np.einsum(subscripts, mat_rot, self.calculate_rot_mat(self.orientation))
 
 
 class LinearPolariser(InterferometerComponent):

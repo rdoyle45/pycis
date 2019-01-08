@@ -161,7 +161,9 @@ class Instrument(object):
 
     def calculate_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
         """
-        accounting for crystal orientation + alignment
+        TAKE CARE -- method assumes that all instances of pycis.model.InterferomterComponent supplied to 
+        Instrument are aligned, such that their phase delays add constructively. If you are playing with arbitrary 
+        combinations and orientations of crystal then this will not be accurate. 
         
         :param wl: 
         :param n_e: 
@@ -171,6 +173,7 @@ class Instrument(object):
         :param output_components: 
         :return: 
         """
+        # TODO method needs thinking through in more detail.
 
         # calculate the angles of each pixel's line of sight through the interferometer
         inc_angles, crystal_azim_angles = self.calculate_ray_angles(downsample=downsample, letterbox=letterbox)
