@@ -1,7 +1,7 @@
 from .camera import *
 from .crystals import *
 from .bandpass_filter import *
-from .instrument import *
+from .Instrument import *
 from .lens import *
 # from .Lineshape import Lineshape, get_lines, create_arbitrary_lines
 

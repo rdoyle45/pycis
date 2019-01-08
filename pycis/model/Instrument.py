@@ -175,6 +175,20 @@ class Instrument(object):
 
             return phase_offset, phase_shape
 
+    def calculate_phase_offset(self, wl, n_e=None, n_o=None):
+        """
+
+        :param wl: 
+        :param n_e: 
+        :param n_o: 
+        :return: phase_offset [ rad ]
+        """
+
+        phase_offset = 0
+        for crystal in self.crystals:
+            phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
+
+        return phase_offset
 
     def get_snr_intensity(self, line_name, snr):
         """ Given spectral line and desired approximate image snr (central ROI), return the necessary input intensity I0 in units 

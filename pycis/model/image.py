@@ -711,7 +711,8 @@ class SynthImagePhaseCalib(SynthImage):
         self.igram = self.measure(self.igram_ph)
         self.dc = self.measure(self.dc_ph, clean=True)
 
-        phase_onaxis = pycis.model.uniaxial_crystal(self.spectra['wl'], self.instrument.waveplate.thickness, 0, 0, 0)
+        # phase_onaxis = pycis.model.uniaxial_crystal(self.spectra['wl'], self.instrument.waveplate.thickness, 0, 0, 0)
+        phase_onaxis = self.instrument.calculate_phase_offset(self.spectra['wl'])
         self.phase -= divmod(phase_onaxis, 2 * np.pi)[0] * 2 * np.pi
 
         # uncertainty
