@@ -30,27 +30,16 @@ class SynthImage(object):
         # TODO Stokes vector compatibility
 
         # generate interference pattern
-        self.igram_ph, self.dc_ph = self._make()
-
-        # measure interference pattern
-        self.igram = self.instrument.camera.capture(self.igram_ph)
-        self.dc = self.instrument.camera.capture(self.dc_ph, clean=True)
-
-    def _make(self):
-        """ Create synthetic image."""
-
-        orientations = []
-        for crystal in self.instrument.crystals:
-            orientations.append(crystal.orientation)
-
         if self.instrument.inst_type == 'two-beam':
             igram_ph, dc_ph = self._make_ideal()
 
         else:
-            # general
+            # general treatment
             igram_ph, dc_ph = self._make_mueller()
 
-        return igram_ph, dc_ph
+        # measure interference pattern
+        self.igram = self.instrument.camera.capture(igram_ph)
+        self.dc = self.instrument.camera.capture(dc_ph, clean=True)
 
     def _make_mueller(self):
         """
@@ -117,7 +106,7 @@ class SynthImage(object):
 
                 if units == 'cnts':
                     dc_ph = np.ones(self.instrument.camera.sensor_dim) * spec * \
-                            self.instrument.camera.epercount / self.instrument.camera.qe
+                            self.instrument.camera.epercount / self.instrument.camera.qe / self.instrument.calculate_ideal_transmission()
 
                 elif units == 'ph':
                     dc_ph = np.ones(self.instrument.camera.sensor_dim) * spec / 2
@@ -127,7 +116,7 @@ class SynthImage(object):
                 assert np.shape(spec) == self.instrument.camera.sensor_dim
 
                 if units == 'cnts':
-                    dc_ph = spec * self.instrument.camera.epercount / self.instrument.camera.qe
+                    dc_ph = spec * self.instrument.camera.epercount / self.instrument.camera.qe / self.instrument.calculate_ideal_transmission()
 
                 elif units == 'ph':
                     dc_ph = spec / 2

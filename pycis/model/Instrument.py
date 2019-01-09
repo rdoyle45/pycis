@@ -42,8 +42,8 @@ class Instrument(object):
 
         # polarisers
         # set manually for now
-        self.pol_1 = pycis.LinearPolariser(0, tx_2=0.)
-        self.pol_2 = pycis.LinearPolariser(0, tx_2=0.)
+        self.pol_1 = pycis.LinearPolariser(0, tx_2=0)
+        self.pol_2 = pycis.LinearPolariser(0, tx_2=0)
 
         # crystals
         assert all(isinstance(c, pycis.model.BirefringentComponent) for c in crystals)
@@ -182,7 +182,10 @@ class Instrument(object):
         """ transmission is decreased due to polarisers, calculate this factor analytically for the special case of 
         ideal interferometer"""
 
-        return
+        tx = (self.pol_1.tx_1 ** 2 + self.pol_1.tx_2 ** 2) * (self.pol_2.tx_1 ** 2 + self.pol_2.tx_2 ** 2)
+
+        print(tx)
+        return tx
 
     def check_instrument_type(self):
         """
