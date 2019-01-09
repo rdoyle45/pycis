@@ -170,6 +170,7 @@ class Instrument(object):
 
             return phase_offset, phase_shape
 
+
     def calculate_ideal_contrast(self):
 
         contrast = 1
@@ -214,7 +215,6 @@ class Instrument(object):
 
     def calculate_ideal_phase_offset(self, wl, n_e=None, n_o=None):
         """
-        
         :param wl: 
         :param n_e: 
         :param n_o: 
