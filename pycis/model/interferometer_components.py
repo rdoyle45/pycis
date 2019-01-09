@@ -2,6 +2,21 @@ import numpy as np
 import pycis
 
 
+def calculate_rot_mat(angle):
+    """
+    general Mueller matrix for frame rotation
+
+    :param angle: [ rad ]
+    :return: 
+    """
+
+    angle2 = 2 * angle
+    return np.array([[1, 0, 0, 0],
+                     [0, np.cos(angle2), np.sin(angle2), 0],
+                     [0, -np.sin(angle2), np.cos(angle2), 0],
+                     [0, 0, 0, 1]])
+
+
 class InterferometerComponent:
     """ base class for CIS interferometer components """
 
@@ -11,21 +26,6 @@ class InterferometerComponent:
         """
 
         self.orientation = orientation
-
-    @staticmethod
-    def calculate_rot_mat(angle):
-        """
-        generate Mueller matrix for frame rotation
-        
-        :param angle: [ rad ]
-        :return: 
-        """
-
-        angle2 = 2 * angle
-        return np.array([[1, 0, 0, 0],
-                         [0, np.cos(angle2), np.sin(angle2), 0],
-                         [0, -np.sin(angle2), np.cos(angle2), 0],
-                         [0, 0, 0, 1]])
 
     def orient(self, mat):
         """
@@ -37,8 +37,8 @@ class InterferometerComponent:
 
         # matrix multiplication
         subscripts = 'ij...,jl...->il...'
-        mat_rot = np.einsum(subscripts, self.calculate_rot_mat(-self.orientation), mat)
-        return np.einsum(subscripts, mat_rot, self.calculate_rot_mat(self.orientation))
+        mat_rot = np.einsum(subscripts, calculate_rot_mat(-self.orientation), mat)
+        return np.einsum(subscripts, mat_rot, calculate_rot_mat(self.orientation))
 
 
 class LinearPolariser(InterferometerComponent):
@@ -58,6 +58,10 @@ class LinearPolariser(InterferometerComponent):
         self.tx_2 = tx_2
 
     def calculate_mueller_mat(self):
+        """
+        general Mueller matrix for a linear polariser
+        :return: 
+        """
 
         m = 0.5 * np.array([[self.tx_2 ** 2 + self.tx_1 ** 2, self.tx_2 ** 2 - self.tx_1 ** 2, 0, 0],
                             [self.tx_2 ** 2 - self.tx_1 ** 2, self.tx_2 ** 2 + self.tx_1 ** 2, 0, 0],
@@ -86,6 +90,14 @@ class BirefringentComponent(InterferometerComponent):
         self.contrast = contrast
 
     def calculate_mueller_mat(self, wl, inc_angle, azim_angle):
+        """
+        general Mueller matrix for a phase retarder
+        
+        :param wl: [ m ]
+        :param inc_angle: [ rad ] 
+        :param azim_angle: [ rad ]
+        :return: 
+        """
 
         phase = self.calculate_phase_delay(wl, inc_angle, azim_angle)
 
@@ -98,7 +110,7 @@ class BirefringentComponent(InterferometerComponent):
         m = np.array([[a1, a0, a0, a0],
                       [a0, a1, a0, a0],
                       [a0, a0, self.contrast * np.cos(phase), self.contrast * np.sin(phase)],
-                      [a0, a0, - self.contrast * np.sin(phase), self.contrast * np.cos(phase)]])
+                      [a0, a0, -self.contrast * np.sin(phase), self.contrast * np.cos(phase)]])
 
         return self.orient(m)
 
