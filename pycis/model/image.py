@@ -11,7 +11,7 @@ import pycis
 class SynthImage(object):
     """ synthetic coherence imaging spectroscopy (CIS) image."""
 
-    def __init__(self, instrument, spec, name):
+    def __init__(self, instrument, spec):
         """
         :param spec: frequency spectrum of the light observed.  
         
@@ -23,7 +23,6 @@ class SynthImage(object):
 
         self.instrument = instrument
         self.spec = spec
-        self.name = name
 
         # TODO the vectorisation needs a clean-up and to be thoroughly checked
         # TODO radiometric units

@@ -11,17 +11,15 @@ class Instrument(object):
     Coherence imaging instrument class, facilitates synthetic image generation
     """
 
-    def __init__(self, name, camera, back_lens, crystals, bandpass_filter=None, interferometer_orientation=0):
+    def __init__(self, camera, back_lens, crystals, bandpass_filter=None, interferometer_orientation=0):
         """
         
-        :param name: 
         :param camera: pycis.model.Camera or a string-type camera name
         :param back_lens: pycis.model.Lens or a string-type lens name
         :param crystals: list of instances of pycis.model.BirefringentComponent
         :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name
         """
 
-        self.name = name
         self.interferometer_orientation = interferometer_orientation
 
         # camera
@@ -135,9 +133,8 @@ class Instrument(object):
 
         transfer_mat = np.einsum(subscripts, self.pol_2.calculate_mueller_mat(), transfer_mat)
 
-        # orientation of the interferometer itself.
+        # account for orientation of the interferometer itself.
         rot_mat = pycis.model.calculate_rot_mat(self.interferometer_orientation)
-
         return np.einsum(subscripts, rot_mat, transfer_mat)
 
     def calculate_ideal_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
@@ -227,7 +224,7 @@ class Instrument(object):
 
         phase_offset = 0
         for crystal in self.crystals:
-            phase_offset += crystal.calculate_ideal_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
+            phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
 
         return phase_offset
 

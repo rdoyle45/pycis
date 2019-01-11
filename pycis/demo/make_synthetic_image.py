@@ -22,8 +22,7 @@ wp_1 = pycis.UniaxialCrystal(np.pi / 8, 4.48e-3, 0)
 
 inst_name = 'ga'
 inst_contrast = 1.0
-inst = pycis.model.Instrument(inst_name, cam, backlens, [sp_1, wp_1],
-                              instrument_contrast=inst_contrast)
+inst = pycis.model.Instrument(inst_name, cam, backlens, [sp_1, wp_1],)
 wl = 466e-9
 
 spectra = {'wl': wl,
@@ -31,7 +30,7 @@ spectra = {'wl': wl,
            'spec units': 'cnts',
            }
 
-si = pycis.model.SynthImagePhaseCalib(inst, spectra, 'example_name')
+si = pycis.model.SynthImagePhaseCalib(inst, spectra)
 
 si.img_igram()
 si.img_fft()
