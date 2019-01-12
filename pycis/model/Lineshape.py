@@ -165,7 +165,6 @@ class Lineshape(object):
     # created: 16/02/2017
 
     
-    
     """
     def __init__(self, name, I0, vi, Ti, b_field=0, theta=0):
 

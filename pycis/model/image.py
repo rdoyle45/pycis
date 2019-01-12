@@ -85,7 +85,7 @@ class SynthImage(object):
         stokes_vector_in = np.array([dc_ph, a0, a0, a0])
 
         subscripts = 'ij...,j...->i...'
-        transfer_matrix = self.instrument.calculate_transfer_matrix(wl)
+        transfer_matrix = self.instrument.calculate_matrix(wl)
         stokes_vector_out = np.einsum(subscripts, transfer_matrix, stokes_vector_in)
         igram_ph = stokes_vector_out[0]
 

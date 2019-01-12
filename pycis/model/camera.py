@@ -8,9 +8,8 @@ import matplotlib.pyplot as plt
 class Camera(object):
     """ Container for information on the camera sensor. """
 
-    def __init__(self, name, bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise):
+    def __init__(self, bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise):
         """
-        :param name: 
         :param bit_depth: 
         :param sensor_dim: 
         :param pix_size: pixel dimension [m].
@@ -19,7 +18,6 @@ class Camera(object):
         :param cam_noise: Camera noise standard deviation [electrons].
         """
 
-        self.name = name
         self.pix_size = pix_size
         self.sensor_dim = sensor_dim
         self.qe = qe

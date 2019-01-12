@@ -1,5 +1,5 @@
 from .camera import *
-from .interferometer_components import *
+from .interferometer import *
 from .bandpass_filter import *
 from .instrument import *
 from .lens import *
@@ -8,7 +8,6 @@ from .lens import *
 from .dispersion import *
 from .lithium_niobate import *
 
-from .component import load_component, list_components
 from .image import *
 
 from .spectra import *

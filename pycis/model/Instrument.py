@@ -1,5 +1,4 @@
 import numpy as np
-import pickle
 import os.path
 import pycis.paths
 import copy
@@ -11,59 +10,125 @@ class Instrument(object):
     Coherence imaging instrument class, facilitates synthetic image generation
     """
 
-    def __init__(self, camera, back_lens, crystals, bandpass_filter=None, interferometer_orientation=0):
+    def __init__(self, camera, back_lens, interferometer, bandpass_filter=None, interferometer_orientation=0):
         """
+        :param camera: 
+        :type camera pycis.model.Camera
         
-        :param camera: pycis.model.Camera or a string-type camera name
-        :param back_lens: pycis.model.Lens or a string-type lens name
-        :param crystals: list of instances of pycis.model.BirefringentComponent
+        :param back_lens: 
+        :type back_lens: pycis.model.Lens
+        
+        :param interferometer: a list of instances of pycis.model.InterferometerComponent
+        :type interferometer: list
+        
         :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name
         """
 
+        self.camera = camera
+        self.back_lens = back_lens
+        self.interferometer = interferometer
+
+        self.crystals = self.get_crystals()
+        self.polarisers = self.get_polarisers()
+
         self.interferometer_orientation = interferometer_orientation
+        self.bandpass_filter = bandpass_filter
+        self.input_checks()
 
-        # camera
-        if isinstance(camera, pycis.model.Camera):
-            self.camera = camera
-        elif isinstance(camera, str):
-            self.camera = pycis.model.load_component(camera, type='camera')
-        else:
-            raise Exception('argument: camera must be of type pycis.model.Camera or string')
+        self.x, self.y = self.get_sensor_coords()
 
-        # back_lens
-        if isinstance(back_lens, pycis.model.Lens):
-            self.back_lens = back_lens
-
-        elif isinstance(back_lens, str):
-            self.back_lens = pycis.model.load_component(back_lens, type='lens')
-        else:
-            raise Exception('argument: lens must be of type pycis.model.Camera or string')
-
-        # polarisers
-        # set manually for now
-        self.pol_1 = pycis.LinearPolariser(0, tx_2=0)
-        self.pol_2 = pycis.LinearPolariser(0, tx_2=0)
-
-        # crystals
-        assert all(isinstance(c, pycis.model.BirefringentComponent) for c in crystals)
-        self.crystals = crystals
-
-        # bandpass_filter
-        if bandpass_filter is None:
-            pass
-        elif isinstance(bandpass_filter, pycis.model.BandpassFilter):
-            self.bandpass_filter = bandpass_filter
-        elif isinstance(bandpass_filter, str):
-            self.bandpass_filter = pycis.model.FilterFromName(bandpass_filter)
-        else:
-            raise Exception('argument: bandpass_filter must be of type pycis.model.Camera or string')
-
+        # assign instrument 'type' based on interferometer layout
         self.inst_type = self.check_instrument_type()
 
         # TODO include crystal misalignment
-        self.chi = [0, 0]  # placeholder, this will be gotten rid of in time
+        self.chi = [0, 0]  # placeholder
 
-    def calculate_ray_angles(self, downsample=None, letterbox=None, display=False):
+    def input_checks(self):
+        """
+        checks for __init__ arguments
+        :return: 
+        """
+
+        assert isinstance(self.camera, pycis.model.Camera)
+        assert isinstance(self.back_lens, pycis.model.Lens)
+        assert all(isinstance(c, pycis.model.InterferometerComponent) for c in self.interferometer)
+
+        if self.bandpass_filter is not None:
+            assert isinstance(self.bandpass_filter, pycis.model.BandpassFilter)
+
+    def get_crystals(self):
+        """ list the birefringent components, subset of interferometer """
+
+        return [c for c in self.interferometer if isinstance(c, pycis.BirefringentComponent)]
+
+    def get_polarisers(self):
+        """ get a list of the polarisers, subset of interferometer """
+
+        return [c for c in self.interferometer if isinstance(c, pycis.LinearPolariser)]
+
+    def get_sensor_coords(self, downsample=None, letterbox=None):
+        """  
+        can this be a pycis.Camera method? 
+        
+        :param downsample: 
+        :param letterbox: 
+        :return: 
+        """
+
+        cam = self.camera
+        sensor_dim = np.array(list(copy.copy(cam.sensor_dim)))
+
+        if letterbox is not None:
+            sensor_dim[0] -= 2 * letterbox
+
+        centre = cam.pix_size * (sensor_dim - 2) / 2
+
+        if downsample is None:
+            y_pos = np.arange(sensor_dim[0])
+            x_pos = np.arange(sensor_dim[1])
+        else:
+            y_pos = np.arange(sensor_dim[0])[::downsample]
+            x_pos = np.arange(sensor_dim[1])[::downsample]
+
+        y_pos = (y_pos - 0.5) * cam.pix_size - centre[0]  # [m]
+        x_pos = (x_pos - 0.5) * cam.pix_size - centre[1]  # [m]
+
+        x, y = np.meshgrid(x_pos, y_pos)
+
+        return x, y
+
+    def calculate_ray_inc_angle(self):
+        """
+        incidence angles will be the same for all interferometer components (until arbitrary component misalignment 
+        implemented)
+        
+        :param downsample: 
+        :param letterbox: 
+        :return: 
+        """
+
+        # assuming crystals are perfectly alligned, their incidence angle projections are the same.
+        inc_angles = np.arctan2(np.sqrt(self.x ** 2 + self.y ** 2), self.back_lens.focal_length)
+
+        return inc_angles
+
+    def calculate_ray_azim_angle(self, crystal):
+        """
+        azimuthal angles vary with crystal orientation so are calculated separately
+        
+        :param crystal: 
+        :return: 
+        """
+
+        orientation = crystal.orientation + self.interferometer_orientation
+
+        # Rotate x, y coordinates
+        x_rot = (np.cos(orientation) * self.x) + (np.sin(orientation) * self.y)
+        y_rot = (- np.sin(orientation) * self.x) + (np.cos(orientation) * self.y)
+
+        return np.arctan2(x_rot, y_rot)
+
+    def calculate_ray_angle(self, downsample=None, letterbox=None):
         """
         Calculate incidence and azimuthal angles for each pixel's 'sightline' through each crystal
         
@@ -89,11 +154,11 @@ class Instrument(object):
                   (cam.pix_size * (sensor_dim[1] - 2) / 2)]  # + tilt_offset_x]
 
         if downsample is None:
-            y_pos = np.arange(0, sensor_dim[0])
-            x_pos = np.arange(0, sensor_dim[1])
+            y_pos = np.arange(sensor_dim[0])
+            x_pos = np.arange(sensor_dim[1])
         else:
-            y_pos = np.arange(0, sensor_dim[0])[::downsample]
-            x_pos = np.arange(0, sensor_dim[1])[::downsample]
+            y_pos = np.arange(sensor_dim[0])[::downsample]
+            x_pos = np.arange(sensor_dim[1])[::downsample]
 
         y_pos = (y_pos - 0.5) * cam.pix_size - centre[0]  # [m]
         x_pos = (x_pos - 0.5) * cam.pix_size - centre[1]  # [m]
@@ -118,24 +183,25 @@ class Instrument(object):
 
         return inc_angles, crystal_azim_angles
 
-    def calculate_transfer_matrix(self, wl):
-        """ calculate the Mueller matrix (polarisation transfer matrix) for the interferometer """
+    def calculate_matrix(self, wl):
+        """ calculate the total Mueller matrix for the interferometer """
 
-        # calculate the angles of each pixel's line of sight through the interferometer
-        inc_angles, crystal_azim_angles = self.calculate_ray_angles()
-        transfer_mat = self.pol_1.calculate_mueller_mat()
+        inc_angle = self.calculate_ray_inc_angle()
 
+        instrument_matrix = np.identity(4)
         subscripts = 'ij...,jl...->il...'
-        for crystal, azim_angles in zip(self.crystals, crystal_azim_angles):
+
+        for component in self.interferometer:
+
+            azim_angle = self.calculate_ray_azim_angle(component)
+            component_matrix = component.calculate_matrix(wl, inc_angle, azim_angle)
 
             # matrix multiplication
-            transfer_mat = np.einsum(subscripts, crystal.calculate_mueller_mat(wl, inc_angles, azim_angles), transfer_mat)
-
-        transfer_mat = np.einsum(subscripts, self.pol_2.calculate_mueller_mat(), transfer_mat)
+            instrument_matrix = np.einsum(subscripts, component_matrix, instrument_matrix)
 
         # account for orientation of the interferometer itself.
         rot_mat = pycis.model.calculate_rot_mat(self.interferometer_orientation)
-        return np.einsum(subscripts, rot_mat, transfer_mat)
+        return np.einsum(subscripts, rot_mat, instrument_matrix)
 
     def calculate_ideal_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
         """
@@ -151,10 +217,9 @@ class Instrument(object):
         :param output_components: 
         :return: 
         """
-        # TODO method needs thinking through in more detail.
 
         # calculate the angles of each pixel's line of sight through the interferometer
-        inc_angles, crystal_azim_angles = self.calculate_ray_angles(downsample=downsample, letterbox=letterbox)
+        inc_angles, crystal_azim_angles = self.calculate_ray_angle(downsample=downsample, letterbox=letterbox)
 
         # calculate phase delay contribution due to each crystal
         phase = 0
@@ -184,9 +249,9 @@ class Instrument(object):
         """ transmission is decreased due to polarisers, calculate this factor analytically for the special case of 
         ideal interferometer"""
 
-        tx = (self.pol_1.tx_1 ** 2 + self.pol_1.tx_2 ** 2) * (self.pol_2.tx_1 ** 2 + self.pol_2.tx_2 ** 2)
+        pol_1, pol_2 = self.polarisers
+        tx = (pol_1.tx_1 ** 2 + pol_1.tx_2 ** 2) * (pol_2.tx_1 ** 2 + pol_2.tx_2 ** 2)
 
-        print(tx)
         return tx
 
     def check_instrument_type(self):
@@ -205,7 +270,7 @@ class Instrument(object):
 
         # if all crystal orientations are the same and are at 45 degrees to the polarisers, perform a simplified 2-beam
         # interferometer calculation -- avoiding the full Mueller matrix treatment
-        # TODO account for arbitrary rotation of interferometer
+
         if all(o == orientations[0] for o in orientations) and (orientations[0] + np.pi / 4) % (np.pi / 2) == 0:
             inst_type = 'two-beam'
         else:
