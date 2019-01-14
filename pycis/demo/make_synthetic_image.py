@@ -18,10 +18,10 @@ flength = 85e-3
 backlens = pycis.Lens(flength)
 
 # interferometer components
-pol_1 = pycis.LinearPolariser(0.01)
+pol_1 = pycis.LinearPolariser(0.)
 sp_1 = pycis.SavartPlate(np.pi / 4, 4.0e-3)
 wp_1 = pycis.UniaxialCrystal(np.pi / 4, 4.48e-3, 0)
-pol_2 = pycis.LinearPolariser(0.01)
+pol_2 = pycis.LinearPolariser(0.)
 
 inst = pycis.Instrument(cam, backlens, [pol_1, sp_1, wp_1, pol_2],)
 wl = 466e-9

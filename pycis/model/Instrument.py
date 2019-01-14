@@ -32,6 +32,7 @@ class Instrument(object):
         self.polarisers = self.get_polarisers()
 
         self.interferometer_orientation = interferometer_orientation
+        # TODO is bandpass_filter implemented correctly?
         self.bandpass_filter = bandpass_filter
         self.input_checks()
 
@@ -39,6 +40,7 @@ class Instrument(object):
 
         # assign instrument 'type' based on interferometer layout
         self.inst_type = self.check_instrument_type()
+        print(self.inst_type)
 
         # TODO include crystal misalignment
         self.chi = [0, 0]  # placeholder
@@ -236,7 +238,6 @@ class Instrument(object):
 
             return phase_offset, phase_shape
 
-
     def calculate_ideal_contrast(self):
 
         contrast = 1
@@ -271,13 +272,27 @@ class Instrument(object):
         # if all crystal orientations are the same and are at 45 degrees to the polarisers, perform a simplified 2-beam
         # interferometer calculation -- avoiding the full Mueller matrix treatment
 
-        if all(o == orientations[0] for o in orientations) and (orientations[0] + np.pi / 4) % (np.pi / 2) == 0:
-            inst_type = 'two-beam'
-        else:
-            inst_type = 'general'
+        # are their two polarisers, at the front and back of the interferometer?
+        if len(self.polarisers) == 2 and (isinstance(self.interferometer[0], pycis.LinearPolariser) and
+                isinstance(self.interferometer[-1], pycis.LinearPolariser)):
 
-        print(inst_type)
-        return inst_type
+            # are they alligned?
+            pol_1_orientation = self.interferometer[0].orientation
+            pol_2_orientation = self.interferometer[-1].orientation
+
+            if pol_1_orientation == pol_2_orientation:
+
+                # are all crystals alligned?
+                crystal_1_orientation = self.crystals[0].orientation
+
+                if all(c.orientation == crystal_1_orientation for c in self.crystals):
+
+                    # at 45 degrees to the alligned polarisers?
+                    if abs(pol_1_orientation - crystal_1_orientation) == np.pi / 4:
+                        return 'two-beam'
+
+        return 'general'
+
 
     def calculate_ideal_phase_offset(self, wl, n_e=None, n_o=None):
         """
@@ -426,6 +441,3 @@ class Instrument(object):
 
         return vignetted_photon_fluence
 
-    def save(self):
-        pickle.dump(self, open(os.path.join(pycis.paths.instrument_path, self.name + '.p'), 'wb'))
-        return
