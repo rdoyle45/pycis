@@ -34,7 +34,8 @@ def demod_function(img, display=False):
 
 def downsample(img, f):
     """
-    
+    reduce image sample rate by factor f in both x and y
+
     :param img: input image
     :param f: downsampling factor
     :return: 
@@ -44,6 +45,21 @@ def downsample(img, f):
     assert img.ndim == 2
 
     return img[::f, ::f]
+
+
+def crop(img, f):
+    """
+    crop image to rectangle with vertices at (x1, y1), (x1, y2), (x2, y1), (x2, y2).
+
+    :param img:
+    :param f: tuple (x1, x2, y1, y2)
+    :return:
+    """
+
+    assert isinstance(img, np.ndarray)
+    assert img.ndim == 2
+
+    return img[f[2]:f[3], f[0]:f[1]]
 
 
 def letterbox(img, f):
@@ -58,6 +74,20 @@ def letterbox(img, f):
     assert img.ndim == 2
 
     return img[f:-f, :]
+
+
+def left_crop(img, f):
+    """
+    
+    :param img: 
+    :param f: 
+    :return: 
+    """
+    assert isinstance(img, np.ndarray)
+    assert img.ndim == 2
+
+    return img[:, f:]
+
 
 
 def linearity_correction():

@@ -5,24 +5,36 @@ import time
 import pycis
 
 
-def fourier_demod_2d(img, despeckle=False, end_region_mask=False, uncertainty_params_out=False, camera_params=None,
+def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, camera=None,
                      nfringes=None, display=False):
     """ 
-    2D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast 
-    components. Option to output uncertainty too.
+    2D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast.
     
-    Marginally faster than using a 1D FT run in parallel.
+    Option to output uncertainty info too.
     
     :param img: CIS interferogram image to be demodulated.
     :type img: array_like
-    :param nfringes: Manually set the carrier (fringe) frequency to be demodulated, in units of cycles per sequence -- approximately the number of fringes present in the image. If no value is given, the fringe frequency is found automatically.
-    :type nfringes: float.
+    
     :param despeckle: Remove speckles from image.
     :type despeckle: bool.
+    
+    :param mask: End region masking to reduce Fourier artefacts
+    :type mask: bool
+    
+    :param uncertainty_out: output information on the uncertainty in the demodulated quantities
+    :type uncertainty_out: bool
+    
+    :param camera: optional, instance of pycis.model.Camera, used to calculate uncertainty in demodulated quantities
+    :type camera: pycis.model.Camera
+    
+    :param nfringes: Manually set the carrier (fringe) frequency to be demodulated, in units of cycles per sequence -- 
+    approximately the number of fringes present in the image. If no value is given, the fringe frequency is found 
+    automatically.
+    :type nfringes: float.
+    
     :param display: Display a plot.
     :type display: bool.
     
-     
     :return: A tuple containing the DC component (intensity), phase and contrast.
     """
 
@@ -45,7 +57,7 @@ def fourier_demod_2d(img, despeckle=False, end_region_mask=False, uncertainty_pa
     window_1d = pycis.demod.window(fft_length, nfringes, width_factor=0.9, fn='tukey')
     window_2d = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
 
-    if end_region_mask:
+    if mask:
         pp_img_erm_dc = pycis.demod.end_region_mask(pp_img, alpha=0.15, mean_subtract=True)
         pp_img_erm_phase = pycis.demod.end_region_mask(pp_img, alpha=(3 / nfringes), mean_subtract=True)
 
@@ -87,17 +99,13 @@ def fourier_demod_2d(img, despeckle=False, end_region_mask=False, uncertainty_pa
         contrast = np.abs(analytic_signal) / dc
 
     # uncertainty calculation
-    if uncertainty_params_out:
+    if uncertainty_out:
 
-        if camera_params is None:
-            # with no information supplied on the camera used, assume it's the Photron SA-4
-            camera_params = {'gain': 0.0086,  # [DN / e]
-                             'cam_noise_var': 1700,  # [e ^ 2]
-                             }
+        assert camera is not None
 
         # estimate standard deviation of the noise
         i0 = 2 * dc
-        std = np.sqrt(camera_params['gain'] ** 2 * camera_params['cam_noise_var'] + camera_params['gain'] * i0)
+        std = np.sqrt(camera.epercount ** 2 * camera.cam_noise + camera.epercount * i0)
 
         # calculate 'power gain' of the filter windows used
         y_arr_window = np.arange(0, fft_length + 1)
@@ -118,9 +126,9 @@ def fourier_demod_2d(img, despeckle=False, end_region_mask=False, uncertainty_pa
         std_contrast = abs(contrast) * np.sqrt((std_dc / dc) ** 2 + (std_carrier / (contrast * dc)) ** 2)
         std_phase = std_carrier / (contrast * dc)
 
-        uncertainty_params = {'std_dc': std_dc,
-                              'std_phase': std_phase,
-                              'std_contrast': std_contrast}
+        uncertainty = {'std_dc': std_dc,
+                       'std_phase': std_phase,
+                       'std_contrast': std_contrast}
 
     if display:
         print('-- fd_image_2d: nfringes = {}'.format(nfringes))
@@ -156,7 +164,7 @@ def fourier_demod_2d(img, despeckle=False, end_region_mask=False, uncertainty_pa
 
         pycis.demod.display(img, dc, phase, contrast)
 
-        if uncertainty_params_out:
+        if uncertainty_out:
 
             fig3 = plt.figure(figsize=(10, 6), facecolor='white')
             ax31 = fig3.add_subplot(1, 2, 1)
@@ -171,8 +179,8 @@ def fourier_demod_2d(img, despeckle=False, end_region_mask=False, uncertainty_pa
 
         plt.show()
 
-    if uncertainty_params_out:
-        return dc, phase, contrast, uncertainty_params
+    if uncertainty_out:
+        return dc, phase, contrast, uncertainty
     else:
         return dc, phase, contrast
 

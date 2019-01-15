@@ -12,7 +12,7 @@ Authorship:
 Package consists of three modules and a directory, demos, containing short demonstration scripts.
 
 - **pycis.demod**: For the manipulation and demodulation of raw CIS data.
-- **pycis.model**: For forward modelling the CIS instrument: this one is in a constant state of flux but the ```demos/model_calib.py``` and ```demos/model_cherab.py``` scripts will at least be kept up to date.
+- **pycis.model**: Currently undergoing changes!
 - **pycis.tools**: Some handy scripts that have popped up along the way.
 
 ### Prerequisites

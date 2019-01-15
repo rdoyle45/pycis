@@ -1,8 +1,11 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import os.path
-import pycis.paths
+import time
 import copy
 import scipy.interpolate
+
+import pycis
 
 
 class Instrument(object):
@@ -32,11 +35,12 @@ class Instrument(object):
         self.polarisers = self.get_polarisers()
 
         self.interferometer_orientation = interferometer_orientation
+
         # TODO is bandpass_filter implemented correctly?
         self.bandpass_filter = bandpass_filter
         self.input_checks()
 
-        self.x, self.y = self.get_sensor_coords()
+        self.x, self.y = self.calculate_sensor_coords()
 
         # assign instrument 'type' based on interferometer layout
         self.inst_type = self.check_instrument_type()
@@ -47,7 +51,7 @@ class Instrument(object):
 
     def input_checks(self):
         """
-        checks for __init__ arguments
+        checks __init__ arguments
         :return: 
         """
 
@@ -59,47 +63,68 @@ class Instrument(object):
             assert isinstance(self.bandpass_filter, pycis.model.BandpassFilter)
 
     def get_crystals(self):
-        """ list the birefringent components, subset of interferometer """
+        """ list the birefringent components, subset of self.interferometer """
 
         return [c for c in self.interferometer if isinstance(c, pycis.BirefringentComponent)]
 
     def get_polarisers(self):
-        """ get a list of the polarisers, subset of interferometer """
+        """ get a list of the polarisers, subset of self.interferometer """
 
         return [c for c in self.interferometer if isinstance(c, pycis.LinearPolariser)]
 
-    def get_sensor_coords(self, downsample=None, letterbox=None):
-        """  
-        can this be a pycis.Camera method? 
+    def calculate_sensor_coords(self, crop=None, downsample=None, display=False):
+        """
+        spatial coordinates of the camera sensor for ray geometry calculations
+
+        coordinates can be cropped and downsampled to facilitate direct comparison with cropped / downsampled
+        experimental image, forgoing the need to generate a full-sensor synthetic image, as some of that output won't be
+         used. can this be a pycis.Camera method? If both crop and downsample are specified, crop carried out first.
         
-        :param downsample: 
-        :param letterbox: 
-        :return: 
+        :param crop:
+        :param downsample:
+        :param display:
+
+        :return: x, y  [ m ]
         """
 
-        cam = self.camera
-        sensor_dim = np.array(list(copy.copy(cam.sensor_dim)))
+        sensor_dim = np.array(list(copy.copy(self.camera.sensor_dim)))
 
-        if letterbox is not None:
-            sensor_dim[0] -= 2 * letterbox
+        y_pos = np.arange(sensor_dim[0])
+        x_pos = np.arange(sensor_dim[1])
 
-        centre = cam.pix_size * (sensor_dim - 2) / 2
+        centre = self.camera.pix_size * (sensor_dim - 2) / 2
 
-        if downsample is None:
-            y_pos = np.arange(sensor_dim[0])
-            x_pos = np.arange(sensor_dim[1])
-        else:
-            y_pos = np.arange(sensor_dim[0])[::downsample]
-            x_pos = np.arange(sensor_dim[1])[::downsample]
-
-        y_pos = (y_pos - 0.5) * cam.pix_size - centre[0]  # [m]
-        x_pos = (x_pos - 0.5) * cam.pix_size - centre[1]  # [m]
+        y_pos = (y_pos - 0.5) * self.camera.pix_size - centre[0]  # [m]
+        x_pos = (x_pos - 0.5) * self.camera.pix_size - centre[1]  # [m]
 
         x, y = np.meshgrid(x_pos, y_pos)
 
+        if crop is not None:
+            x = pycis.tools.crop(x, crop)
+            y = pycis.tools.crop(y, crop)
+
+        if downsample is not None:
+            x = pycis.tools.downsample(x, downsample)
+            y = pycis.tools.downsample(y, downsample)
+
+        if display:
+
+            fig = plt.figure()
+            axx = fig.add_subplot(121)
+            axy = fig.add_subplot(122)
+
+            imx = axx.imshow(x, origin='lower')
+            cbarx = fig.colorbar(imx, ax=axx)
+
+            imy = axy.imshow(y, origin='lower')
+            cbary = fig.colorbar(imy, ax=axy)
+
+            plt.tight_layout()
+            plt.show()
+
         return x, y
 
-    def calculate_ray_inc_angle(self):
+    def calculate_ray_inc_angles(self, x, y):
         """
         incidence angles will be the same for all interferometer components (until arbitrary component misalignment 
         implemented)
@@ -109,12 +134,11 @@ class Instrument(object):
         :return: 
         """
 
-        # assuming crystals are perfectly alligned, their incidence angle projections are the same.
-        inc_angles = np.arctan2(np.sqrt(self.x ** 2 + self.y ** 2), self.back_lens.focal_length)
+        inc_angles = np.arctan2(np.sqrt(x ** 2 + y ** 2), self.back_lens.focal_length)
 
         return inc_angles
 
-    def calculate_ray_azim_angle(self, crystal):
+    def calculate_ray_azim_angles(self, x, y, crystal):
         """
         azimuthal angles vary with crystal orientation so are calculated separately
         
@@ -125,77 +149,28 @@ class Instrument(object):
         orientation = crystal.orientation + self.interferometer_orientation
 
         # Rotate x, y coordinates
-        x_rot = (np.cos(orientation) * self.x) + (np.sin(orientation) * self.y)
-        y_rot = (- np.sin(orientation) * self.x) + (np.cos(orientation) * self.y)
+        x_rot = (np.cos(orientation) * x) + (np.sin(orientation) * y)
+        y_rot = (- np.sin(orientation) * x) + (np.cos(orientation) * y)
 
         return np.arctan2(x_rot, y_rot)
 
-    def calculate_ray_angle(self, downsample=None, letterbox=None):
-        """
-        Calculate incidence and azimuthal angles for each pixel's 'sightline' through each crystal
-        
-        :param downsample: defaults to None, downsample the data for fitting
-        :param letterbox:
-        :param display: 
-        :return: inc_angles, azim_angles [ rad ]
-        """
-
-        cam = self.camera
-        f_3 = self.back_lens.focal_length
-        sensor_dim = list(copy.copy(cam.sensor_dim))
-
-        if letterbox is not None:
-            sensor_dim[0] -= 2 * letterbox
-
-        # Define x,y detector coordinates:
-        #
-        # tilt_offset_y = f_3 * np.tan(self.chi[0])  # vertical tilt
-        # tilt_offset_x = f_3 * np.tan(self.chi[1])  # horizontal tilt
-
-        centre = [(cam.pix_size * (sensor_dim[0] - 2) / 2),  # + tilt_offset_y,
-                  (cam.pix_size * (sensor_dim[1] - 2) / 2)]  # + tilt_offset_x]
-
-        if downsample is None:
-            y_pos = np.arange(sensor_dim[0])
-            x_pos = np.arange(sensor_dim[1])
-        else:
-            y_pos = np.arange(sensor_dim[0])[::downsample]
-            x_pos = np.arange(sensor_dim[1])[::downsample]
-
-        y_pos = (y_pos - 0.5) * cam.pix_size - centre[0]  # [m]
-        x_pos = (x_pos - 0.5) * cam.pix_size - centre[1]  # [m]
-
-        x, y = np.meshgrid(x_pos, y_pos)
-
-        # assuming crystals are perfectly alligned, their incidence angle projections are the same.
-        inc_angles = np.arctan2(np.sqrt(x ** 2 + y ** 2), f_3)
-
-        # azimuthal angles vary with crystal so are calculated separately
-        crystal_azim_angles = []
-
-        for crystal in self.crystals:
-
-            orientation = crystal.orientation + self.interferometer_orientation
-
-            # Rotate x, y coordinates by crystal orientation
-            x_rot = (np.cos(orientation) * x) + (np.sin(orientation) * y)
-            y_rot = (- np.sin(orientation) * x) + (np.cos(orientation) * y)
-
-            crystal_azim_angles.append(np.arctan2(x_rot, y_rot))
-
-        return inc_angles, crystal_azim_angles
-
     def calculate_matrix(self, wl):
-        """ calculate the total Mueller matrix for the interferometer """
+        """
+        calculate the total Mueller matrix for the interferometer
 
-        inc_angle = self.calculate_ray_inc_angle()
+        :param wl: [ m ]
+        :return:
+        """
 
-        instrument_matrix = np.identity(4)
+        x, y = self.calculate_sensor_coords()
+        inc_angle = self.calculate_ray_inc_angles(x, y)
+
         subscripts = 'ij...,jl...->il...'
+        instrument_matrix = np.identity(4)
 
         for component in self.interferometer:
 
-            azim_angle = self.calculate_ray_azim_angle(component)
+            azim_angle = self.calculate_ray_azim_angles(x, y, component)
             component_matrix = component.calculate_matrix(wl, inc_angle, azim_angle)
 
             # matrix multiplication
@@ -203,29 +178,34 @@ class Instrument(object):
 
         # account for orientation of the interferometer itself.
         rot_mat = pycis.model.calculate_rot_mat(self.interferometer_orientation)
+
         return np.einsum(subscripts, rot_mat, instrument_matrix)
 
-    def calculate_ideal_phase_delay(self, wl, n_e=None, n_o=None, downsample=None, letterbox=None, output_components=False):
+    def calculate_ideal_phase_delay(self, wl, n_e=None, n_o=None, crop=None, downsample=None, output_components=False):
         """
-        TAKE CARE -- method assumes that all instances of pycis.model.InterferomterComponent supplied to 
-        Instrument are aligned, such that their phase delays add constructively. If you are playing with arbitrary 
-        combinations and orientations of crystal then this will not be accurate. 
-        
-        :param wl: 
-        :param n_e: 
-        :param n_o: 
-        :param downsample: 
-        :param letterbox: 
-        :param output_components: 
-        :return: 
+        assumes all crystal's phase contributions are added together -- method used only when instrument.type =
+        'two-beam'
+
+        crop, downsample, n_e, n_o kwargs included for fitting purposes.
+
+        :param wl:
+        :param n_e:
+        :param n_o:
+        :param crop:
+        :param downsample:
+        :param output_components:
+        :return:
         """
 
         # calculate the angles of each pixel's line of sight through the interferometer
-        inc_angles, crystal_azim_angles = self.calculate_ray_angle(downsample=downsample, letterbox=letterbox)
+
+        x, y = self.calculate_sensor_coords(crop=crop, downsample=downsample)
+        inc_angles = self.calculate_ray_inc_angles(x, y)
+        azim_angles = self.calculate_ray_azim_angles(x, y, self.crystals[0])
 
         # calculate phase delay contribution due to each crystal
         phase = 0
-        for crystal, azim_angles in zip(self.crystals, crystal_azim_angles):
+        for crystal in self.crystals:
             phase += crystal.calculate_phase_delay(wl, inc_angles, azim_angles, n_e=n_e, n_o=n_o)
 
         if not output_components:
@@ -262,7 +242,7 @@ class Instrument(object):
         in the case of a perfectly aligned coherence imaging diagnostic in a simple 'two-beam' configuration, skip the 
         Mueller matrix calculation to the final result.
         
-        :return: type
+        :return: type (str)
         """
 
         orientations = []
@@ -274,7 +254,7 @@ class Instrument(object):
 
         # are their two polarisers, at the front and back of the interferometer?
         if len(self.polarisers) == 2 and (isinstance(self.interferometer[0], pycis.LinearPolariser) and
-                isinstance(self.interferometer[-1], pycis.LinearPolariser)):
+                                              isinstance(self.interferometer[-1], pycis.LinearPolariser)):
 
             # are they alligned?
             pol_1_orientation = self.interferometer[0].orientation
@@ -293,7 +273,6 @@ class Instrument(object):
 
         return 'general'
 
-
     def calculate_ideal_phase_offset(self, wl, n_e=None, n_o=None):
         """
         :param wl: 
@@ -307,7 +286,6 @@ class Instrument(object):
             phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
 
         return phase_offset
-
 
     def get_snr_intensity(self, line_name, snr):
         """ Given spectral line and desired approximate image snr (central ROI), return the necessary input intensity I0 in units 

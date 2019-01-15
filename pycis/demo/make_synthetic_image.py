@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
 import pycis
 
 # quick synthetic image
@@ -18,12 +17,13 @@ flength = 85e-3
 backlens = pycis.Lens(flength)
 
 # interferometer components
-pol_1 = pycis.LinearPolariser(0.)
+pol_1 = pycis.LinearPolariser(0.5)
 sp_1 = pycis.SavartPlate(np.pi / 4, 4.0e-3)
 wp_1 = pycis.UniaxialCrystal(np.pi / 4, 4.48e-3, 0)
-pol_2 = pycis.LinearPolariser(0.)
+pol_2 = pycis.LinearPolariser(0.5)
 
-inst = pycis.Instrument(cam, backlens, [pol_1, sp_1, wp_1, pol_2],)
+inst = pycis.Instrument(cam, backlens, [pol_1, wp_1, sp_1, pol_2])
+# inst.calculate_sensor_coords(downsample=None, crop=(100, 250, 100, 250), display=True)
 wl = 466e-9
 
 spectra = {'wl': wl,

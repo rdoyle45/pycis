@@ -54,7 +54,7 @@ if __name__ == '__main__':
     image, wl, time = lsga.get_raw_image(15)
 
     # img_erm = end_region_mask(image)
-    pycis.demod.fourier_demod_2d(image, end_region_mask=True, display=True)
+    pycis.demod.fourier_demod_2d(image, mask=True, display=True)
 
 
 
