@@ -52,14 +52,14 @@ def crop(img, f):
     crop image to rectangle with vertices at (x1, y1), (x1, y2), (x2, y1), (x2, y2).
 
     :param img:
-    :param f: tuple (x1, x2, y1, y2)
+    :param f: tuple (y1, y2, x1, x2)
     :return:
     """
 
     assert isinstance(img, np.ndarray)
     assert img.ndim == 2
 
-    return img[f[2]:f[3], f[0]:f[1]]
+    return img[f[0]:f[1], f[2]:f[3]]
 
 
 def letterbox(img, f):

@@ -23,8 +23,17 @@ wp_1 = pycis.UniaxialCrystal(np.pi / 4, 4.48e-3, 0)
 pol_2 = pycis.LinearPolariser(0.5)
 
 inst = pycis.Instrument(cam, backlens, [pol_1, wp_1, sp_1, pol_2])
+
+
 # inst.calculate_sensor_coords(downsample=None, crop=(100, 250, 100, 250), display=True)
 wl = 466e-9
+
+phase = inst.calculate_ideal_phase_delay(np.array([465e-9, 466e-9]), downsample=5, crop=(0, 200, 0, 200))
+
+plt.figure()
+plt.imshow(phase[:, :, 0])
+plt.colorbar()
+plt.show()
 
 spectra = {'wl': wl,
            'spec': 50000,

@@ -72,7 +72,7 @@ class Instrument(object):
 
         return [c for c in self.interferometer if isinstance(c, pycis.LinearPolariser)]
 
-    def calculate_sensor_coords(self, crop=None, downsample=None, display=False):
+    def calculate_sensor_coords(self, crop=None, downsample=1, display=False):
         """
         spatial coordinates of the camera sensor for ray geometry calculations
 
@@ -80,32 +80,27 @@ class Instrument(object):
         experimental image, forgoing the need to generate a full-sensor synthetic image, as some of that output won't be
          used. can this be a pycis.Camera method? If both crop and downsample are specified, crop carried out first.
         
-        :param crop:
+        :param crop: (y1, y2, x1, x2)
         :param downsample:
         :param display:
 
         :return: x, y  [ m ]
         """
 
-        sensor_dim = np.array(list(copy.copy(self.camera.sensor_dim)))
+        sensor_dim = np.array(self.camera.sensor_dim)
 
-        y_pos = np.arange(sensor_dim[0])
-        x_pos = np.arange(sensor_dim[1])
+        if crop is None:
+            crop = (0, sensor_dim[0], 0, sensor_dim[1])
 
         centre = self.camera.pix_size * (sensor_dim - 2) / 2
+
+        y_pos = np.arange(crop[0], crop[1])[::downsample]
+        x_pos = np.arange(crop[2], crop[3])[::downsample]
 
         y_pos = (y_pos - 0.5) * self.camera.pix_size - centre[0]  # [m]
         x_pos = (x_pos - 0.5) * self.camera.pix_size - centre[1]  # [m]
 
         x, y = np.meshgrid(x_pos, y_pos)
-
-        if crop is not None:
-            x = pycis.tools.crop(x, crop)
-            y = pycis.tools.crop(y, crop)
-
-        if downsample is not None:
-            x = pycis.tools.downsample(x, downsample)
-            y = pycis.tools.downsample(y, downsample)
 
         if display:
 
@@ -181,7 +176,7 @@ class Instrument(object):
 
         return np.einsum(subscripts, rot_mat, instrument_matrix)
 
-    def calculate_ideal_phase_delay(self, wl, n_e=None, n_o=None, crop=None, downsample=None, output_components=False):
+    def calculate_ideal_phase_delay(self, wl, n_e=None, n_o=None, crop=None, downsample=1, output_components=False):
         """
         assumes all crystal's phase contributions are added together -- method used only when instrument.type =
         'two-beam'

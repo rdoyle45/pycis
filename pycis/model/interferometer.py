@@ -82,8 +82,10 @@ class BirefringentComponent(InterferometerComponent):
         """
         :param thickness: [ m ]
         :type thickness: float
+
         :param material: string denoting crystal material
         :type material: str
+
         :param contrast: arbitrary contrast degradation factor for crystal, uniform contrast only for now.
         :type contrast: float
         """
@@ -285,6 +287,7 @@ class SavartPlate(BirefringentComponent):
         elif self.mode == 'veiras':
             # explicitly model Savart plate as the combination of two uniaxial crystals (1 & 2)
 
+            # TODO update this.
             azim_angle_1 = azim_angle
             azim_angle_2 = azim_angle - (np.pi / 2)
             t = self.thickness / 2

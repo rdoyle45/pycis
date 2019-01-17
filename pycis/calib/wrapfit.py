@@ -80,7 +80,6 @@ def wrapfit(wls, phase, phase_std, l_wp_guess, idx_0=0, num_steps=120000, polyno
     return gd0_axis, gd0_pdf
 
 
-
 class WrapFitPosterior(object):
     def __init__(self, wls, phase, phase_std, idx_0, l_wp_guess, polynomial_order=2, display=False):
 
