@@ -107,7 +107,7 @@ class BirefringentComponent(InterferometerComponent):
 
         phase = self.calculate_phase_delay(wl, inc_angle, azim_angle)
 
-        # padding <- can i get rid of this using broadcasting?
+        # TODO can i get rid of this using broadcasting?
         a1 = np.ones_like(phase)
         a0 = np.zeros_like(phase)
 
@@ -124,7 +124,7 @@ class BirefringentComponent(InterferometerComponent):
 
 
 class UniaxialCrystal(BirefringentComponent):
-    """ general uniaxial crystal """
+    """ Uniaxial crystal """
 
     def __init__(self, orientation, thickness, cut_angle, material='a-BBO', contrast=1):
         """
@@ -150,10 +150,10 @@ class UniaxialCrystal(BirefringentComponent):
         :param wl: wavelength [ m ]
         :type wl: float or array-like
 
-        :param inc_angle: incidence angle [ rad ]
+        :param inc_angle: ray incidence angle [ rad ]
         :type inc_angle: float or array-like
 
-        :param azim_angle: azimuthal angle [ rad ]
+        :param azim_angle: ray azimuthal angle [ rad ]
         :type azim_angle: float or array-like
 
         :param n_e: manually set extraordinary refractive index (for fitting)
@@ -174,23 +174,15 @@ class UniaxialCrystal(BirefringentComponent):
         # if wl, theta and omega are arrays, vectorise
         if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(inc_angle) and not pycis.tools.is_scalar(
                 azim_angle):
+
             img_dim = inc_angle.shape
             assert img_dim == azim_angle.shape
-            # TODO can't this stuff be done using broadcasting?
 
-            wl_len = len(wl)
+            # tile wl arrays to image dimensions for vectorisation
+            wl = np.tile(wl[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
+            n_e = np.tile(n_e[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
+            n_o = np.tile(n_o[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
 
-            reps_img = [wl_len, 1, 1]
-            reps_axis = [img_dim[0], img_dim[1], 1]
-
-            wl = np.tile(wl, reps_axis)
-            n_e = np.tile(n_e, reps_axis)
-            n_o = np.tile(n_o, reps_axis)
-
-            inc_angle = np.moveaxis(np.tile(inc_angle, reps_img), 0, -1)
-            azim_angle = np.moveaxis(np.tile(azim_angle, reps_img), 0, -1)
-
-        # calculation
         term_1 = np.sqrt(n_o ** 2 - np.sin(inc_angle) ** 2)
 
         term_2 = (n_o ** 2 - n_e ** 2) * \
@@ -211,7 +203,7 @@ class SavartPlate(BirefringentComponent):
 
     def __init__(self, orientation, thickness, material='a-BBO', mode='francon', contrast=1):
         """
-        :param mode: source for the equation for phase delay: 'francon' or 'veiras'
+        :param mode: source for the equation for phase delay: 'francon' (approx.) or 'veiras' (exact)
         :type mode: string
 
         """
@@ -230,10 +222,10 @@ class SavartPlate(BirefringentComponent):
         :param wl: wavelength [ m ]
         :type wl: float or array-like
 
-        :param inc_angle: incidence angle [ rad ]
+        :param inc_angle: ray incidence angle [ rad ]
         :type inc_angle: float or array-like
 
-        :param azim_angle: azimuthal angle [ rad ]
+        :param azim_angle: ray azimuthal angle [ rad ]
         :type azim_angle: float or array-like
 
         :param n_e: manually set extraordinary refractive index (for fitting)
@@ -262,17 +254,10 @@ class SavartPlate(BirefringentComponent):
                 img_dim = inc_angle.shape
                 assert img_dim == azim_angle.shape
 
-                wl_length = len(wl)
-
-                reps_img = [wl_length, 1, 1]
-                reps_axis = [img_dim[0], img_dim[1], 1]
-
-                wl = np.tile(wl, reps_axis)
-                a = np.tile(a, reps_axis)
-                b = np.tile(b, reps_axis)
-
-                inc_angle = np.moveaxis(np.tile(inc_angle, reps_img), 0, -1)
-                azim_angle = np.moveaxis(np.tile(azim_angle, reps_img), 0, -1)
+                # tile wl arrays to image dimensions for vectorisation
+                wl = np.tile(wl[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
+                a = np.tile(a[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
+                b = np.tile(b[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
 
             # calculation
             term_1 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2)) * (np.cos(azim_angle) + np.sin(azim_angle)) * np.sin(
@@ -285,21 +270,24 @@ class SavartPlate(BirefringentComponent):
             phase = 2 * np.pi * - (self.thickness / (2 * wl)) * (term_1 + term_2)
 
         elif self.mode == 'veiras':
-            # explicitly model Savart plate as the combination of two uniaxial crystals (1 & 2)
 
-            # TODO update this.
-            azim_angle_1 = azim_angle
-            azim_angle_2 = azim_angle - (np.pi / 2)
+            # explicitly model plate as the combination of two uniaxial crystals
+
+            or1 = self.orientation
+            or2 = self.orientation - np.pi / 2
+
+            azim_angle1 = azim_angle
+            azim_angle2 = azim_angle - np.pi / 2
             t = self.thickness / 2
 
-            crystal_1 = UniaxialCrystal(t, cut_angle=-np.pi / 4, material=self.material)
-            crystal_2 = UniaxialCrystal(t, cut_angle=np.pi / 4, material=self.material)
+            crystal_1 = UniaxialCrystal(or1, t, cut_angle=-np.pi / 4, material=self.material)
+            crystal_2 = UniaxialCrystal(or2, t, cut_angle=np.pi / 4, material=self.material)
 
-            phase = crystal_1.calculate_phase_delay(wl, inc_angle, azim_angle_1, n_e=n_e, n_o=n_o) - \
-                    crystal_2.calculate_phase_delay(wl, inc_angle, azim_angle_2, n_e=n_e, n_o=n_o)
+            phase = crystal_1.calculate_phase_delay(wl, inc_angle, azim_angle1, n_e=n_e, n_o=n_o) - \
+                    crystal_2.calculate_phase_delay(wl, inc_angle, azim_angle2, n_e=n_e, n_o=n_o)
 
         else:
-            raise Exception('invalid mode')
+            raise Exception('invalid SavartPlate.mode')
 
         return phase
 
