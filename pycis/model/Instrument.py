@@ -38,7 +38,7 @@ class Instrument(object):
         self.bandpass_filter = bandpass_filter
         self.input_checks()
 
-        self.x, self.y = self.calculate_sensor_coords()
+        self.x, self.y = self.calculate_pixel_pos()
 
         # assign instrument 'type' based on interferometer layout
         self.inst_type = self.check_instrument_type()
@@ -76,9 +76,9 @@ class Instrument(object):
 
         return [c for c in self.interferometer if isinstance(c, pycis.LinearPolariser)]
 
-    def calculate_sensor_coords(self, x_coord=None, y_coord=None, crop=None, downsample=1, display=False):
+    def calculate_pixel_pos(self, x_coord=None, y_coord=None, crop=None, downsample=1):
         """
-        Calculate x-y coordinates of the camera sensor for ray geometry calculations, in [ m ]
+        Calculate x-y coordinates of the pixels of the camera's sensor -- for ray geometry calculations
 
         Converts from pixel coordinates (origin top left) to spatial coordinates (origin centre). If x_coord and
         y_coord are not specified, entire sensor will be evaluated (with specified cropping and downsampling).
@@ -91,7 +91,6 @@ class Instrument(object):
         :param y_coord: array of pixel coordinates (y)
         :param crop: (y1, y2, x1, x2)
         :param downsample:
-        :param display:
 
         :return: x_pos, y_pos [ m ]
 
@@ -124,21 +123,6 @@ class Instrument(object):
 
             x_pos, y_pos = np.meshgrid(x_pos, y_pos)
 
-        if display:
-
-            fig = plt.figure()
-            axx = fig.add_subplot(121)
-            axy = fig.add_subplot(122)
-
-            imx = axx.imshow(x_coord, origin='lower')
-            cbarx = fig.colorbar(imx, ax=axx)
-
-            imy = axy.imshow(y_coord, origin='lower')
-            cbary = fig.colorbar(imy, ax=axy)
-
-            plt.tight_layout()
-            plt.show()
-
         return x_pos, y_pos
 
     def calculate_ray_inc_angles(self, x_pos, y_pos):
@@ -150,6 +134,7 @@ class Instrument(object):
         :param y_pos: y position (s), centred sensor coordinates [ m ]
 
         :return: incidence angles [ rad ]
+
         """
 
         assert np.shape(x_pos) == np.shape(y_pos)
@@ -168,13 +153,14 @@ class Instrument(object):
         :param crystal: instance of pycis.model.BirefringentComponent
 
         :return: azimuthal angles [ rad ]
+
         """
 
         assert np.shape(x_pos) == np.shape(y_pos)
 
         orientation = crystal.orientation + self.interferometer_orientation
 
-        # Rotate x, y coordinates
+        # rotate x, y coordinates
         x_rot = (np.cos(orientation) * x_pos) + (np.sin(orientation) * y_pos)
         y_rot = (- np.sin(orientation) * x_pos) + (np.cos(orientation) * y_pos)
 
@@ -187,9 +173,10 @@ class Instrument(object):
         :param wl: [ m ]
 
         :return: instrument matrix
+
         """
 
-        x, y = self.calculate_sensor_coords()
+        x, y = self.calculate_pixel_pos()
         inc_angle = self.calculate_ray_inc_angles(x, y)
 
         subscripts = 'ij...,jl...->il...'
@@ -208,34 +195,30 @@ class Instrument(object):
 
         return np.einsum(subscripts, rot_mat, instrument_matrix)
 
-    def calculate_ideal_phase_delay(self, wl, x=None, y=None, n_e=None, n_o=None, crop=None, downsample=1,
+    def calculate_ideal_phase_delay(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
                                     output_components=False):
         """
         assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
-        'two-beam'
-
-        crop, downsample, x, y, n_e, n_o kwargs included for fitting purposes.
+        'two-beam'. kwargs included for fitting purposes.
 
         :param wl:
-        :param x:
-        :param y:
+        :param x_coord:
+        :param y_coord:
         :param n_e:
         :param n_o:
         :param crop:
         :param downsample:
         :param output_components:
-        :return:
+
+        :return: phase delay [ rad ]
+
         """
 
         # calculate the angles of each pixel's line of sight through the interferometer
+        x_pos, y_pos = self.calculate_pixel_pos(x_coord=x_coord, y_coord=y_coord, crop=crop, downsample=downsample)
 
-        if x is None and y is None:
-            x, y = self.calculate_sensor_coords(crop=crop, downsample=downsample)
-        else:
-            x, y = self.calculate_sensor_coords(x_coord=x, y_coord=y)
-
-        inc_angles = self.calculate_ray_inc_angles(x, y)
-        azim_angles = self.calculate_ray_azim_angles(x, y, self.crystals[0])
+        inc_angles = self.calculate_ray_inc_angles(x_pos, y_pos)
+        azim_angles = self.calculate_ray_azim_angles(x_pos, y_pos, self.crystals[0])
 
         # calculate phase delay contribution due to each crystal
         phase = 0
@@ -311,8 +294,10 @@ class Instrument(object):
         """
         :param wl: 
         :param n_e: 
-        :param n_o: 
+        :param n_o:
+
         :return: phase_offset [ rad ]
+
         """
 
         phase_offset = 0
