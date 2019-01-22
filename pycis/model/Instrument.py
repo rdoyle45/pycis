@@ -1,8 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import os.path
 import scipy.interpolate
-
 import pycis
 
 
@@ -38,7 +36,7 @@ class Instrument(object):
         self.bandpass_filter = bandpass_filter
         self.input_checks()
 
-        self.x, self.y = self.calculate_pixel_pos()
+        self.x_pos, self.y_pos = self.calculate_pixel_pos()
 
         # assign instrument 'type' based on interferometer layout
         self.inst_type = self.check_instrument_type()
@@ -62,7 +60,7 @@ class Instrument(object):
 
     def get_crystals(self):
         """
-        list the birefringent components in the interferometer, subset of self.interferometer list
+        list all birefringent components present in the interferometer ( subset of self.interferometer list )
 
         """
 
@@ -70,7 +68,7 @@ class Instrument(object):
 
     def get_polarisers(self):
         """
-        list the polarisers in the interferometer, subset of self.interferometer list
+        list all polarisers present in the interferometer ( subset of self.interferometer list )
 
         """
 
@@ -176,15 +174,15 @@ class Instrument(object):
 
         """
 
-        x, y = self.calculate_pixel_pos()
-        inc_angle = self.calculate_ray_inc_angles(x, y)
+        x_pos, y_pos = self.calculate_pixel_pos()
+        inc_angle = self.calculate_ray_inc_angles(x_pos, y_pos)
 
         subscripts = 'ij...,jl...->il...'
         instrument_matrix = np.identity(4)
 
         for component in self.interferometer:
 
-            azim_angle = self.calculate_ray_azim_angles(x, y, component)
+            azim_angle = self.calculate_ray_azim_angles(x_pos, y_pos, component)
             component_matrix = component.calculate_matrix(wl, inc_angle, azim_angle)
 
             # matrix multiplication

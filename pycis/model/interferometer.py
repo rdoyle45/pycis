@@ -148,13 +148,13 @@ class UniaxialCrystal(BirefringentComponent):
         ray
 
         :param wl: wavelength [ m ]
-        :type wl: float or array-like
+        :type wl: float or array-like (1-D)
 
         :param inc_angle: ray incidence angle [ rad ]
-        :type inc_angle: float or array-like
+        :type inc_angle: float or array-like (up to 2-D)
 
         :param azim_angle: ray azimuthal angle [ rad ]
-        :type azim_angle: float or array-like
+        :type azim_angle: float or array-like (up to 2-D)
 
         :param n_e: manually set extraordinary refractive index (for fitting)
         :type n_e: float
@@ -175,13 +175,20 @@ class UniaxialCrystal(BirefringentComponent):
         if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(inc_angle) and not pycis.tools.is_scalar(
                 azim_angle):
 
-            img_dim = inc_angle.shape
-            assert img_dim == azim_angle.shape
+            assert inc_angle.shape == azim_angle.shape
+
+            if inc_angle.ndim == 1:
+                # pad 1-D ray angle arrays
+
+                inc_angle = inc_angle[:, np.newaxis]
+                azim_angle = azim_angle[:, np.newaxis]
 
             # tile wl arrays to image dimensions for vectorisation
-            wl = np.tile(wl[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
-            n_e = np.tile(n_e[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
-            n_o = np.tile(n_o[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
+            reps = [1, inc_angle.shape[0], inc_angle.shape[1]]
+
+            wl = np.tile(wl[:, np.newaxis, np.newaxis], reps)
+            n_e = np.tile(n_e[:, np.newaxis, np.newaxis], reps)
+            n_o = np.tile(n_o[:, np.newaxis, np.newaxis], reps)
 
         term_1 = np.sqrt(n_o ** 2 - np.sin(inc_angle) ** 2)
 
@@ -251,13 +258,22 @@ class SavartPlate(BirefringentComponent):
             # if wl, theta and omega are arrays, vectorise
             if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(inc_angle) and not pycis.tools.is_scalar(
                     azim_angle):
-                img_dim = inc_angle.shape
-                assert img_dim == azim_angle.shape
+
+                assert inc_angle.shape == azim_angle.shape
+
+                if inc_angle.ndim == 1:
+                    # pad 1-D ray angle arrays
+
+                    inc_angle = inc_angle[:, np.newaxis]
+                    azim_angle = azim_angle[:, np.newaxis]
 
                 # tile wl arrays to image dimensions for vectorisation
-                wl = np.tile(wl[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
-                a = np.tile(a[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
-                b = np.tile(b[:, np.newaxis, np.newaxis], [1, img_dim[0], img_dim[1]])
+                reps = [1, inc_angle.shape[0], inc_angle.shape[1]]
+
+                # tile wl arrays to image dimensions for vectorisation
+                wl = np.tile(wl[:, np.newaxis, np.newaxis], reps)
+                a = np.tile(a[:, np.newaxis, np.newaxis], reps)
+                b = np.tile(b[:, np.newaxis, np.newaxis], reps)
 
             # calculation
             term_1 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2)) * (np.cos(azim_angle) + np.sin(azim_angle)) * np.sin(

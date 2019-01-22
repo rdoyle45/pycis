@@ -128,7 +128,8 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
 
         uncertainty = {'std_dc': std_dc,
                        'std_phase': std_phase,
-                       'std_contrast': std_contrast}
+                       'std_contrast': std_contrast,
+                       'SNR': i0 / (2 * std)}  # only appropriate for calibration images
 
     if display:
         print('-- fd_image_2d: nfringes = {}'.format(nfringes))
