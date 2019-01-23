@@ -7,7 +7,8 @@ def calculate_rot_mat(angle):
     general Mueller matrix for frame rotation
 
     :param angle: [ rad ]
-    :return: 
+    :return:
+
     """
 
     angle2 = 2 * angle
@@ -124,13 +125,17 @@ class BirefringentComponent(InterferometerComponent):
 
 
 class UniaxialCrystal(BirefringentComponent):
-    """ Uniaxial crystal """
+    """
+    Uniaxial crystal
+
+    """
 
     def __init__(self, orientation, thickness, cut_angle, material='a-BBO', contrast=1):
         """
         
         :param cut_angle: [ rad ] angle between optic axis and crystal front face
         :type cut_angle: float
+
         """
 
         super().__init__(orientation, thickness, material, contrast)
@@ -163,6 +168,7 @@ class UniaxialCrystal(BirefringentComponent):
         :type n_o: float
 
         :return: phase [ rad ]
+
         """
 
         # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
@@ -206,7 +212,10 @@ class UniaxialCrystal(BirefringentComponent):
 
 
 class SavartPlate(BirefringentComponent):
-    """ Savart plate """
+    """
+    Savart plate
+
+    """
 
     def __init__(self, orientation, thickness, material='a-BBO', mode='francon', contrast=1):
         """
@@ -242,6 +251,7 @@ class SavartPlate(BirefringentComponent):
         :type n_o: float
 
         :return: phase [ rad ]
+
         """
 
         if self.mode == 'francon':

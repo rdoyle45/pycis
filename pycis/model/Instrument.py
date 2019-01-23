@@ -7,6 +7,7 @@ import pycis
 class Instrument(object):
     """ 
     Coherence imaging spectroscopy instrument
+
     """
 
     def __init__(self, camera, back_lens, interferometer, bandpass_filter=None, interferometer_orientation=0):
@@ -21,6 +22,7 @@ class Instrument(object):
         :type interferometer: list
         
         :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name
+
         """
 
         self.camera = camera
