@@ -5,142 +5,140 @@ import numpy as np
 from matplotlib.colors import LogNorm
 import matplotlib
 from scipy.constants import c, e, k
+
 import pycis
+from pycis.tools import is_scalar
 
 
-class SynthImage(object):
-    """ synthetic coherence imaging spectroscopy (CIS) image."""
+class SynthImage:
+    """
+    generate synthetic coherence imaging spectroscopy (CIS) image
 
-    def __init__(self, instrument, spec):
+    """
+
+    def __init__(self, instrument, wl, spec, stokes=False):
         """
-        :param spec: frequency spectrum of the light observed.  
+        :param input_spec: frequency spectrum of the light observed.
+        :type input_spec: Union[pycis.InputSpec, Dict]
         
         :param instrument: instance of pycis.model.Instrument
         :type instrument: pycis.model.Instrument
         
         :param name: string
+
         """
 
         self.instrument = instrument
-        self.spec = spec
+        self.wl, self.spec = self.format_input_spec(wl, spec, stokes)
 
-        # TODO the vectorisation needs a clean-up and to be thoroughly checked
-        # TODO radiometric units
-        # TODO Stokes vector compatibility
+        # calculate total number of photons incident, along each pixel's sightline
+        dc_ph = np.trapz(self.spec, self.wl, axis=-3)
 
-        # generate interference pattern
+        # generate interference pattern, method used depends on instrument type
         if self.instrument.inst_type == 'two-beam':
-            igram_ph, dc_ph = self._make_ideal()
-
+            igram_ph = self._make_ideal(dc_ph)
+        elif self.instrument.inst_type == 'general':
+            igram_ph = self._make_mueller()
         else:
-            # general treatment
-            igram_ph, dc_ph = self._make_mueller()
+            raise Exception()
 
         # measure interference pattern
         self.igram = self.instrument.camera.capture(igram_ph)
         self.dc = self.instrument.camera.capture(dc_ph, clean=True)
 
+    def format_input_spec(self, wl, spec, stokes=False):
+        """
+        handling input spectra for synthetic image generation
+
+        defaults to unpolarised light (stokes=False)
+
+        Additional functionality to be added for arbitrary Stokes' vector input (stokes=True):
+        the stokes axis of the nd arrays should always be the first axis! (TODO xarray!)
+
+        order of spec axes goes [stokes parameters, wavelengths, sensor_y, sensor_x]
+
+        :param wl: wavelength [ m ]
+        :type wl: Union[float, np.ndarray]
+
+        :param spec:
+        :type spec: Union[int, float, np.ndarray]
+
+        :param spec_units: 'counts',  'photons'
+        :type spec_units: str
+
+        """
+
+        if stokes is False:
+
+            if is_scalar(wl) and is_scalar(spec):
+                # monochromatic image, uniform intensity
+
+                # we need to generate an arbitrary spectrum for compatibility with the rest of the calculations. ie
+                # units of spec need to be converted from ph -> ph / m. This is a bit of a hack
+                wl = np.array([wl * 0.99, wl])
+                spec = np.array([0, 2 * spec / (wl[1] - wl[0])])
+
+                # padding
+                sd = self.instrument.camera.sensor_dim
+                spec = np.tile(spec[np.newaxis, :, np.newaxis, np.newaxis], [4, 1, sd[0], sd[1]])
+                spec[1:, :, :, :] = 0
+
+            elif isinstance(wl, np.ndarray) and isinstance(spec, np.ndarray):
+                # unique spectrum defined for each pixel
+
+                assert wl.ndim == 1
+                assert spec.ndim == 3
+                assert spec.shape[0] == wl.shape[0]
+                assert spec.shape[0] == self.instrument.camera.sensor_dim[0]
+                assert spec.shape[1] == self.instrument.camera.sensor_dim[1]
+
+                # padding
+                spec = np.tile(spec[np.newaxis, :, :, :], [4, 1, 1, 1])
+
+            else:
+                raise TypeError
+        else:
+            raise NotImplementedError
+
+        return wl, spec
+
     def _make_mueller(self):
         """
 
-        :return: 
+        :return:
+
         """
 
-        wl = self.spec['wl']
-        spec = self.spec['spec']
-        units = self.spec['spec units']
+        mueller_matrix = self.instrument.calculate_matrix(self.wl)
 
-        if pycis.tools.is_scalar(wl):
-
-            if pycis.tools.is_scalar(spec):
-
-                if units == 'cnts':
-                    dc_ph = np.ones(self.instrument.camera.sensor_dim) * spec * \
-                            self.instrument.camera.epercount / self.instrument.camera.qe
-
-                elif units == 'ph':
-                    dc_ph = np.ones(self.instrument.camera.sensor_dim) * spec / 2
-
-            else:
-
-                assert np.shape(spec) == self.instrument.camera.sensor_dim
-
-                if units == 'cnts':
-                    dc_ph = spec * self.instrument.camera.epercount / self.instrument.camera.qe
-
-                elif units == 'ph':
-                    dc_ph = spec / 2
-
-        else:
-
-            # calculate contrast degradation due to spectrum
-            assert np.shape(spec) == self.instrument.camera.sensor_dim
-            assert units == 'ph'
-
-            dc_ph = np.trapz(spec, axis=-1) / 2
-            normalised_spectra = spec / np.moveaxis(np.tile(2 * dc_ph, [len(wl), 1, 1]), 0, -1)
-            normalised_spectra[np.isnan(normalised_spectra)] = 0.
-
-        a0 = np.zeros_like(dc_ph)
-        stokes_vector_in = np.array([dc_ph, a0, a0, a0])
-
+        # matrix multiplication
         subscripts = 'ij...,j...->i...'
-        transfer_matrix = self.instrument.calculate_matrix(wl)
-        stokes_vector_out = np.einsum(subscripts, transfer_matrix, stokes_vector_in)
-        igram_ph = stokes_vector_out[0]
+        stokes_vector_out = np.einsum(subscripts, mueller_matrix, self.spec)
 
-        return igram_ph, dc_ph
+        # integrate over wavelength
+        igram_ph = np.trapz(stokes_vector_out[0], self.wl, axis=0)
 
-    def _make_ideal(self):
-        """ Needs looking over """
+        return igram_ph
 
-        wl = self.spec['wl']
-        spec = self.spec['spec']
-        units = self.spec['spec units']
-        phase = self.instrument.calculate_ideal_phase_delay(wl)
+    def _make_ideal(self, dc_ph):
+        """
+        calculate interference for the special case of an idealised two-beam interferometer. Analytical calculation
+        avoids Mueller calculus for speed.
 
-        if pycis.tools.is_scalar(wl):
+        :return:
 
-            if pycis.tools.is_scalar(spec):
+        """
 
-                if units == 'cnts':
-                    dc_ph = np.ones(self.instrument.camera.sensor_dim) * spec * \
-                            self.instrument.camera.epercount / self.instrument.camera.qe / self.instrument.calculate_ideal_transmission()
+        # TODO can get rid of Stokes axis for the idealised calculation?
 
-                elif units == 'ph':
-                    dc_ph = np.ones(self.instrument.camera.sensor_dim) * spec / 2
+        phase = self.instrument.calculate_ideal_phase_delay(self.wl)
+        spec_norm = np.where(self.spec > 0, self.spec / dc_ph[:, np.newaxis], 0)
 
-            else:
-
-                assert np.shape(spec) == self.instrument.camera.sensor_dim
-
-                if units == 'cnts':
-                    dc_ph = spec * self.instrument.camera.epercount / self.instrument.camera.qe / self.instrument.calculate_ideal_transmission()
-
-                elif units == 'ph':
-                    dc_ph = spec / 2
-
-            degree_coherence = self.instrument.calculate_ideal_contrast() * np.exp(1j * phase)
-
-        else:
-            # calculate contrast degradation due to spectrum
-            assert np.shape(spec) == self.instrument.camera.sensor_dim
-            assert units == 'ph'
-
-            dc_ph = np.trapz(spec, axis=-1) / 2
-            normalised_spectra = spec / np.moveaxis(np.tile(2 * dc_ph, [len(wl), 1, 1]), 0, -1)
-            normalised_spectra[np.isnan(normalised_spectra)] = 0.
-
-            contrast = self.instrument.calculate_ideal_contrast()
-
-            degree_coherence = np.trapz(normalised_spectra * contrast * np.exp(1j * phase), axis=-1)
-
+        contrast = self.instrument.calculate_ideal_contrast()
+        degree_coherence = np.trapz(spec_norm * contrast * np.exp(1j * phase), self.wl, axis=1)
         igram_ph = dc_ph / 4 * (1 + np.real(degree_coherence))
 
-        # phase = np.angle(degree_coherence)
-        # contrast = np.abs(degree_coherence)
-
-        return igram_ph, dc_ph
+        return igram_ph[0]
 
     def _imshow(self, param, colormap, label, save, savename, ticks=True, **kwargs):
         """"""

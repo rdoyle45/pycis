@@ -17,6 +17,8 @@ def degree_coherence_general(lineshape, wavelengths, display=False):
     :return: degree_coherence
     """
 
+    # TODO this needs updating badly
+
     npts = len(wavelengths)
     assert len(lineshape) == npts
 
