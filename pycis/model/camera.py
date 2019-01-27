@@ -6,16 +6,21 @@ import matplotlib.pyplot as plt
 
 
 class Camera(object):
-    """ Container for information on the camera sensor. """
+    """
+    Camera base class
+
+    """
 
     def __init__(self, bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise):
         """
+
         :param bit_depth: 
-        :param sensor_dim: 
-        :param pix_size: pixel dimension [m].
+        :param sensor_dim: (y, x)
+        :param pix_size: pixel dimension [ m ].
         :param qe: Quantum efficiency or sensor.
         :param epercount: Conversion gain of sensor.
-        :param cam_noise: Camera noise standard deviation [electrons].
+        :param cam_noise: Camera noise standard deviation [ e- ].
+
         """
 
         self.pix_size = pix_size
@@ -25,10 +30,10 @@ class Camera(object):
         self.cam_noise = cam_noise
         self.bit_depth = bit_depth
 
-    def capture(self, photon_fluence, clean=False, display=False):
+    def capture(self, intensity, clean=False, display=False):
         """ model sensor signal given photon fluence (photons / pixel / camera timestep).
         
-        :param photon_fluence: numpy array of camera  
+        :param intensity: stokes vector
         :param clean: 
         :return: camera_signal
         """
@@ -36,7 +41,7 @@ class Camera(object):
         np.random.seed()
 
         # account for quantum efficiency
-        electron_fluence = photon_fluence * self.qe
+        electron_fluence = intensity * self.qe
 
         if not clean:
             # add shot noise
@@ -93,9 +98,111 @@ class Camera(object):
 
         return stacked_signal
 
-    def save(self):
-        pickle.dump(self, open(os.path.join(pycis.paths.camera_path, self.name + '.p'), 'wb'))
-        return
+
+class PolCamera(Camera):
+    """ Polarisation camera, eg. Photron Chrysta """
+
+    def __init__(self, bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise):
+        """
+
+        :param format:
+        :type format: str
+
+        """
+
+        assert sensor_dim[0] % 2 == 0
+        assert sensor_dim[1] % 2 == 0
+
+        super().__init__(bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)
+
+        self.format = format
+
+        # define Mueller matrices for the 4 polariser orientations
+
+        self.mm_0deg = 0.5 * np.array([[1, -1, 0, 0],
+                                      [-1, 1, 0, 0],
+                                      [0, 0, 0, 0],
+                                      [0, 0, 0, 0]])
+
+        self.mm_45deg = 0.5 * np.array([[1, 0, 1, 0],
+                                       [0, 0, 0, 0],
+                                       [1, 0, 1, 0],
+                                       [0, 0, 0, 0]])
+
+        self.mm_90deg = 0.5 * np.array([[1, 1, 0, 0],
+                                       [1, 1, 0, 0],
+                                       [0, 0, 0, 0],
+                                       [0, 0, 0, 0]])
+
+        self.mm_m45deg = 0.5 * np.array([[1, 0, -1, 0],
+                                        [0, 0, 0, 0],
+                                        [-1, 0, 1, 0],
+                                        [0, 0, 0, 0]])
+
+        # pad to generate pixel array of Mueller matrices
+
+        # there is probably a better way of doing this...
+
+        pix_idxs_y = np.arange(0, sensor_dim[0], 2)
+        pix_idxs_x = np.arange(0, sensor_dim[1], 2)
+        pix_idxs_y, pix_idxs_x = np.meshgrid(pix_idxs_y, pix_idxs_x)
+
+        mueller_matrix = np.zeros([4, 4, self.sensor_dim[0], self.sensor_dim[1]])
+
+        mueller_matrix[:, :, pix_idxs_y, pix_idxs_x] = self.mm_0deg[:, :, np.newaxis, np.newaxis]
+        mueller_matrix[:, :, pix_idxs_y, pix_idxs_x + 1] = self.mm_45deg[:, :, np.newaxis, np.newaxis]
+        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x] = self.mm_90deg[:, :, np.newaxis, np.newaxis]
+        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x + 1] = self.mm_m45deg[:, :, np.newaxis, np.newaxis]
+
+        self.mueller_matrix = mueller_matrix
+
+    def capture(self, intensity, clean=False, display=False):
+
+        assert isinstance(intensity, np.ndarray)
+        assert intensity.shape[0] == 4
+        assert intensity.shape[1] == 4
+        assert intensity.shape[2] == self.sensor_dim[0]
+        assert intensity.shape[3] == self.sensor_dim[1]
+
+        # matrix multiplication (mueller matrix axes are the first two axes)
+        subscripts = 'ij...,j...->i...'
+        stokes_vector_out = np.einsum(subscripts, self.mueller_matrix, intensity)
+
+        intensity = stokes_vector_out[0]
+
+        np.random.seed()
+
+        # account for quantum efficiency
+        electron_fluence = intensity * self.qe
+
+        if not clean:
+            # add shot noise
+            shot_noise = np.random.poisson(electron_fluence) - electron_fluence
+            electron_fluence += shot_noise
+
+            # add camera noise
+            electron_fluence += np.random.normal(0, self.cam_noise, self.sensor_dim)
+
+        # apply gain
+        signal = electron_fluence / self.epercount
+
+        # digitise at bitrate of sensor
+        signal = np.digitize(signal, np.arange(0, 2 ** self.bit_depth))
+
+        if display:
+            fig, ax = plt.subplots()
+            im = ax.imshow(signal, 'gray')
+            cbar = fig.colorbar(im, ax=ax)
+            plt.show()
+
+        return signal
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
@@ -126,7 +233,7 @@ if __name__ == '__main__':
 
     name = 'photron_SA4'
     bit_depth = 12
-    sensor_dim = [1024, 1024]
+    sensor_dim = [256, 216]
     pix_size = 20e-6
     qe = 0.3
     epercount = 11.6
@@ -148,6 +255,4 @@ if __name__ == '__main__':
     # epercount = 0.46  # [e / count]
     # cam_noise = 0  # [e]
 
-    camera = pycis.model.Camera(name, bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)
-    camera.save()
-
+    camera = PolCamera(bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)

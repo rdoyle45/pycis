@@ -1,12 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pycis
+import time
 
 # define camera
 # pco.edge 5.5 camera
 bit_depth = 16
-sensor_dim = (2560, 2160)
-# sensor_dim = (250, 210)
+# sensor_dim = (256, 216)
+sensor_dim = (1000, 1000)
 pix_size = 6.5e-6
 qe = 0.35
 epercount = 0.46  # [e / count]
@@ -29,9 +30,27 @@ inst = pycis.Instrument(cam, backlens, interferometer)
 
 
 # inst.calculate_sensor_coords(downsample=None, crop=(100, 250, 100, 250), display=True)
-wl = 466e-9
+# wl = 466e-9
+# spec = 1e5
 
-si = pycis.model.SynthImage(inst, wl, 1e5)
+wl0 = 464.9e-9
+std = 0.090e-9
+wl = np.linspace(wl0 - 3 * std, wl0 + 3 * std, 31)
+
+# generate spectrum
+spec = 1 / np.sqrt(2 * np.pi * std ** 2) * np.exp(-1 / 2 * ((wl - wl0) / std) ** 2) * 1e5
+
+# pad speectrum to sensor array dimensions
+spec = np.tile(spec[:, np.newaxis, np.newaxis], [1, sensor_dim[0], sensor_dim[1]])
+
+# stokes parameters
+# a0 = np.zeros_like(spec)
+# spec = np.array([spec, a0, a0, a0])
+
+s = time.time()
+si = pycis.model.SynthImage(inst, wl, spec)
+e = time.time()
+print(e - s, ' seconds')
 
 si.img_igram()
 si.img_fft()

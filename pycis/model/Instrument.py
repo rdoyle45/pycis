@@ -41,8 +41,7 @@ class Instrument(object):
         self.x_pos, self.y_pos = self.calculate_pixel_pos()
 
         # assign instrument 'type' based on interferometer layout
-        self.inst_type = self.check_instrument_type()
-        print(self.inst_type)
+        self.inst_mode = self.check_inst_mode()
 
         # TODO crystal misalignment
         self.chi = [0, 0]  # placeholder
@@ -252,7 +251,7 @@ class Instrument(object):
 
         return tx
 
-    def check_instrument_type(self):
+    def check_inst_mode(self):
         """
         instrument type determines best way to generate the observed interference pattern
         

@@ -107,15 +107,19 @@ class BirefringentComponent(InterferometerComponent):
         """
 
         phase = self.calculate_phase_delay(wl, inc_angle, azim_angle)
+        #################################################
+        # TODO can i get rid of this using broadcasting?#
+        #################################################
 
-        # TODO can i get rid of this using broadcasting?
         a1 = np.ones_like(phase)
         a0 = np.zeros_like(phase)
+        c_cphase = self.contrast * np.cos(phase)
+        c_sphase = self.contrast * np.sin(phase)
 
         m = np.array([[a1, a0, a0, a0],
                       [a0, a1, a0, a0],
-                      [a0, a0, self.contrast * np.cos(phase), self.contrast * np.sin(phase)],
-                      [a0, a0, -self.contrast * np.sin(phase), self.contrast * np.cos(phase)]])
+                      [a0, a0, c_cphase, c_sphase],
+                      [a0, a0, -c_sphase, c_cphase]])
 
         return self.orient(m)
 
@@ -196,16 +200,18 @@ class UniaxialCrystal(BirefringentComponent):
             n_e = np.tile(n_e[:, np.newaxis, np.newaxis], reps)
             n_o = np.tile(n_o[:, np.newaxis, np.newaxis], reps)
 
-        term_1 = np.sqrt(n_o ** 2 - np.sin(inc_angle) ** 2)
+        s_inc_angle = np.sin(inc_angle)
+
+        term_1 = np.sqrt(n_o ** 2 - s_inc_angle ** 2)
 
         term_2 = (n_o ** 2 - n_e ** 2) * \
-                 (np.sin(self.cut_angle) * np.cos(self.cut_angle) * np.cos(azim_angle) * np.sin(inc_angle)) / \
+                 (np.sin(self.cut_angle) * np.cos(self.cut_angle) * np.cos(azim_angle) * s_inc_angle) / \
                  (n_e ** 2 * np.sin(self.cut_angle) ** 2 + n_o ** 2 * np.cos(self.cut_angle) ** 2)
 
         term_3 = - n_o * np.sqrt(
             (n_e ** 2 * (n_e ** 2 * np.sin(self.cut_angle) ** 2 + n_o ** 2 * np.cos(self.cut_angle) ** 2)) -
             ((n_e ** 2 - (n_e ** 2 - n_o ** 2) * np.cos(self.cut_angle) ** 2 * np.sin(
-                azim_angle) ** 2) * np.sin(inc_angle) ** 2)) / \
+                azim_angle) ** 2) * s_inc_angle ** 2)) / \
                  (n_e ** 2 * np.sin(self.cut_angle) ** 2 + n_o ** 2 * np.cos(self.cut_angle) ** 2)
 
         return 2 * np.pi * (self.thickness / wl) * (term_1 + term_2 + term_3)
@@ -285,12 +291,15 @@ class SavartPlate(BirefringentComponent):
                 a = np.tile(a[:, np.newaxis, np.newaxis], reps)
                 b = np.tile(b[:, np.newaxis, np.newaxis], reps)
 
+            c_azim_angle = np.cos(azim_angle)
+            s_azim_angle = np.sin(azim_angle)
+            s_inc_angle = np.sin(inc_angle)
+
             # calculation
-            term_1 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2)) * (np.cos(azim_angle) + np.sin(azim_angle)) * np.sin(
-                inc_angle)
+            term_1 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2)) * (c_azim_angle + s_azim_angle) * s_inc_angle
 
             term_2 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2) ** (3 / 2)) * ((a ** 2) / np.sqrt(2)) * \
-                     (np.cos(azim_angle) ** 2 - np.sin(azim_angle) ** 2) * np.sin(inc_angle) ** 2
+                     (c_azim_angle ** 2 - s_azim_angle ** 2) * s_inc_angle ** 2
 
             # minus sign here makes the OPD calculation consistent with Veiras' definition
             phase = 2 * np.pi * - (self.thickness / (2 * wl)) * (term_1 + term_2)

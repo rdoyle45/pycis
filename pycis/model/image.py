@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LogNorm
 import matplotlib
-from scipy.constants import c, e, k
+import scipy.integrate
 
 import pycis
 from pycis.tools import is_scalar
@@ -16,46 +16,37 @@ class SynthImage:
 
     """
 
-    def __init__(self, instrument, wl, spec, stokes=False):
+    def __init__(self, instrument, wl, spec):
         """
-        :param input_spec: frequency spectrum of the light observed.
-        :type input_spec: Union[pycis.InputSpec, Dict]
-        
         :param instrument: instance of pycis.model.Instrument
         :type instrument: pycis.model.Instrument
-        
-        :param name: string
+
+        :param wl: wavelengths [ m ]. See SynthImage.check_spec_mode for formatting
+        :type wl: Union[float, np.ndarray]
+
+        :param input_spec: wavelength spectrum of the light observed [ ph / pixel / m / exposure ]. See
+        SynthImage.check_spec_mode for formatting
+        :type input_spec: Union[float, np.ndarray]
+
+        :param stokes: if true, the
+        :type stokes: bool
 
         """
 
         self.instrument = instrument
-        self.wl, self.spec = self.format_input_spec(wl, spec, stokes)
+        self.wl = wl
+        self.spec = spec
+        self.spec_mode = self.check_spec_mode(wl, spec)
 
-        # calculate total number of photons incident, along each pixel's sightline
-        dc_ph = np.trapz(self.spec, self.wl, axis=-3)
+        print('--pycis: inst_mode = ' + self.instrument.inst_mode)
+        print('--pycis: spec_mode = ' + self.spec_mode)
 
-        # generate interference pattern, method used depends on instrument type
-        if self.instrument.inst_type == 'two-beam':
-            igram_ph = self._make_ideal(dc_ph)
-        elif self.instrument.inst_type == 'general':
-            igram_ph = self._make_mueller()
-        else:
-            raise Exception()
+        self.igram, self.i0 = self.make()
 
-        # measure interference pattern
-        self.igram = self.instrument.camera.capture(igram_ph)
-        self.dc = self.instrument.camera.capture(dc_ph, clean=True)
 
-    def format_input_spec(self, wl, spec, stokes=False):
+    def check_spec_mode(self, wl, spec):
         """
         handling input spectra for synthetic image generation
-
-        defaults to unpolarised light (stokes=False)
-
-        Additional functionality to be added for arbitrary Stokes' vector input (stokes=True):
-        the stokes axis of the nd arrays should always be the first axis! (TODO xarray!)
-
-        order of spec axes goes [stokes parameters, wavelengths, sensor_y, sensor_x]
 
         :param wl: wavelength [ m ]
         :type wl: Union[float, np.ndarray]
@@ -68,77 +59,121 @@ class SynthImage:
 
         """
 
-        if stokes is False:
+        if is_scalar(wl) and is_scalar(spec):
+            # monochromatic image, unpolarised light, uniform intensity.
+            # used for quick testing.
 
-            if is_scalar(wl) and is_scalar(spec):
-                # monochromatic image, uniform intensity
+            spec_mode = 'unpolarised, monochromatic, uniform'
 
-                # we need to generate an arbitrary spectrum for compatibility with the rest of the calculations. ie
-                # units of spec need to be converted from ph -> ph / m. This is a bit of a hack
-                wl = np.array([wl * 0.99, wl])
-                spec = np.array([0, 2 * spec / (wl[1] - wl[0])])
+        else:
 
-                # padding
-                sd = self.instrument.camera.sensor_dim
-                spec = np.tile(spec[np.newaxis, :, np.newaxis, np.newaxis], [4, 1, sd[0], sd[1]])
-                spec[1:, :, :, :] = 0
+            assert isinstance(wl, np.ndarray) and isinstance(spec, np.ndarray)
+            assert wl.ndim == 1
 
-            elif isinstance(wl, np.ndarray) and isinstance(spec, np.ndarray):
-                # unique spectrum defined for each pixel
+            if spec.ndim == 3:
+                # unpolarised light, axes: [wavelength, sensor_y, sensor_x]
 
-                assert wl.ndim == 1
-                assert spec.ndim == 3
                 assert spec.shape[0] == wl.shape[0]
-                assert spec.shape[0] == self.instrument.camera.sensor_dim[0]
-                assert spec.shape[1] == self.instrument.camera.sensor_dim[1]
+                assert spec.shape[1] == self.instrument.camera.sensor_dim[0]
+                assert spec.shape[2] == self.instrument.camera.sensor_dim[1]
 
-                # padding
-                spec = np.tile(spec[np.newaxis, :, :, :], [4, 1, 1, 1])
+                spec_mode = 'unpolarised'
+
+            elif spec.ndim == 4:
+                # partially polarised light, axes: [stokes vector, wavelength, sensor_y, sensor_x]
+
+                assert spec.shape[0] == 4
+                assert spec.shape[1] == wl.shape[0]
+                assert spec.shape[2] == self.instrument.camera.sensor_dim[0]
+                assert spec.shape[3] == self.instrument.camera.sensor_dim[1]
+
+                spec_mode = 'partially polarised'
 
             else:
-                raise TypeError
+                raise Exception('cannot interpret spec')
+
+        return spec_mode
+
+    def make(self):
+        """
+        generate interferogram image
+
+        calculation depends on the instrument specified and the format of wl / spec inputs. Some repeated code here,
+        can be written better!
+
+        :return: igram, i0
+
+        """
+
+        if self.instrument.inst_mode == 'two-beam' and self.spec_mode != 'partially polarised':
+
+            if self.spec_mode == 'unpolarised, monochromatic, uniform':
+
+                i0 = self.spec
+                phase = self.instrument.calculate_ideal_phase_delay(self.wl)
+                contrast = self.instrument.calculate_ideal_contrast()
+                degree_coherence = contrast * np.exp(1j * phase)
+
+                igram = i0 / 4 * (1 + np.real(degree_coherence))
+                i0 = np.ones_like(igram) * i0
+
+            elif self.spec_mode == 'unpolarised':
+
+                i0 = np.trapz(self.spec, self.wl, axis=0)
+                spec_norm = np.divide(self.spec, i0, where=i0 > 0)
+
+                phase = self.instrument.calculate_ideal_phase_delay(self.wl)
+                contrast = self.instrument.calculate_ideal_contrast()
+                degree_coherence = np.trapz(spec_norm * contrast * np.exp(1j * phase), self.wl, axis=0)
+
+                igram = i0 / 4 * (1 + np.real(degree_coherence))
+
+            else:
+                raise Exception()
+
         else:
-            raise NotImplementedError
 
-        return wl, spec
+            if self.spec_mode == 'unpolarised, monochromatic, uniform':
 
-    def _make_mueller(self):
-        """
+                spec = np.array([self.spec, 0, 0, 0])
+                mueller_matrix = self.instrument.calculate_matrix(self.wl)
+                # matrix multiplication (mueller matrix axes are the first two axes)
+                subscripts = 'ij...,j...->i...'
+                stokes_vector_out = np.einsum(subscripts, mueller_matrix, spec)
 
-        :return:
+                igram = stokes_vector_out[0]
+                i0 = self.spec
 
-        """
+            elif self.spec_mode == 'unpolarised':
 
-        mueller_matrix = self.instrument.calculate_matrix(self.wl)
+                a0 = np.zeros_like(self.spec)
+                spec = np.array([self.spec, a0, a0, a0])
 
-        # matrix multiplication
-        subscripts = 'ij...,j...->i...'
-        stokes_vector_out = np.einsum(subscripts, mueller_matrix, self.spec)
+                mueller_matrix = self.instrument.calculate_matrix(self.wl)
+                # matrix multiplication (mueller matrix axes are the first two axes)
+                subscripts = 'ij...,j...->i...'
+                stokes_vector_out = np.einsum(subscripts, mueller_matrix, spec)
 
-        # integrate over wavelength
-        igram_ph = np.trapz(stokes_vector_out[0], self.wl, axis=0)
+                igram = np.trapz(stokes_vector_out[0], self.wl, axis=0)
+                i0 = np.trapz(self.spec, self.wl, axis=0)
 
-        return igram_ph
+            elif self.spec_mode == 'partially polarised':
 
-    def _make_ideal(self, dc_ph):
-        """
-        calculate interference for the special case of an idealised two-beam interferometer. Analytical calculation
-        avoids Mueller calculus for speed.
+                mueller_matrix = self.instrument.calculate_matrix(self.wl)
+                # matrix multiplication (mueller matrix axes are the first two axes)
+                subscripts = 'ij...,j...->i...'
+                stokes_vector_out = np.einsum(subscripts, mueller_matrix, self.spec)
 
-        :return:
+                igram = np.trapz(stokes_vector_out[0], self.wl, axis=0)
+                i0 = np.trapz(self.spec[0], self.wl, axis=0)
 
-        """
+            else:
+                raise Exception()
 
-        # TODO can get rid of Stokes axis for the idealised calculation?
+        igram = self.instrument.camera.capture(igram)
+        i0 = self.instrument.camera.capture(i0, clean=True)
 
-        phase = self.instrument.calculate_ideal_phase_delay(self.wl)
-        spec_norm = np.where(self.spec > 0, self.spec / dc_ph[:, np.newaxis], 0)
-
-        contrast = self.instrument.calculate_ideal_contrast()
-        degree_coherence = np.trapz(spec_norm * contrast * np.exp(1j * phase), self.wl, axis=1)
-        igram_ph = dc_ph / 4 * (1 + np.real(degree_coherence))
-
-        return igram_ph[0]
+        return igram, i0
 
     def _imshow(self, param, colormap, label, save, savename, ticks=True, **kwargs):
         """"""
@@ -187,17 +222,16 @@ class SynthImage:
         self._imshow(self.dc, 'gray', 'camera signal (ADU)', save, savename, vmin=vmin, vmax=vmax)
         return
 
-    def img_phase(self, save=False):
-        savename = 'phase'
-        self._imshow(self.phase, 'viridis', r'$\phi$ [rad]', save, savename)
-
-    def img_contrast(self, save=False, vmin=0, vmax=1):
-        savename = 'contrast'
-        self._imshow(self.contrast, 'viridis', r'$\zeta$', save, savename, vmin=vmin, vmax=vmax)
-        return
+    # def img_phase(self, save=False):
+    #     savename = 'phase'
+    #     self._imshow(self.phase, 'viridis', r'$\phi$ [rad]', save, savename)
+    #
+    # def img_contrast(self, save=False, vmin=0, vmax=1):
+    #     savename = 'contrast'
+    #     self._imshow(self.contrast, 'viridis', r'$\zeta$', save, savename, vmin=vmin, vmax=vmax)
+    #     return
 
     def img_fft(self, save=False):
-        savename='fft'
 
         ft = np.fft.fft2(self.igram)
         ft = np.fft.fftshift(ft)
@@ -208,21 +242,6 @@ class SynthImage:
         cbar = plt.colorbar()
         cbar.set_label(r'ft [/pixel]', size=9)
 
-        if save:
-            plt.savefig(pycis.paths.images_path + savename + '_' + self.line_name + '_' + self.dob_sf + '.eps')
-            plt.close()
-        else:
-            plt.show()
-        return
-
-    def save(self):
-        pickle.dump(self, open(os.path.join(pycis.paths.synth_images_path, self.name + '.p'), 'wb'))
-        return
-
-
-def load_synth_image(name):
-    image = pickle.load(open(os.path.join(pycis.paths.synth_images_path, name + '.p'), 'rb'))
-    return image
 
 
 
