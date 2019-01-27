@@ -1,10 +1,8 @@
-import pickle
 import os.path
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LogNorm
 import matplotlib
-import scipy.integrate
 
 import pycis
 from pycis.tools import is_scalar
@@ -28,9 +26,6 @@ class SynthImage:
         SynthImage.check_spec_mode for formatting
         :type input_spec: Union[float, np.ndarray]
 
-        :param stokes: if true, the
-        :type stokes: bool
-
         """
 
         self.instrument = instrument
@@ -42,7 +37,6 @@ class SynthImage:
         print('--pycis: spec_mode = ' + self.spec_mode)
 
         self.igram, self.i0 = self.make()
-
 
     def check_spec_mode(self, wl, spec):
         """
@@ -60,8 +54,7 @@ class SynthImage:
         """
 
         if is_scalar(wl) and is_scalar(spec):
-            # monochromatic image, unpolarised light, uniform intensity.
-            # used for quick testing.
+            # monochromatic image, unpolarised light, uniform intensity. Used for quick testing.
 
             spec_mode = 'unpolarised, monochromatic, uniform'
 
@@ -106,6 +99,7 @@ class SynthImage:
         """
 
         if self.instrument.inst_mode == 'two-beam' and self.spec_mode != 'partially polarised':
+            # use analytical expression for idealised CIS (eqn. 2.5.37, p35 S. Silburn's thesis)
 
             if self.spec_mode == 'unpolarised, monochromatic, uniform':
 
@@ -129,49 +123,55 @@ class SynthImage:
                 igram = i0 / 4 * (1 + np.real(degree_coherence))
 
             else:
-                raise Exception()
+                raise Exception('unable to interpret self.spec_mode')
 
-        else:
+            # simulate camera capture
+            # standard-type camera
+            igram = self.instrument.camera.capture(igram)
+            i0 = self.instrument.camera.capture(i0, clean=True)
 
+        elif self.instrument.inst_mode == 'general':
+            # Use general Mueller calculus
+
+            # input formatting depends on spec_mode, arrange into Stokes' vector format:
             if self.spec_mode == 'unpolarised, monochromatic, uniform':
-
                 spec = np.array([self.spec, 0, 0, 0])
-                mueller_matrix = self.instrument.calculate_matrix(self.wl)
-                # matrix multiplication (mueller matrix axes are the first two axes)
-                subscripts = 'ij...,j...->i...'
-                stokes_vector_out = np.einsum(subscripts, mueller_matrix, spec)
-
-                igram = stokes_vector_out[0]
-                i0 = self.spec
-
             elif self.spec_mode == 'unpolarised':
-
                 a0 = np.zeros_like(self.spec)
                 spec = np.array([self.spec, a0, a0, a0])
-
-                mueller_matrix = self.instrument.calculate_matrix(self.wl)
-                # matrix multiplication (mueller matrix axes are the first two axes)
-                subscripts = 'ij...,j...->i...'
-                stokes_vector_out = np.einsum(subscripts, mueller_matrix, spec)
-
-                igram = np.trapz(stokes_vector_out[0], self.wl, axis=0)
-                i0 = np.trapz(self.spec, self.wl, axis=0)
-
             elif self.spec_mode == 'partially polarised':
-
-                mueller_matrix = self.instrument.calculate_matrix(self.wl)
-                # matrix multiplication (mueller matrix axes are the first two axes)
-                subscripts = 'ij...,j...->i...'
-                stokes_vector_out = np.einsum(subscripts, mueller_matrix, self.spec)
-
-                igram = np.trapz(stokes_vector_out[0], self.wl, axis=0)
-                i0 = np.trapz(self.spec[0], self.wl, axis=0)
-
+                spec = self.spec
             else:
-                raise Exception()
+                raise Exception('unable to interpret self.spec_mode')
 
-        igram = self.instrument.camera.capture(igram)
-        i0 = self.instrument.camera.capture(i0, clean=True)
+            # Mueller matrix multiplication (mueller matrix axes are always the first two array axes)
+            mueller_matrix = self.instrument.calculate_matrix(self.wl)
+            subscripts = 'ij...,j...->i...'
+            stokes_vector_out = np.einsum(subscripts, mueller_matrix, spec)
+
+            # output formatting depends on spec_mode:
+            if self.spec_mode == 'unpolarised, monochromatic, uniform':
+                igram = stokes_vector_out
+                sd = self.instrument.camera.sensor_dim
+                i0 = np.tile(spec[:, np.newaxis, np.newaxis], [1, sd[0], sd[1]])
+            elif self.spec_mode == 'unpolarised' or self.spec_mode == 'partially polarised':
+                igram = np.trapz(stokes_vector_out, self.wl, axis=1)
+                i0 = np.trapz(spec, self.wl, axis=1)
+            else:
+                raise Exception('unable to interpret self.spec_mode')
+
+            # simulate camera capture
+            if isinstance(self.instrument.camera, pycis.PolCamera):
+                # polarisation-type camera, complete Stokes' vector required
+                igram = self.instrument.camera.capture(igram)
+                i0 = self.instrument.camera.capture(i0, clean=True)
+            else:
+                # standard-type camera, only detects S0 Stokes' parameter
+                igram = self.instrument.camera.capture(igram[0])
+                i0 = self.instrument.camera.capture(i0[0], clean=True)
+
+        else:
+            raise Exception('unable to interpret self.instrument.inst_mode')
 
         return igram, i0
 

@@ -291,6 +291,7 @@ class SavartPlate(BirefringentComponent):
                 a = np.tile(a[:, np.newaxis, np.newaxis], reps)
                 b = np.tile(b[:, np.newaxis, np.newaxis], reps)
 
+            # precalculate trig fns
             c_azim_angle = np.cos(azim_angle)
             s_azim_angle = np.sin(azim_angle)
             s_inc_angle = np.sin(inc_angle)

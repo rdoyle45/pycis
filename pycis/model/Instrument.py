@@ -34,16 +34,16 @@ class Instrument(object):
 
         self.interferometer_orientation = interferometer_orientation
 
-        # TODO is bandpass_filter implemented correctly?
+        # TODO implement bandpass_filter
         self.bandpass_filter = bandpass_filter
         self.input_checks()
 
         self.x_pos, self.y_pos = self.calculate_pixel_pos()
 
-        # assign instrument 'type' based on interferometer layout
+        # assign instrument 'mode'
         self.inst_mode = self.check_inst_mode()
 
-        # TODO crystal misalignment
+        # TODO implement crystal misalignment
         self.chi = [0, 0]  # placeholder
 
     def input_checks(self):
@@ -253,7 +253,7 @@ class Instrument(object):
 
     def check_inst_mode(self):
         """
-        instrument type determines best way to generate the observed interference pattern
+        instrument mode determines best way to calculate the interference pattern
         
         in the case of a perfectly aligned coherence imaging diagnostic in a simple 'two-beam' configuration, skip the 
         Mueller matrix calculation to the final result.
@@ -272,20 +272,23 @@ class Instrument(object):
         if len(self.polarisers) == 2 and (isinstance(self.interferometer[0], pycis.LinearPolariser) and
                                               isinstance(self.interferometer[-1], pycis.LinearPolariser)):
 
-            # are they alligned?
+            # ...are they alligned?
             pol_1_orientation = self.interferometer[0].orientation
             pol_2_orientation = self.interferometer[-1].orientation
 
             if pol_1_orientation == pol_2_orientation:
 
-                # are all crystals alligned?
+                # ...are all crystals alligned?
                 crystal_1_orientation = self.crystals[0].orientation
 
                 if all(c.orientation == crystal_1_orientation for c in self.crystals):
 
                     # ...at 45 degrees to the polarisers?
                     if abs(pol_1_orientation - crystal_1_orientation) == np.pi / 4:
-                        return 'two-beam'
+
+                        # ...and is the camera a standard camera?
+                        if not isinstance(self.camera, pycis.PolCamera):
+                            return 'two-beam'
 
         return 'general'
 

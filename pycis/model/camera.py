@@ -1,7 +1,4 @@
 import numpy as np
-import pickle
-import pycis
-import os.path
 import matplotlib.pyplot as plt
 
 
@@ -115,8 +112,6 @@ class PolCamera(Camera):
 
         super().__init__(bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)
 
-        self.format = format
-
         # define Mueller matrices for the 4 polariser orientations
 
         self.mm_0deg = 0.5 * np.array([[1, -1, 0, 0],
@@ -160,9 +155,8 @@ class PolCamera(Camera):
 
         assert isinstance(intensity, np.ndarray)
         assert intensity.shape[0] == 4
-        assert intensity.shape[1] == 4
-        assert intensity.shape[2] == self.sensor_dim[0]
-        assert intensity.shape[3] == self.sensor_dim[1]
+        assert intensity.shape[1] == self.sensor_dim[0]
+        assert intensity.shape[2] == self.sensor_dim[1]
 
         # matrix multiplication (mueller matrix axes are the first two axes)
         subscripts = 'ij...,j...->i...'
