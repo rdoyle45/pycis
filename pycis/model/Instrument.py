@@ -18,10 +18,12 @@ class Instrument(object):
         :param back_lens: 
         :type back_lens: pycis.model.Lens
         
-        :param interferometer: a list of instances of pycis.model.InterferometerComponent
+        :param interferometer: a list of instances of pycis.model.InterferometerComponent. The first component in
+        the list is the first component that the light passes through.
         :type interferometer: list
         
-        :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name
+        :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name (not actually implemented
+        properly yet)
 
         """
 

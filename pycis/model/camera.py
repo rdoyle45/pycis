@@ -191,14 +191,6 @@ class PolCamera(Camera):
 
         return signal
 
-
-
-
-
-
-
-
-
 if __name__ == '__main__':
 
     # name = 'fibre'  # a single pixel 'fibre' view for quick phase comparisons

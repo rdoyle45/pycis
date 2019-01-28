@@ -136,11 +136,14 @@ class SynthImage:
             # input formatting depends on spec_mode, arrange into Stokes' vector format:
             if self.spec_mode == 'unpolarised, monochromatic, uniform':
                 spec = np.array([self.spec, 0, 0, 0])
+
             elif self.spec_mode == 'unpolarised':
                 a0 = np.zeros_like(self.spec)
                 spec = np.array([self.spec, a0, a0, a0])
+
             elif self.spec_mode == 'partially polarised':
                 spec = self.spec
+
             else:
                 raise Exception('unable to interpret self.spec_mode')
 
@@ -150,13 +153,16 @@ class SynthImage:
             stokes_vector_out = np.einsum(subscripts, mueller_matrix, spec)
 
             # output formatting depends on spec_mode:
+
             if self.spec_mode == 'unpolarised, monochromatic, uniform':
                 igram = stokes_vector_out
                 sd = self.instrument.camera.sensor_dim
                 i0 = np.tile(spec[:, np.newaxis, np.newaxis], [1, sd[0], sd[1]])
+
             elif self.spec_mode == 'unpolarised' or self.spec_mode == 'partially polarised':
                 igram = np.trapz(stokes_vector_out, self.wl, axis=1)
                 i0 = np.trapz(spec, self.wl, axis=1)
+
             else:
                 raise Exception('unable to interpret self.spec_mode')
 
@@ -165,6 +171,7 @@ class SynthImage:
                 # polarisation-type camera, complete Stokes' vector required
                 igram = self.instrument.camera.capture(igram)
                 i0 = self.instrument.camera.capture(i0, clean=True)
+
             else:
                 # standard-type camera, only detects S0 Stokes' parameter
                 igram = self.instrument.camera.capture(igram[0])

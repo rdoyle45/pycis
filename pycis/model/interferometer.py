@@ -1,12 +1,13 @@
 import numpy as np
 import pycis
+from pycis.tools import is_scalar
 
 
 def calculate_rot_mat(angle):
     """
     general Mueller matrix for frame rotation
 
-    :param angle: [ rad ]
+    :param angle: rotation angle [ rad ]
     :return:
 
     """
@@ -19,11 +20,14 @@ def calculate_rot_mat(angle):
 
 
 class InterferometerComponent:
-    """ base class for CIS interferometer components """
+    """
+    base class for CIS interferometer components
+
+    """
 
     def __init__(self, orientation):
         """
-        :param orientation: [ rad ]
+        :param orientation: orientation angle [ rad ]
         """
 
         self.orientation = orientation
@@ -47,13 +51,17 @@ class InterferometerComponent:
 
 
 class LinearPolariser(InterferometerComponent):
-    """ linear polariser """
+    """
+    linear polariser
+
+    """
 
     def __init__(self, orientation, tx_1=1, tx_2=0):
         """
         :param orientation: [ rad ] 0 aligns vertical polariser axis to vertical interferometer axis
         :param tx_1: transmission primary component. [0, 1] - defaults to 1
         :param tx_2: transmission secondary (orthogonal) component. [0, 1] - defaults to 0
+
         """
         super().__init__(orientation)
 
@@ -65,7 +73,9 @@ class LinearPolariser(InterferometerComponent):
     def calculate_matrix(self, wl, inc_angle, azim_angle):
         """
         general Mueller matrix for a linear polariser. No dependence on inputs.
-        :return: 
+
+        :return:
+
         """
 
         m = 0.5 * np.array([[self.tx_2 ** 2 + self.tx_1 ** 2, self.tx_2 ** 2 - self.tx_1 ** 2, 0, 0],
@@ -77,7 +87,10 @@ class LinearPolariser(InterferometerComponent):
 
 
 class BirefringentComponent(InterferometerComponent):
-    """ base class for CIS crystal components """
+    """
+    base class for CIS crystal components
+
+    """
 
     def __init__(self, orientation, thickness, material='a-BBO', contrast=1):
         """
@@ -107,12 +120,13 @@ class BirefringentComponent(InterferometerComponent):
         """
 
         phase = self.calculate_phase_delay(wl, inc_angle, azim_angle)
-        #################################################
-        # TODO can i get rid of this using broadcasting?#
-        #################################################
+
+        # TODO can i get rid of this using broadcasting?
 
         a1 = np.ones_like(phase)
         a0 = np.zeros_like(phase)
+
+        # precalculate trig fns
         c_cphase = self.contrast * np.cos(phase)
         c_sphase = self.contrast * np.sin(phase)
 
@@ -124,7 +138,11 @@ class BirefringentComponent(InterferometerComponent):
         return self.orient(m)
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
-        """ abstract method """
+        """
+        abstract method
+
+        """
+
         raise NotImplementedError()
 
 
@@ -182,8 +200,7 @@ class UniaxialCrystal(BirefringentComponent):
             assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
 
         # if wl, theta and omega are arrays, vectorise
-        if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(inc_angle) and not pycis.tools.is_scalar(
-                azim_angle):
+        if not is_scalar(wl) and not is_scalar(inc_angle) and not is_scalar(azim_angle):
 
             assert inc_angle.shape == azim_angle.shape
 
@@ -272,8 +289,7 @@ class SavartPlate(BirefringentComponent):
             b = 1 / n_o
 
             # if wl, theta and omega are arrays, vectorise
-            if not pycis.tools.is_scalar(wl) and not pycis.tools.is_scalar(inc_angle) and not pycis.tools.is_scalar(
-                    azim_angle):
+            if not is_scalar(wl) and not is_scalar(inc_angle) and not is_scalar(azim_angle):
 
                 assert inc_angle.shape == azim_angle.shape
 
@@ -306,7 +322,6 @@ class SavartPlate(BirefringentComponent):
             phase = 2 * np.pi * - (self.thickness / (2 * wl)) * (term_1 + term_2)
 
         elif self.mode == 'veiras':
-
             # explicitly model plate as the combination of two uniaxial crystals
 
             or1 = self.orientation
@@ -327,6 +342,57 @@ class SavartPlate(BirefringentComponent):
 
         return phase
 
+
+class QuarterWaveplate(BirefringentComponent):
+    """
+    Idealised quarter waveplate
+
+    """
+
+    def __init__(self, orientation):
+        """
+
+        :param orientation:
+        """
+
+        thickness = 1.  # this value is arbitrary
+
+        super().__init__(orientation, thickness)
+
+
+    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+        """
+        calculate phase delay due to ideal quarter waveplate
+
+        :param wl:
+        :param inc_angle:
+        :param azim_angle:
+        :param n_e:
+        :param n_o:
+        :return: phase [ rad ]
+        """
+
+        if is_scalar(wl):
+            if is_scalar(inc_angle) and is_scalar(azim_angle):
+                ones_shape = 1
+
+            else:
+                assert isinstance(inc_angle, np.ndarray) and isinstance(azim_angle, np.ndarray)
+                assert inc_angle.shape == azim_angle.shape
+
+                ones_shape = np.ones_like(inc_angle)
+
+        elif isinstance(wl, np.ndarray) and isinstance(inc_angle, np.ndarray) and isinstance(azim_angle, np.ndarray):
+
+            assert wl.ndim == 1
+            assert inc_angle.shape == azim_angle.shape
+
+            ones_shape = np.ones(wl.shape[0], inc_angle.shape[0], inc_angle.shape[1])
+
+        else:
+            raise Exception('unable to interpret inputs')
+
+        return np.pi / 2 * ones_shape
 
 # TODO class FieldWidenedSavartPlate(BirefringentComponent):
 
