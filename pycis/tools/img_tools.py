@@ -8,22 +8,6 @@ import scipy.ndimage
 from PIL import Image
 import pycis
 
-# target plasma line rest wavelengths:
-wl_CIII = 464.9e-9
-wl_HeII = 468.6e-9
-wl_CII = 514.2e-9
-
-# calib spectral line wavelengths to use [m]
-wl_CdI_1 = 467.81493e-9
-wl_CdI_2 = 479.9912e-9
-wl_CdI_3 = 508.58217e-9
-wl_ZnI_1 = 468.014e-9
-wl_ZnI_2 = 472.21569e-9
-wl_ZnI_3 = 481.05321e-9
-
-plasma_wl = np.sort(np.array([wl_CIII, wl_HeII, wl_CII]))
-lamp_wl = np.sort(np.array([wl_CdI_1, wl_ZnI_1, wl_ZnI_2, wl_CdI_2, wl_ZnI_3]))
-
 
 default_roi_dim = (50, 50)
 
@@ -88,12 +72,10 @@ def left_crop(img, f):
 
     return img[:, f:]
 
-
-
-def linearity_correction():
-
-
-    return
+# def linearity_correction():
+#
+#
+#     return
 
 
 def get_lamp_data(units='m'):
