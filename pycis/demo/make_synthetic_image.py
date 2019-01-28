@@ -108,5 +108,6 @@ def demo_2():
     si.img_fft()
     plt.show()
 
+
 if __name__ == '__main__':
     demo_2()

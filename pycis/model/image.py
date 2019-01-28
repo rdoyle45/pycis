@@ -48,8 +48,7 @@ class SynthImage:
         :param spec:
         :type spec: Union[int, float, np.ndarray]
 
-        :param spec_units: 'counts',  'photons'
-        :type spec_units: str
+        :return str spec_mode
 
         """
 
@@ -153,7 +152,6 @@ class SynthImage:
             stokes_vector_out = np.einsum(subscripts, mueller_matrix, spec)
 
             # output formatting depends on spec_mode:
-
             if self.spec_mode == 'unpolarised, monochromatic, uniform':
                 igram = stokes_vector_out
                 sd = self.instrument.camera.sensor_dim

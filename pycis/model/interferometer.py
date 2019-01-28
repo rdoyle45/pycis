@@ -394,6 +394,7 @@ class QuarterWaveplate(BirefringentComponent):
 
         return np.pi / 2 * ones_shape
 
+
 # TODO class FieldWidenedSavartPlate(BirefringentComponent):
 
 

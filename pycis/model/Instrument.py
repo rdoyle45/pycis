@@ -46,7 +46,6 @@ class Instrument(object):
         self.inst_mode = self.check_inst_mode()
 
         # TODO implement crystal misalignment
-        self.chi = [0, 0]  # placeholder
 
     def input_checks(self):
         """
@@ -314,6 +313,8 @@ class Instrument(object):
         """ Given spectral line and desired approximate image snr (central ROI), return the necessary input intensity I0 in units 
         of [photons/pixel/timestep]. """
 
+        # TODO old, clean up / throw away
+
         # load line
         line = pycis.model.Lineshape(line_name, 1, 0, 1)
 
@@ -339,6 +340,8 @@ class Instrument(object):
 
     def get_contrast_ti(self, line_name, contrast):
         """ Given spectral line and desired approximate image contrast, return necessary input ion temp in [eV]."""
+
+        # TODO old, clean up / throw away
 
         C = pycis.tools.c
         k_B = pycis.tools.k_B
@@ -392,6 +395,7 @@ class Instrument(object):
     def apply_vignetting(self, photon_fluence):
         """account for instrument etendue to first order based on Scott's predictive matlab code. """
 
+        # TODO old, clean up / throw away
 
         etendue = np.load(os.path.join(pycis.paths.instrument_path, 'etendue.npy'))
         sensor_distance = np.load(os.path.join(pycis.paths.instrument_path, 'sensor_distance.npy'))

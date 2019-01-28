@@ -7,22 +7,24 @@ Authorship:
 - Joseph Allcock
 - Scott Silburn: Author of the original Matlab scripts. Author of ```pycis/data/get.py```  
 
-### Modules
+### Subpackages
 
-Package consists of three modules and a directory, demos, containing short demonstration scripts.
-
-- **pycis.demod**: For the manipulation and demodulation of raw CIS data.
-- **pycis.model**: Currently undergoing changes!
+- **pycis.demod**: Manipulation and demodulation of raw CIS data.
+- **pycis.model**: Forward modelling the diagnostic and generating synthetic images
 - **pycis.tools**: Some handy scripts that have popped up along the way.
+- **pycis.demo**: demo scripts.
+- **pycis.calib**: calibration tools (work in progress)
+- **pycis.data**: loading CIS data from the 2013 MAST campaign (will only work on the Freia computing cluster)
+
 
 ### Prerequisites
 
-Runs on python 3, compiled C for cython scripts is provided but will likely need to be re-compiled. Prerequisite packages (rough version numbers):
+Python 3. Prerequisite 
+packages:
 
-- numpy: 1.13.1
-- scipy: 0.19.1
-- matplotlib: 2.0.2
-- cython: 0.25.2
+- numpy
+- scipy
+- matplotlib
 - pandas
 - imageio
 
