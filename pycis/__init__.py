@@ -15,19 +15,19 @@ except ImportError as e:
     print(e)
 
 try:
-    from . import data
+    from .data import *
 except ImportError as e:
     print('--pycis ImportError: could not import pycis.raw_data:')
     print(e)
 
 try:
-    from . import calib
+    from .calib import *
 except ImportError as e:
     print('--pycis ImportError: could not import pycis.calib:')
     print(e)
 
 try:
-    from . import tools
+    from .tools import *
 except ImportError as e:
     print('--pycis ImportError: could not import pycis.tools:')
     print(e)

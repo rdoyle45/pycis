@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import math
 
 import pycis
-import inference_tools.inference.mcmc
+import inference
 
 
 def wrapfit(wls, phase, phase_std, l_wp_guess, idx_0=0, num_steps=120000, polynomial_order=2, display=True):

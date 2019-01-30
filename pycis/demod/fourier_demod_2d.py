@@ -101,35 +101,90 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     # uncertainty calculation
     if uncertainty_out:
 
-        assert camera is not None
+        if camera is None:
+            # estimate the image noise using Fourier domain image
 
-        # estimate standard deviation of the noise
-        i0 = 2 * dc
-        std = np.sqrt(camera.epercount ** 2 * camera.cam_noise + camera.epercount * i0)
+            plt.figure()
+            plt.imshow(img, 'gray')
+            plt.colorbar()
 
-        # calculate 'power gain' of the filter windows used
-        y_arr_window = np.arange(0, fft_length + 1)
-        x_arr_window = np.arange(0, np.shape(img)[1]) - fft_length
+            fft_img = np.fft.rfft2(img, axes=(1, 0))
 
-        x_mesh_window, y_mesh_window = np.meshgrid(x_arr_window, y_arr_window)
+            plt.figure()
+            plt.imshow(np.log10(np.abs(fft_img)))
+            plt.colorbar()
 
-        pg_dc_window = np.abs(1 - window_2d) ** 2
-        pg_carrier_window = np.abs(window_2d) ** 2
+            padding_x = 400
+            padding_y = 400
 
-        area = np.trapz(np.trapz(np.ones_like(window_2d), y_mesh_window, axis=0), x_arr_window)
+            # generate window for extraction of the 'empty' part of the image
 
-        carrier_noise_coeff = np.sqrt(np.trapz(np.trapz(pg_carrier_window, y_mesh_window, axis=0), x_arr_window) / area)
-        dc_noise_coeff = np.sqrt(np.trapz(np.trapz(pg_dc_window, y_mesh_window, axis=0), x_arr_window) / area)
-        std_carrier = std * carrier_noise_coeff
+            window_empty = np.zeros_like(fft_img, dtype=np.float64)
+            window_empty[padding_y:-padding_y, padding_x:-padding_x] = 1
 
-        std_dc = std * dc_noise_coeff
-        std_contrast = abs(contrast) * np.sqrt((std_dc / dc) ** 2 + (std_carrier / (contrast * dc)) ** 2)
-        std_phase = std_carrier / (contrast * dc)
+            fft_img_empty = fft_img[np.where(window_empty == 1)]
 
-        uncertainty = {'std_dc': std_dc,
-                       'std_phase': std_phase,
-                       'std_contrast': std_contrast,
-                       'SNR': i0 / (2 * std)}  # only appropriate for calibration images
+            imag = np.imag(fft_img_empty).flatten()
+            real = np.real(fft_img_empty).flatten()
+            plt.figure()
+            plt.hist(imag, bins=300, density=True, label='imaginary', alpha=0.75)
+            plt.hist(real, bins=300, density=True, label='real', alpha=0.75)
+
+            plt.xlabel('Fourier component', size=12)
+            plt.legend(loc=0)
+
+            mean_imag = np.mean(imag)
+            var_imag = np.var(imag)
+            std_imag = np.sqrt(var_imag)
+
+            mean_real = np.mean(real)
+            var_real = np.var(real)
+            std_real = np.sqrt(var_real)
+
+            print(mean_imag, mean_real)
+            print(std_imag, std_real)
+
+            # predict image sigma
+            var_img = (2 * var_real) / (img.shape[0] * img.shape[1])
+            std_img = np.sqrt(var_img)
+
+            print(std_img)
+
+            plt.figure()
+            plt.imshow(window_empty)
+            plt.colorbar()
+
+            plt.show(block=True)
+
+        else:
+            # estimate standard deviation of the noise
+            i0 = 4 * dc
+            std = (1 / camera.epercount) * np.sqrt(camera.cam_noise ** 2 + camera.epercount * img)
+            print(np.mean(pycis.get_roi(std)))
+
+            # calculate 'power gain' of the filter windows used
+            y_arr_window = np.arange(0, fft_length + 1)
+            x_arr_window = np.arange(0, np.shape(img)[1]) - fft_length
+
+            x_mesh_window, y_mesh_window = np.meshgrid(x_arr_window, y_arr_window)
+
+            pg_dc_window = np.abs(1 - window_2d) ** 2
+            pg_carrier_window = np.abs(window_2d) ** 2
+
+            area = np.trapz(np.trapz(np.ones_like(window_2d), y_mesh_window, axis=0), x_arr_window)
+
+            carrier_noise_coeff = np.sqrt(np.trapz(np.trapz(pg_carrier_window, y_mesh_window, axis=0), x_arr_window) / area)
+            dc_noise_coeff = np.sqrt(np.trapz(np.trapz(pg_dc_window, y_mesh_window, axis=0), x_arr_window) / area)
+            std_carrier = std * carrier_noise_coeff
+
+            std_dc = std * dc_noise_coeff
+            std_contrast = abs(contrast) * np.sqrt((std_dc / dc) ** 2 + (std_carrier / (contrast * dc)) ** 2)
+            std_phase = std_carrier / (contrast * dc)
+
+            uncertainty = {'std_dc': std_dc,
+                           'std_phase': std_phase,
+                           'std_contrast': std_contrast,
+                           'SNR': i0 / (2 * std)}  # only appropriate for calibration images
 
     if display:
         print('-- fd_image_2d: nfringes = {}'.format(nfringes))
@@ -185,6 +240,26 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     else:
         return dc, phase, contrast
 
+
+if __name__ == '__main__':
+    import laser_scan_ga
+    import calib_data_swip
+
+    inst_ga = laser_scan_ga.load_instrument()
+
+    lsga = laser_scan_ga.LaserScanGA(34)
+    cds = calib_data_swip.CalibDataSwip('2018-07-20', 'lamps', 1)
+
+    img_swip, wl_swip = cds.get_stacked_img(0)
+    img_ga, wl_ga, time = lsga.get_raw_image(-1)
+    img_ga_synth = pycis.SynthImage(inst_ga, 469e-9, 5e4).igram
+
+    img_ga = img_ga[:, 50:]
+
+    dc, phase, contrast, uncertainty = fourier_demod_2d(img_ga, uncertainty_out=True, camera=inst_ga.camera)
+    dc, phase, contrast, uncertainty = fourier_demod_2d(img_ga, uncertainty_out=True)
+
+    # std_phase = uncertainty['std_phase']
 
 
 

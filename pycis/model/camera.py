@@ -171,11 +171,11 @@ class PolCamera(Camera):
 
         if not clean:
             # add shot noise
-            shot_noise = np.random.poisson(electron_fluence) - electron_fluence
+            shot_noise = np.random.poisson(electron_fluence, size=self.sensor_dim) - electron_fluence
             electron_fluence += shot_noise
 
             # add camera noise
-            electron_fluence += np.random.normal(0, self.cam_noise, self.sensor_dim)
+            electron_fluence += np.random.normal(0, self.cam_noise, size=self.sensor_dim)
 
         # apply gain
         signal = electron_fluence / self.epercount
