@@ -238,13 +238,15 @@ def get_img_stack(path, rot90=0, fmt='tif', display=False, overwrite=False):
         plt.figure()
         plt.imshow(img_stack, 'gray')
         plt.colorbar()
-        plt.show()
+        plt.show(block=True)
 
     return img_stack
 
 
 def get_phase_img_stack(path, rot90=0, fmt='tif', overwrite=False):
-    """ Calculate and save the phase of the stacked images of the specified format in the given directory. """
+    """
+    Calculate and save the phase of the stacked images of the specified format in the given directory.
+    """
 
     assert os.path.isdir(path)
 
@@ -256,7 +258,7 @@ def get_phase_img_stack(path, rot90=0, fmt='tif', overwrite=False):
     else:
 
         img_stack = get_img_stack(path, rot90=rot90, fmt=fmt, overwrite=overwrite)
-        img_stack = np.flipud(np.fliplr(img_stack))
+        # img_stack = np.flipud(np.fliplr(img_stack))
 
         intensity, phase, contrast = demod_function(img_stack, display=False)
 
