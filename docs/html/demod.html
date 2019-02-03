@@ -1,0 +1,441 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>demod &mdash; pycis  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="pycis  documentation" href="index.html"/>
+        <link rel="next" title="model" href="model.html"/>
+        <link rel="prev" title="pycis Documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> pycis
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">demod</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#fourier-demod-column">fourier_demod_column</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fourier-demod-1d">fourier_demod_1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fourier-demod-2d">fourier_demod_2d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#window">window</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wrap">wrap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#unwrap">unwrap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#despeckle">despeckle</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">model</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pycis</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>demod</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="demod">
+<h1>demod<a class="headerlink" href="#demod" title="Permalink to this headline">¶</a></h1>
+<p>Manipulation and demodulation of raw CIS data.</p>
+<div class="section" id="fourier-demod-column">
+<h2>fourier_demod_column<a class="headerlink" href="#fourier-demod-column" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pycis.demod.fourier_demod_column">
+<code class="descclassname">pycis.demod.</code><code class="descname">fourier_demod_column</code><span class="sig-paren">(</span><em>col</em>, <em>nfringes=None</em>, <em>apodise=False</em>, <em>display=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pycis.demod.fourier_demod_column" title="Permalink to this definition">¶</a></dt>
+<dd><p>1-D Fourier demodulation of single CIS interferogram raw_data column, extracting the DC component (intensity), phase and contrast.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>col</strong> (<em>array_like</em><em>, </em><em>1-D.</em>) – CIS interferogram column to be demodulated.</li>
+<li><strong>nfringes</strong> (<em>int.</em>) – Manually set the carrier (fringe) frequency to be demodulated, in units of cycles per sequence – approximately the number of fringes present in the image. If no value is given, the fringe frequency is found automatically.</li>
+<li><strong>apodise</strong> (<em>bool.</em>) – Apodise the extracted carrier at points of steep intensity gradient to minimise influence of artefacts and noise (See SS thesis.)</li>
+<li><strong>display</strong> (<em>bool.</em>) – Display a plot.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A tuple containing the DC component (intensity), phase and contrast.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="fourier-demod-1d">
+<h2>fourier_demod_1d<a class="headerlink" href="#fourier-demod-1d" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pycis.demod.fourier_demod_1d">
+<code class="descclassname">pycis.demod.</code><code class="descname">fourier_demod_1d</code><span class="sig-paren">(</span><em>img</em>, <em>nfringes=None</em>, <em>column_range=None</em>, <em>despeckle=False</em>, <em>tilt_angle=0</em>, <em>multiproc=True</em>, <em>display=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pycis.demod.fourier_demod_1d" title="Permalink to this definition">¶</a></dt>
+<dd><p>1-D Fourier demodulation of a coherence imaging interferogram image, looped over image columns to extract the DC, phase and contrast components.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>img</strong> (<em>array_like</em>) – Input interferogram image to be demodulated.</li>
+<li><strong>mask</strong> (<em>bool.</em>) – Mask low intensity portions of the image with NaNs</li>
+<li><strong>despeckle</strong> (<em>bool.</em>) – Remove speckles from image.</li>
+<li><strong>nfringes</strong> – Manually set the carrier (fringe) frequency to be demodulated, in units of cycles per sequence – approximately the number of fringes present in the image. If no value is given, the fringe frequency is found automatically.</li>
+<li><strong>tilt_angle</strong> – interferometer tilt angle in degrees, default is zero. Tilted fringes feature has not yet been tested rigorously.</li>
+<li><strong>display</strong> (<em>bool.</em>) – Display a plot.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A tuple containing DC (intensity), phase and contrast images.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="fourier-demod-2d">
+<h2>fourier_demod_2d<a class="headerlink" href="#fourier-demod-2d" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pycis.demod.fourier_demod_2d">
+<code class="descclassname">pycis.demod.</code><code class="descname">fourier_demod_2d</code><span class="sig-paren">(</span><em>img</em>, <em>despeckle=False</em>, <em>mask=False</em>, <em>uncertainty_out=False</em>, <em>camera=None</em>, <em>nfringes=None</em>, <em>display=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pycis.demod.fourier_demod_2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>2D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast.</p>
+<p>Option to output uncertainty info too.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>img</strong> (<em>array_like</em>) – CIS interferogram image to be demodulated.</li>
+<li><strong>despeckle</strong> (<em>bool.</em>) – Remove speckles from image.</li>
+<li><strong>mask</strong> (<em>bool</em>) – End region masking to reduce Fourier artefacts</li>
+<li><strong>uncertainty_out</strong> (<em>bool</em>) – output information on the uncertainty in the demodulated quantities</li>
+<li><strong>camera</strong> (<em>pycis.model.Camera</em>) – optional, instance of pycis.model.Camera, used to calculate uncertainty in demodulated quantities</li>
+<li><strong>nfringes</strong> – Manually set the carrier (fringe) frequency to be demodulated, in units of cycles per sequence –</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>approximately the number of fringes present in the image. If no value is given, the fringe frequency is found 
+automatically.
+:type nfringes: float.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>display</strong> (<em>bool.</em>) – Display a plot.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A tuple containing the DC component (intensity), phase and contrast.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="window">
+<h2>window<a class="headerlink" href="#window" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pycis.demod.window">
+<code class="descclassname">pycis.demod.</code><code class="descname">window</code><span class="sig-paren">(</span><em>rfft_length</em>, <em>nfringes</em>, <em>fn='tukey'</em>, <em>width_factor=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#pycis.demod.window" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a filters window for isolating the carrier (fringe) frequency.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rfft_length</strong> (<em>int.</em>) – length of the real FFT to be filtered</li>
+<li><strong>nfringes</strong> (<em>int.</em>) – The carrier (fringe) frequency to be demodulated, in units of cycles per sequence – approximately the number of fringes present in the image.</li>
+<li><strong>fn</strong> (<em>str.</em>) – Specifies the window function to use, see the ‘fns’ dict at the top of the script for the</li>
+<li><strong>width_factor</strong> (<em>float</em>) – a multiplicative factor determining the width of the filters, multiplies nfringes, which is found to work reasonably well.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">generated window as an array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="wrap">
+<h2>wrap<a class="headerlink" href="#wrap" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pycis.demod.wrap">
+<code class="descclassname">pycis.demod.</code><code class="descname">wrap</code><span class="sig-paren">(</span><em>phase</em>, <em>units='rad'</em><span class="sig-paren">)</span><a class="headerlink" href="#pycis.demod.wrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrap N-D phase profile within (- pi, pi] radian interval.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>phase</strong> (<em>array_like</em>) – input phase</li>
+<li><strong>units</strong> (<em>str</em>) – Units of phase (accepted: ‘rad’, ‘waves’, ‘fringes’).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">wrapped values (radians).</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="unwrap">
+<h2>unwrap<a class="headerlink" href="#unwrap" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pycis.demod.unwrap">
+<code class="descclassname">pycis.demod.</code><code class="descname">unwrap</code><span class="sig-paren">(</span><em>phase</em>, <em>centre=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pycis.demod.unwrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unwrap 1-D / 2-D phase profiles.</p>
+<p>In 2-D, a simple phase unwrapping algorithm sequentially unwraps columns and then rows (or vice versa). For noisy
+data however, this method can perform poorly.</p>
+<p>This ‘pseudo 2D’ unwrapping algorithm relies on the strong vertical phase shear present in the CIS raw_data.
+In an ideal system the optical axis is projected onto the detector centre. On axis, the Savart plate introduces
+zero net phase delay, so the (wrapped) phase measured at the centre of the detector array is the (wrapped) waveplate
+phase delay – a handy quantity to know. Numpy’s np.unwrap function sets the 0th array element to be wrapped, set
+‘centre’ to False to return this numpy-like behaviour. ‘centre’ defaults to True, wrapping the phase at the array
+centre.</p>
+<p>(The good ideas here are Scott’s.)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>phase</strong> (<em>np.ndarray</em>) – input phase [ rad ], 1-D or 2-D.</li>
+<li><strong>centre</strong> (<em>bool</em>) – Unwrap the phase such that the centre of the input array is wrapped.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Unwrapped phase [ rad ].</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="despeckle">
+<h2>despeckle<a class="headerlink" href="#despeckle" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pycis.demod.despeckle">
+<code class="descclassname">pycis.demod.</code><code class="descname">despeckle</code><span class="sig-paren">(</span><em>image</em>, <em>display=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pycis.demod.despeckle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove random ‘speckles’ in a raw image caused by neutrons.</p>
+<p>Function uses a median filters to get rid of single pixels and a 1st derivative threshold test to remove larger 
+speckles. Tune the three ‘_lim’ parameters if not getting desired results.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>image</strong> (<em>array_like</em>) – Input image to be despeckled.</li>
+<li><strong>display</strong> (<em>bool.</em>) – Display a plot.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The despeckled image.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="model.html" class="btn btn-neutral float-right" title="model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="pycis Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Joseph Allcock.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  false,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

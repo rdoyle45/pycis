@@ -1,0 +1,30 @@
+demod
+=====
+
+Scripts for demodulating raw CIS images to recover intensity, phase and contrast.
+
+fd_column
+---------
+.. autofunction:: pycis.demod.fd_column
+
+fd_image_1d
+-----------
+.. autofunction:: pycis.demod.fd_image_1d
+
+fd_image_2d
+-----------
+.. autofunction:: pycis.demod.fd_image_2d
+
+
+wrap
+----
+.. autofunction:: pycis.demod.wrap
+
+unwrap
+------
+.. autofunction:: pycis.demod.unwrap
+
+despeckle
+---------
+.. autofunction:: pycis.demod.despeckle
+

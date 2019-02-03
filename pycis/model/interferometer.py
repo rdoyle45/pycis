@@ -25,19 +25,24 @@ class InterferometerComponent:
 
     """
 
-    def __init__(self, orientation):
+    def __init__(self, orientation, clear_aperture=None):
         """
         :param orientation: orientation angle [ rad ]
+
+        :param clear_aperture: clear aperture of component [ m ]. If None, infinite aperture assumed.
         """
 
         self.orientation = orientation
+        self.clear_aperture = clear_aperture
 
     def orient(self, mat):
         """
         account for orientation of interferometer component with given vertical Mueller matrix
         
         :param mat: 4 x 4 Mueller matrix
-        :return: 
+
+        :return:
+
         """
 
         # matrix multiplication
@@ -46,7 +51,11 @@ class InterferometerComponent:
         return np.einsum(subscripts, mat_rot, calculate_rot_mat(self.orientation))
 
     def calculate_matrix(self, wl, inc_angle, azim_angle):
-        """ abstract method """
+        """
+        abstract method, calculate component's Mueller matrix
+
+        """
+
         raise NotImplementedError
 
 
@@ -56,14 +65,14 @@ class LinearPolariser(InterferometerComponent):
 
     """
 
-    def __init__(self, orientation, tx_1=1, tx_2=0):
+    def __init__(self, orientation, clear_aperture=None, tx_1=1, tx_2=0):
         """
         :param orientation: [ rad ] 0 aligns vertical polariser axis to vertical interferometer axis
         :param tx_1: transmission primary component. [0, 1] - defaults to 1
         :param tx_2: transmission secondary (orthogonal) component. [0, 1] - defaults to 0
 
         """
-        super().__init__(orientation)
+        super().__init__(orientation, clear_aperture=clear_aperture)
 
         assert 0 <= tx_1 <= 1
         assert 0 <= tx_2 <= 1
@@ -72,7 +81,7 @@ class LinearPolariser(InterferometerComponent):
 
     def calculate_matrix(self, wl, inc_angle, azim_angle):
         """
-        general Mueller matrix for a linear polariser. No dependence on inputs.
+        general Mueller matrix for a linear polariser. No dependence on wavelength / ray angles assumed.
 
         :return:
 
@@ -92,7 +101,7 @@ class BirefringentComponent(InterferometerComponent):
 
     """
 
-    def __init__(self, orientation, thickness, material='a-BBO', contrast=1):
+    def __init__(self, orientation, thickness, clear_aperture=None, material='a-BBO', contrast=1):
         """
         :param thickness: [ m ]
         :type thickness: float
@@ -103,7 +112,7 @@ class BirefringentComponent(InterferometerComponent):
         :param contrast: arbitrary contrast degradation factor for crystal, uniform contrast only for now.
         :type contrast: float
         """
-        super().__init__(orientation)
+        super().__init__(orientation, clear_aperture=clear_aperture)
 
         self.thickness = thickness
         self.material = material

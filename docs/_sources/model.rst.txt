@@ -1,0 +1,15 @@
+model
+=====
+
+Forward modelling the CIS instrument.
+
+.. automodule:: pycis.model
+   :members:
+
+bbo
+--------------
+
+.. autofunction:: pycis.model.bbo
+
+
+
