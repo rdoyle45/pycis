@@ -3,29 +3,24 @@ model
 
 Forward modelling the diagnostic and generating synthetic images.
 
+.. toctree::
+   :maxdepth: 2
 
-Interferometer
---------------
-
-.. automodule:: pycis.model.interferometer
-    :members:
-
-Instrument
-----------
-
-.. automodule:: pycis.model.instrument
-    :members:
-
-Image
------
-
-.. automodule:: pycis.model.image
-    :members:
+   interferometer
+   instrument
+   synth_image
 
 Dispersion
 ----------
 
 .. autofunction:: pycis.model.dispersion
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
 
 

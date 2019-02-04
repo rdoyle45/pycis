@@ -7,7 +7,6 @@ pycis Documentation
 ===================
 
 .. toctree::
-   :maxdepth: 2
    
    demod
    model
