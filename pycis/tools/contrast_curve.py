@@ -74,7 +74,7 @@ class ContrastCurve(object):
                 ls_m = bls.ls_szd
 
                 # calculate interferometer delay time
-                degree_coherence, abbo_axis = pycis.model.degree_coherence_general(ls_m, wl_axis, display=False)
+                degree_coherence, abbo_axis = pycis.model.calculate_degree_coherence(ls_m, wl_axis, display=False)
                 contrast_delay_curve = abs(degree_coherence)
 
                 # interpolate contrast at the fixed delay -- this bit can be sped up.

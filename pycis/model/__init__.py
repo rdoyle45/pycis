@@ -12,4 +12,4 @@ from .image import *
 
 from .spectra import *
 # from .degree_coherence import degree_coherence_numerical, degree_coherence_analytical
-from .degree_coherence_general import degree_coherence_general
+from .degree_coherence import calculate_degree_coherence

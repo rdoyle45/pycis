@@ -201,37 +201,50 @@ def get_img(path, display=False):
     return img
 
 
-def get_img_stack(path, rot90=0, fmt='tif', display=False, overwrite=False):
+def get_img_stack(path, rot90=0, fmt='tif', display=False, overwrite=False, delete=False):
     """ Given a path to a directory, stack all images of the specified file type within that directory and save. 
     
     :param path: 
     :param rot90: number of 90 deg rotations (direction is from firtst towards the second axis, as per np.rot90 convention)
     :param fmt: 
     :param overwrite: bool, if False, look for an existing image stack from a previous calculation.
+    :param delete: delete original image files after stacking -- use with caution.
     :return: 
     """
 
     img_stack_path = os.path.join(path, 'img_stack.npy')
+    flist = get_img_flist(path, fmt=fmt)
+    fnum = len(flist)
 
     if os.path.isfile(img_stack_path) and overwrite is False:
         img_stack = np.load(img_stack_path)
 
     else:
-        flist = get_img_flist(path, fmt=fmt)
-        fnum = len(flist)
 
         if fnum == 0:
             raise Exception('No files of this type found in the given directory.')
 
         img_stack = 0
 
-        for imgpath in flist:
-            img_stack += get_img(imgpath)
+        for f in flist:
+            img_stack += get_img(f)
 
         if rot90 != 0:
             img_stack = np.rot90(img_stack, k=rot90)
 
         np.save(img_stack_path, img_stack)
+
+    if delete:
+        print('You are about to delete the contents of: ')
+        print(str(path))
+        print('-----')
+        choice = input('Proceed? [y/n]: ')
+        if choice == 'y':
+            for f in flist:
+                os.remove(f)
+            print('deletion completed')
+        else:
+            pass
 
     if display:
 
@@ -243,7 +256,7 @@ def get_img_stack(path, rot90=0, fmt='tif', display=False, overwrite=False):
     return img_stack
 
 
-def get_phase_img_stack(path, rot90=0, fmt='tif', overwrite=False):
+def get_phase_img_stack(path, rot90=0, fmt='tif', overwrite=False, **kwargs):
     """
     Calculate and save the phase of the stacked images of the specified format in the given directory.
     """
@@ -260,7 +273,7 @@ def get_phase_img_stack(path, rot90=0, fmt='tif', overwrite=False):
         img_stack = get_img_stack(path, rot90=rot90, fmt=fmt, overwrite=overwrite)
         # img_stack = np.flipud(np.fliplr(img_stack))
 
-        intensity, phase, contrast = demod_function(img_stack, display=False)
+        intensity, phase, contrast = pycis.fourier_demod_2d(img_stack, **kwargs)
 
         phase_img_stack = phase
 
