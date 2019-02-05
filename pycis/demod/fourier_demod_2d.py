@@ -6,7 +6,7 @@ import pycis
 
 
 def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, camera=None,
-                     nfringes=None, display=False):
+                     nfringes=None, notch=None, display=False):
     """ 
     2D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast.
     
@@ -37,6 +37,8 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     
     :return: A tuple containing the DC component (intensity), phase and contrast.
     """
+    
+    # TODO cleanup
 
     start_time = time.time()
     pp_img = np.copy(img)
@@ -45,7 +47,7 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     if despeckle:
         pp_img = pycis.demod.despeckle(pp_img)
 
-    # since the input image is real, its FT is Hermitian -- all info contained in +ve frequencies: use rfft2()
+    # since the input image is real, its FT is Hermitian -- all info contained in +ve frequencies -- use rfft2()
     fft_img = np.fft.rfft2(pp_img, axes=(1, 0))
 
     # estimate carrier (fringe) frequency, if not supplied
@@ -54,11 +56,29 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
 
     # generate window function
     fft_length = int(img.shape[0] / 2)
-    window_1d = pycis.demod.window(fft_length, nfringes, width_factor=0.8, fn='tukey')
+    window_1d = pycis.demod.window(fft_length, nfringes, width_factor=1.0, fn='tukey')
     window_2d = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
-    window_2d *= (1 - scipy.signal.tukey(fft_img.shape[1]))
+    window_2d *= (1 - scipy.signal.tukey(fft_img.shape[1], alpha=0.8))
+
+    if notch is not None:
+        # cut a vertical notch out in Fourier domain to remove artefacts
+
+        notch_window_width = 5
+        pre_zeros = [0] * int(notch - notch_window_width / 2)
+        mid_zeros = [0] * (img.shape[1] - 2 * notch_window_width - 2 * len(pre_zeros))
+        notch = scipy.signal.tukey(notch_window_width, alpha=0.8)
+
+        notch_window = np.concatenate([pre_zeros, notch, mid_zeros, notch, pre_zeros])
+
+        plt.figure()
+        plt.plot(notch_window)
+        plt.show(block=True)
+
+        window_2d *= (1 - notch_window)
 
     if mask:
+        # end region masking
+
         pp_img_erm_dc = pycis.demod.end_region_mask(pp_img, alpha=0.15, mean_subtract=True)
         pp_img_erm_phase = pycis.demod.end_region_mask(pp_img, alpha=(3 / nfringes), mean_subtract=True)
 
@@ -134,10 +154,11 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
 
             # mean_real = np.mean(real)
             var_real = np.var(real)
+            var_avg = (var_real + var_imag) / 2
             # std_real = np.sqrt(var_real)
 
             # predict image sigma
-            var_img = (2 * var_real) / (img.shape[0] * img.shape[1])
+            var_img = (2 * var_avg) / (img.shape[0] * img.shape[1])
             std = np.ones_like(img) * np.sqrt(var_img)
 
         else:
@@ -167,7 +188,7 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
         uncertainty = {'std_dc': std_dc,
                        'std_phase': std_phase,
                        'std_contrast': std_contrast,
-                       'SNR': dc / (2 * std)}  # only appropriate for calibration images
+                       'snr': dc / std}  # only appropriate for calibration images
 
     if display:
         print('-- fd_image_2d: nfringes = {}'.format(nfringes))
@@ -222,27 +243,6 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
         return dc, phase, contrast, uncertainty
     else:
         return dc, phase, contrast
-
-
-# if __name__ == '__main__':
-#     import laser_scan_ga
-#     import calib_data_swip
-#
-#     inst_ga = laser_scan_ga.load_instrument()
-#
-#     lsga = laser_scan_ga.LaserScanGA(34)
-#     cds = calib_data_swip.CalibDataSwip('2018-07-20', 'lamps', 1)
-#
-#     img_swip, wl_swip = cds.get_img_stack(0)
-#     img_ga, wl_ga, time = lsga.get_raw_image(-1)
-#     img_ga_synth = pycis.SynthImage(inst_ga, 469e-9, 5e4).igram
-#
-#     img_ga = img_ga[:, 50:]
-#
-#     dc, phase, contrast, uncertainty = fourier_demod_2d(img_ga, uncertainty_out=True, camera=inst_ga.camera)
-#     dc, phase, contrast, uncertainty = fourier_demod_2d(img_ga, uncertainty_out=True)
-#
-#     # std_phase = uncertainty['std_phase']
 
 
 

@@ -21,7 +21,7 @@ def calculate_rot_mat(angle):
 
 class InterferometerComponent:
     """
-    base class for CIS interferometer components
+    abstract base class for CIS interferometer components
 
     """
 
