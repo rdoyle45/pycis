@@ -37,7 +37,7 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     
     :return: A tuple containing the DC component (intensity), phase and contrast.
     """
-    
+
     # TODO cleanup
 
     start_time = time.time()

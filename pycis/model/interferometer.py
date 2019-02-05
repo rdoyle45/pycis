@@ -25,15 +25,15 @@ class InterferometerComponent:
 
     """
 
-    def __init__(self, orientation, clear_aperture=None):
+    def __init__(self, orientation, clr_aperture=None):
         """
         :param orientation: orientation angle [ rad ]
 
-        :param clear_aperture: clear aperture of component [ m ]. If None, infinite aperture assumed.
+        :param clr_aperture: clear aperture of component [ m ]. If None, infinite aperture assumed.
         """
 
         self.orientation = orientation
-        self.clear_aperture = clear_aperture
+        self.clear_aperture = clr_aperture
 
     def orient(self, mat):
         """
@@ -65,14 +65,14 @@ class LinearPolariser(InterferometerComponent):
 
     """
 
-    def __init__(self, orientation, clear_aperture=None, tx_1=1, tx_2=0):
+    def __init__(self, orientation, tx_1=1, tx_2=0, clr_aperture=None):
         """
         :param orientation: [ rad ] 0 aligns vertical polariser axis to vertical interferometer axis
         :param tx_1: transmission primary component. [0, 1] - defaults to 1
         :param tx_2: transmission secondary (orthogonal) component. [0, 1] - defaults to 0
 
         """
-        super().__init__(orientation, clear_aperture=clear_aperture)
+        super().__init__(orientation, clr_aperture=clr_aperture)
 
         assert 0 <= tx_1 <= 1
         assert 0 <= tx_2 <= 1
@@ -101,7 +101,7 @@ class BirefringentComponent(InterferometerComponent):
 
     """
 
-    def __init__(self, orientation, thickness, clear_aperture=None, material='a-BBO', contrast=1):
+    def __init__(self, orientation, thickness, material='a-BBO', contrast=1, clr_aperture=None):
         """
         :param thickness: [ m ]
         :type thickness: float
@@ -112,7 +112,7 @@ class BirefringentComponent(InterferometerComponent):
         :param contrast: arbitrary contrast degradation factor for crystal, uniform contrast only for now.
         :type contrast: float
         """
-        super().__init__(orientation, clear_aperture=clear_aperture)
+        super().__init__(orientation, clr_aperture=clr_aperture)
 
         self.thickness = thickness
         self.material = material
@@ -161,7 +161,7 @@ class UniaxialCrystal(BirefringentComponent):
 
     """
 
-    def __init__(self, orientation, thickness, cut_angle, material='a-BBO', contrast=1):
+    def __init__(self, orientation, thickness, cut_angle, material='a-BBO', contrast=1, clr_aperture=None):
         """
         
         :param cut_angle: [ rad ] angle between optic axis and crystal front face
@@ -169,7 +169,7 @@ class UniaxialCrystal(BirefringentComponent):
 
         """
 
-        super().__init__(orientation, thickness, material, contrast)
+        super().__init__(orientation, thickness, material=material, contrast=contrast, clr_aperture=clr_aperture)
         self.cut_angle = cut_angle
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
@@ -249,13 +249,13 @@ class SavartPlate(BirefringentComponent):
 
     """
 
-    def __init__(self, orientation, thickness, material='a-BBO', mode='francon', contrast=1):
+    def __init__(self, orientation, thickness, material='a-BBO', mode='francon', contrast=1, clr_aperture=None):
         """
         :param mode: source for the equation for phase delay: 'francon' (approx.) or 'veiras' (exact)
         :type mode: string
 
         """
-        super().__init__(orientation, thickness, material, contrast)
+        super().__init__(orientation, thickness, material=material, contrast=contrast, clr_aperture=clr_aperture)
         self.mode = mode
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
@@ -358,7 +358,7 @@ class QuarterWaveplate(BirefringentComponent):
 
     """
 
-    def __init__(self, orientation):
+    def __init__(self, orientation, clr_aperture=None):
         """
 
         :param orientation:
@@ -366,7 +366,7 @@ class QuarterWaveplate(BirefringentComponent):
 
         thickness = 1.  # this value is arbitrary
 
-        super().__init__(orientation, thickness)
+        super().__init__(orientation, thickness, clr_aperture=clr_aperture)
 
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
