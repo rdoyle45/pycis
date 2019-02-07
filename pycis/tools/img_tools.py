@@ -178,6 +178,12 @@ def convert_predicted_cis_vignetting_from_matlab_to_npy():
 
 
 def get_img_flist(path, fmt='tif'):
+    """
+
+    :param path:
+    :param fmt:
+    :return:
+    """
 
     assert os.path.isdir(path)
 
@@ -202,10 +208,12 @@ def get_img(path, display=False):
 
 
 def get_img_stack(path, rot90=0, fmt='tif', display=False, overwrite=False, delete=False):
-    """ Given a path to a directory, stack all images of the specified file type within that directory and save. 
+    """
+    stack all images in a directory
     
     :param path: 
-    :param rot90: number of 90 deg rotations (direction is from firtst towards the second axis, as per np.rot90 convention)
+    :param rot90: number of 90 deg rotations (direction is from first towards the second axis, as per np.rot90
+    convention)
     :param fmt: 
     :param overwrite: bool, if False, look for an existing image stack from a previous calculation.
     :param delete: delete original image files after stacking -- use with caution.

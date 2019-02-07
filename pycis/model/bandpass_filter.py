@@ -96,11 +96,21 @@ class BandpassFilter:
 
         return filtered_spectrum
 
-    def plot_tx(self, ax, inc_angle=0., **kwargs):
-        """ Add transmission profile to an existing plot (for a given incidence angle). """
+    def plot_tx(self, ax, inc_angle=0., wl_units='m', **kwargs):
+        """
+        Add transmission profile to an existing plot (for a given incidence angle).
+
+        """
 
         wl_effective = self.tilt(inc_angle)
-        ax.plot(wl_effective, self.tx, **kwargs)
+
+        if wl_units == 'nm':
+            wl_plot = wl_effective * 1e9
+        elif wl_units == 'm':
+            wl_plot = wl_effective
+        else:
+            raise Exception('invalid wl_units')
+        ax.plot(wl_plot, self.tx, **kwargs)
         return
 
     def save_csv(self, name=None):

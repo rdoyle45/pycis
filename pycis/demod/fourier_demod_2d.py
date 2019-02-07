@@ -56,7 +56,7 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
 
     # generate window function
     fft_length = int(img.shape[0] / 2)
-    window_1d = pycis.demod.window(fft_length, nfringes, width_factor=1.0, fn='tukey')
+    window_1d = pycis.demod.window(fft_length, nfringes, width_factor=1.2, fn='tukey')
     window_2d = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
     window_2d *= (1 - scipy.signal.tukey(fft_img.shape[1], alpha=0.8))
 
@@ -69,10 +69,6 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
         notch = scipy.signal.tukey(notch_window_width, alpha=0.8)
 
         notch_window = np.concatenate([pre_zeros, notch, mid_zeros, notch, pre_zeros])
-
-        plt.figure()
-        plt.plot(notch_window)
-        plt.show(block=True)
 
         window_2d *= (1 - notch_window)
 
@@ -134,28 +130,12 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
 
             fft_img_empty = fft_img[np.where(window_empty == 1)]
 
-            if display:
-                plt.figure()
-                plt.imshow(np.log10(np.abs(fft_img)))
-                plt.colorbar()
-
-                plt.figure()
-                plt.imshow(window_empty)
-                plt.colorbar()
-
-                plt.show(block=True)
-
             imag = np.imag(fft_img_empty).flatten()
             real = np.real(fft_img_empty).flatten()
 
-            # mean_imag = np.mean(imag)
             var_imag = np.var(imag)
-            std_imag = np.sqrt(var_imag)
-
-            # mean_real = np.mean(real)
             var_real = np.var(real)
             var_avg = (var_real + var_imag) / 2
-            # std_real = np.sqrt(var_real)
 
             # predict image sigma
             var_img = (2 * var_avg) / (img.shape[0] * img.shape[1])
@@ -163,7 +143,6 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
 
         else:
             # estimate standard deviation of the noise
-            i0 = 4 * dc
             std = (1 / camera.epercount) * np.sqrt(camera.cam_noise ** 2 + camera.epercount * img)
 
         # calculate 'power gain' of the filter windows used

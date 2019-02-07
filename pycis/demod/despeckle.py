@@ -32,8 +32,8 @@ def despeckle(image, display=False):
 
         # tuning parameters as in Scott's original code
         intensity_lim = 5  # Ilim - don't bother with parts of the image below this many counts
-        detection_lim = 2  # Detection limit for speckles, lower = more sensitive.
-        size_lim = 4  # Size limit - maximum number of pixels across to be considered a speckle.
+        detection_lim = 0.05  # Detection limit for speckles, lower = more sensitive.
+        size_lim = 3  # Size limit - maximum number of pixels across to be considered a speckle.
 
         # Intensity gradient down column
         grad = np.gradient(data_row)

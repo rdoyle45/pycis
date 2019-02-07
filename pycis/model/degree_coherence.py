@@ -89,7 +89,7 @@ def calculate_degree_coherence(spectrum, wl_axis, material='a-BBO', delay_max=10
         leg = ax2.legend()
         plt.show()
 
-    return degree_coherence
+    return degree_coherence, delay_axis
 
 
 if __name__ == '__main__':
