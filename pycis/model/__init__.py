@@ -9,7 +9,5 @@ from .dispersion import *
 from .lithium_niobate import *
 
 from .image import *
-
-from .spectra import *
 # from .degree_coherence import degree_coherence_numerical, degree_coherence_analytical
 from .degree_coherence import calculate_degree_coherence

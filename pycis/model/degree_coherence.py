@@ -9,11 +9,11 @@ def calculate_degree_coherence(spectrum, wl_axis, material='a-BBO', delay_max=10
     calculate degree of coherence (DOC), given a wavelength spectrum.
 
     In general, DOC is a complex quantity. In the absence of dispersion, DOC is the Fourier transform of the (
-    normalised) frequency spectrum. Since the spectrum is real, DOC will be an even function of time delay -- so only
-    positive time delays are returned.
+    normalised) frequency spectrum. Since the spectrum is real, DOC will be an even function of interferometer delay
+    -- so only positive delays are returned.
 
     In Fourier transform spectroscopy, measured DOC depends on dispersion present in the two-beam interferometer. In
-    the case of CIS, the dispersion is determined by the choice of birefringent material used in the interferometer.
+    the case of CIS, the dispersion is determined by the choice of birefringent crystal material.
 
     :param spectrum: [ arb. ]
     :type spectrum: np.ndarray

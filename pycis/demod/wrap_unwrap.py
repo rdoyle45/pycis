@@ -1,8 +1,9 @@
 import numpy as np
-
+import copy
 
 def wrap(phase, units='rad'):
-    """ Wrap N-D phase profile within (- pi, pi] radian interval.
+    """
+    Wrap N-D phase profile within (- pi, pi] radian interval.
 
     :param phase: input phase
     :type phase: array_like
@@ -18,6 +19,36 @@ def wrap(phase, units='rad'):
     period = units_period[units]
 
     return (phase + period / 2) % period - (period / 2)
+
+def wrap_centre(phase):
+    """
+    Wrap centre of a phase image into (- pi, pi] radian interval.
+
+    :param phase: [ rad ]
+
+    :return: phase_wc [ rad ]
+    """
+
+    assert isinstance(phase, np.ndarray)
+    assert phase.ndim == 2
+
+    phase_wc = copy.deepcopy(phase)
+
+    # wrap image centre into [-pi, +pi] (assumed projection of optical axis onto detector)
+    y_centre_idx = np.round((np.size(phase, 0) - 1) / 2).astype(np.int)
+    x_centre_idx = np.round((np.size(phase, 1) - 1) / 2).astype(np.int)
+    phase_centre = phase_wc[y_centre_idx, x_centre_idx]
+
+    if phase_centre > 0:
+        while abs(phase_centre) > np.pi:
+            phase_wc -= 2 * np.pi
+            phase_centre = phase_wc[y_centre_idx, x_centre_idx]
+    else:
+        while abs(phase_centre) > np.pi:
+            phase_wc += 2 * np.pi
+            phase_centre = phase_wc[y_centre_idx, x_centre_idx]
+
+    return phase_wc
 
 
 def unwrap(phase, centre=True):
