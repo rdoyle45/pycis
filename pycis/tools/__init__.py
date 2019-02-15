@@ -1,6 +1,6 @@
 from .find_nearest import find_nearest
 from .misc_calculations import *
-from .to_precision import to_precision
+from .to_precision import *
 from .find_peaks import indexes
 from .log_trapz import log_trapz
 

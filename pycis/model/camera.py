@@ -35,7 +35,8 @@ class Camera(object):
         :return: camera_signal
         """
 
-        np.random.seed()
+        # np.random.seed()
+        np.random.seed(42)
 
         # account for quantum efficiency
         electron_fluence = intensity * self.qe
