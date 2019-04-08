@@ -110,4 +110,4 @@ def demo_2():
 
 
 if __name__ == '__main__':
-    demo_2()
+    demo_1()
