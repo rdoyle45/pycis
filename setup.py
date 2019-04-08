@@ -7,7 +7,6 @@ import os.path
 # compilation_args = []
 # cython_directives = {'language_level': 3}
 # setup_path = os.path.dirname(os.path.abspath(__file__))
-
 # extensions = []
 # for root, dirs, files in os.walk(setup_path):
 #     for file in files:
