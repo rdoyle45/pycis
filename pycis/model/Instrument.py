@@ -338,59 +338,59 @@ class Instrument(object):
 
         return i0_1
 
-    def get_contrast_ti(self, line_name, contrast):
-        """ Given spectral line and desired approximate image contrast, return necessary input ion temp in [eV]."""
-
-        # TODO old, clean up / throw away
-
-        C = pycis.tools.c
-        k_B = pycis.tools.k_B
-        E = pycis.tools.e
-
-        # load line
-        line = pycis.model.Lineshape(line_name, 1, 0, 1)
-
-        _, _, _, wavelength_com = line.make(1000)
-
-        # calculate characteristic temperature
-
-        biref, n_e, n_o, kappa, dBdlambda, d2Bdlambda2, d3Bdlambda3 = pycis.model.bbo_slo(wavelength_com)
-
-        phase_wp = uniaxial_crystal(wavelength_com, n_e, n_o, self.waveplate.thickness, 0, 0)
-
-        phase_sp = savart_plate(wavelength_com, n_e, n_o, self.savartplate.thickness, 0, 0)
-
-        phase = phase_wp + phase_sp
-
-        group_delay  = kappa * phase
-
-        t_characteristic = (line.m_i * C ** 2) / (2 * k_B * (np.pi * group_delay) ** 2)
-
-        # calculate multiplet contrast
-
-        coherence_m = 0  # multiplet complex coherence
-        # loop over multiplet transitions:
-        line_no = line.line_no
-        lines_wl = np.zeros(line_no)
-        lines_rel_int = np.zeros(line_no)
-        for i in range(0, line_no):
-            lines_wl[i] = line.lines['wave_obs'].iloc[i]
-            lines_rel_int[i] = line.lines['rel_int'].iloc[i]
-
-        nu_0 = C / wavelength_com
-
-        for m in range(0, line_no):
-            nu_m = C / (lines_wl[m])  # [Hz]
-            xi_m = (nu_0 - nu_m) / nu_0
-            coherence_m += np.exp(2 * np.pi * 1j * group_delay * xi_m) * lines_rel_int[m]
-        contrast_m = abs(coherence_m)
-        phase_m = np.angle(coherence_m) / (2 * np.pi)  # [waves]
-
-        t_ion = - t_characteristic * np.log(contrast / contrast_m)  # [K]
-
-        t_ion *= (k_B / E)  # [eV]
-
-        return t_ion
+    # def get_contrast_ti(self, line_name, contrast):
+    #     """ Given spectral line and desired approximate image contrast, return necessary input ion temp in [eV]."""
+    #
+    #     # TODO old, clean up / throw away
+    #
+    #     C = pycis.tools.c
+    #     k_B = pycis.tools.k_B
+    #     E = pycis.tools.e
+    #
+    #     # load line
+    #     line = pycis.model.Lineshape(line_name, 1, 0, 1)
+    #
+    #     _, _, _, wavelength_com = line.make(1000)
+    #
+    #     # calculate characteristic temperature
+    #
+    #     biref, n_e, n_o, kappa, dBdlambda, d2Bdlambda2, d3Bdlambda3 = pycis.model.bbo_slo(wavelength_com)
+    #
+    #     phase_wp = uniaxial_crystal(wavelength_com, n_e, n_o, self.waveplate.thickness, 0, 0)
+    #
+    #     phase_sp = savart_plate(wavelength_com, n_e, n_o, self.savartplate.thickness, 0, 0)
+    #
+    #     phase = phase_wp + phase_sp
+    #
+    #     group_delay  = kappa * phase
+    #
+    #     t_characteristic = (line.m_i * C ** 2) / (2 * k_B * (np.pi * group_delay) ** 2)
+    #
+    #     # calculate multiplet contrast
+    #
+    #     coherence_m = 0  # multiplet complex coherence
+    #     # loop over multiplet transitions:
+    #     line_no = line.line_no
+    #     lines_wl = np.zeros(line_no)
+    #     lines_rel_int = np.zeros(line_no)
+    #     for i in range(0, line_no):
+    #         lines_wl[i] = line.lines['wave_obs'].iloc[i]
+    #         lines_rel_int[i] = line.lines['rel_int'].iloc[i]
+    #
+    #     nu_0 = C / wavelength_com
+    #
+    #     for m in range(0, line_no):
+    #         nu_m = C / (lines_wl[m])  # [Hz]
+    #         xi_m = (nu_0 - nu_m) / nu_0
+    #         coherence_m += np.exp(2 * np.pi * 1j * group_delay * xi_m) * lines_rel_int[m]
+    #     contrast_m = abs(coherence_m)
+    #     phase_m = np.angle(coherence_m) / (2 * np.pi)  # [waves]
+    #
+    #     t_ion = - t_characteristic * np.log(contrast / contrast_m)  # [K]
+    #
+    #     t_ion *= (k_B / E)  # [eV]
+    #
+    #     return t_ion
 
     def apply_vignetting(self, photon_fluence):
         """account for instrument etendue to first order based on Scott's predictive matlab code. """

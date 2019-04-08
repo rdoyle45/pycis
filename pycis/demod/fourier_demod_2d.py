@@ -6,7 +6,7 @@ import pycis
 
 
 def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, camera=None,
-                     nfringes=None, notch=None, display=False):
+                     nfringes=None, display=False):
     """ 
     2D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast.
     
@@ -58,19 +58,6 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     fft_length = int(img.shape[0] / 2)
     window_1d = pycis.demod.window(fft_length, nfringes, width_factor=1.2, fn='tukey')
     window_2d = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
-    window_2d *= (1 - scipy.signal.tukey(fft_img.shape[1], alpha=0.8))
-
-    if notch is not None:
-        # cut a vertical notch out in Fourier domain to remove artefacts
-
-        notch_window_width = 5
-        pre_zeros = [0] * int(notch - notch_window_width / 2)
-        mid_zeros = [0] * (img.shape[1] - 2 * notch_window_width - 2 * len(pre_zeros))
-        notch = scipy.signal.tukey(notch_window_width, alpha=0.8)
-
-        notch_window = np.concatenate([pre_zeros, notch, mid_zeros, notch, pre_zeros])
-
-        window_2d *= (1 - notch_window)
 
     if mask:
         # end region masking
