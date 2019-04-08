@@ -6,7 +6,7 @@ import pycis
 
 
 def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, camera=None,
-                     nfringes=None, notch=None, display=False):
+                     nfringes=None, notch_take=None, notch_add=None, display=False):
     """ 
     2D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast.
     
@@ -39,7 +39,6 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     """
 
     # TODO cleanup
-
     start_time = time.time()
     pp_img = np.copy(img)
 
@@ -56,25 +55,56 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
 
     # generate window function
     fft_length = int(img.shape[0] / 2)
-    window_1d = pycis.demod.window(fft_length, nfringes, width_factor=1.2, fn='tukey')
+    window_1d = pycis.demod.window(fft_length, nfringes, width_factor=1., fn='tukey')
     window_2d = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
-    window_2d *= (1 - scipy.signal.tukey(fft_img.shape[1], alpha=0.8))
+    window_2d *= (1 - scipy.signal.tukey(fft_img.shape[1], alpha=0.6))
 
-    if notch is not None:
+    # plt.figure()
+    # plt.imshow(window_2d)
+    # plt.colorbar()
+
+    if notch_take is not None:
         # cut a vertical notch out in Fourier domain to remove artefacts
 
-        notch_window_width = 5
-        pre_zeros = [0] * int(notch - notch_window_width / 2)
+        notch_window_width = 9
+        pre_zeros = [0] * int(notch_take - notch_window_width / 2)
         mid_zeros = [0] * (img.shape[1] - 2 * notch_window_width - 2 * len(pre_zeros))
-        notch = scipy.signal.tukey(notch_window_width, alpha=0.8)
+        notch_take = scipy.signal.tukey(notch_window_width, alpha=0.8)
 
-        notch_window = np.concatenate([pre_zeros, notch, mid_zeros, notch, pre_zeros])
+        notch_window = np.concatenate([pre_zeros, notch_take, mid_zeros, notch_take, pre_zeros])
 
         window_2d *= (1 - notch_window)
 
+    if notch_add is not None:
+        # cut a vertical notch out in Fourier domain to remove artefacts
+
+        notch_window_width = 6
+        pre_zeros = [0] * int(notch_add - notch_window_width / 2)
+        mid_zeros = [0] * (img.shape[1] - 2 * notch_window_width - 2 * len(pre_zeros))
+        notch_add = scipy.signal.tukey(notch_window_width, alpha=0.8)
+
+        notch_window = np.concatenate([pre_zeros, notch_add, mid_zeros, notch_add, pre_zeros])
+
+        notch_window = np.tile(notch_window, reps=[window_2d.shape[0], 1])
+
+        window_2d += notch_window
+        window_2d[window_2d > 1] = 1
+
+        window_1d_na = pycis.demod.window(fft_length, nfringes, width_factor=2.3, fn='tukey', alpha=0.3)
+        window_2d_na = np.transpose(np.tile(window_1d_na, (fft_img.shape[1], 1)))
+        window_2d *= window_2d_na
+
+        # plt.figure()
+        # plt.imshow(notch_window)
+        # plt.colorbar()
+
+        # plt.figure()
+        # plt.imshow(notch_window)
+        # plt.colorbar()
+        # plt.show()
+
     if mask:
         # end region masking
-
         pp_img_erm_dc = pycis.demod.end_region_mask(pp_img, alpha=0.15, mean_subtract=True)
         pp_img_erm_phase = pycis.demod.end_region_mask(pp_img, alpha=(3 / nfringes), mean_subtract=True)
 
@@ -146,8 +176,8 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
             std = (1 / camera.epercount) * np.sqrt(camera.cam_noise ** 2 + camera.epercount * img)
 
         # calculate 'power gain' of the filter windows used
-        y_arr_window = np.arange(0, fft_length + 1)
-        x_arr_window = np.arange(0, np.shape(img)[1]) - fft_length
+        y_arr_window = np.arange(fft_length + 1)
+        x_arr_window = np.arange(np.shape(img)[1]) - fft_length
 
         x_mesh_window, y_mesh_window = np.meshgrid(x_arr_window, y_arr_window)
 
@@ -164,14 +194,35 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
         std_contrast = abs(contrast) * np.sqrt((std_dc / dc) ** 2 + (std_carrier / (contrast * dc)) ** 2)
         std_phase = std_carrier / (contrast * dc)
 
+        # estimate covariance matrix for phase
+        cov_phase_pixel_vert = np.fft.irfft2(abs(window_2d) ** 2, axes=(1, 0))[:, 0]
+        cov_phase = np.zeros([img.shape[0], img.shape[0]])
+
+        # plt.figure()
+        # plt.plot(cov_phase_pixel_vert / np.max(cov_phase_pixel_vert))
+        # plt.plot(np.fft.fftshift(cov_phase_pixel_vert) / np.max(cov_phase_pixel_vert))
+        # plt.plot(img[:, 0] / np.max(img[:, 0]))
+        # plt.show(block=True)
+
+        # assemble into covariance matrix -- ugly
+        for idx in range(len(cov_phase_pixel_vert)):
+            if idx != 0:
+                cov_phase_pixel_vert = np.roll(cov_phase_pixel_vert, 1)
+
+            cov_phase[:, idx] = cov_phase_pixel_vert
+
+        corr_phase = cov_phase / np.max(cov_phase)  # Pearson correlation coefficient matrix for image column
+
         uncertainty = {'std_dc': std_dc,
                        'std_phase': std_phase,
                        'std_contrast': std_contrast,
-                       'snr': dc / std}  # only appropriate for calibration images
+                       'snr': dc / std,
+                       'corr_phase': corr_phase,
+                       }  # only really appropriate for calibration images
 
     if display:
-        print('-- fd_image_2d: nfringes = {}'.format(nfringes))
-        print('-- fd_image_2d: time elapsed: {:.2f}s'.format(time.time() - start_time))
+        print('-- fourier_demod_2d: nfringes = {}'.format(nfringes))
+        print('-- fourier_demod_2d: time elapsed: {:.2f}s'.format(time.time() - start_time))
 
         fig1 = plt.figure(figsize=(10, 6), facecolor='white')
 
@@ -216,7 +267,7 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
             cbar32 = fig3.colorbar(im32, ax=ax32)
             ax32.set_title('contrast noise')
 
-        plt.show()
+        plt.show(block=True)
 
     if uncertainty_out:
         return dc, phase, contrast, uncertainty

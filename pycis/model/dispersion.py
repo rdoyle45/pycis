@@ -1,4 +1,4 @@
-d_lambda = 1.e-8
+d_lambda = 1.e-10
 d_lambda_micron = d_lambda * 1.e6
 
 # dispersion data

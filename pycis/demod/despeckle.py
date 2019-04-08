@@ -20,7 +20,7 @@ def despeckle(image, display=False):
     """
 
     # apply median filters (smooths while preserving edges)
-    image_out = scipy.signal.medfilt(image, 3)
+    image_out = scipy.signal.medfilt(image, 5)
 
     # loop over image rows
     y_dim, x_dim = image_out.shape

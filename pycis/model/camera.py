@@ -36,7 +36,7 @@ class Camera(object):
         """
 
         # np.random.seed()
-        np.random.seed(42)
+        np.random.seed()
 
         # account for quantum efficiency
         electron_fluence = intensity * self.qe
@@ -153,6 +153,13 @@ class PolCamera(Camera):
         self.mueller_matrix = mueller_matrix
 
     def capture(self, intensity, clean=False, display=False):
+        """
+
+        :param intensity:
+        :param clean:
+        :param display:
+        :return:
+        """
 
         assert isinstance(intensity, np.ndarray)
         assert intensity.shape[0] == 4
