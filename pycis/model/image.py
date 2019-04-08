@@ -227,15 +227,6 @@ class SynthImage:
         self._imshow(self.dc, 'gray', 'camera signal (ADU)', save, savename, vmin=vmin, vmax=vmax)
         return
 
-    # def img_phase(self, save=False):
-    #     savename = 'phase'
-    #     self._imshow(self.phase, 'viridis', r'$\phi$ [rad]', save, savename)
-    #
-    # def img_contrast(self, save=False, vmin=0, vmax=1):
-    #     savename = 'contrast'
-    #     self._imshow(self.contrast, 'viridis', r'$\zeta$', save, savename, vmin=vmin, vmax=vmax)
-    #     return
-
     def img_fft(self, save=False):
 
         ft = np.fft.fft2(self.igram)

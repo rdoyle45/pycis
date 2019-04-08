@@ -5,8 +5,8 @@ import time
 import pycis
 
 
-def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, camera=None,
-                     nfringes=None, notch_take=None, notch_add=None, display=False):
+def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, camera=None, nfringes=None,
+                     notch_take=None, notch_add=None, display=False):
     """ 
     2D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast.
     

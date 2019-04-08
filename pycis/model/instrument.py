@@ -5,26 +5,24 @@ import pycis
 
 
 class Instrument(object):
-    """ 
+    """
     Coherence imaging spectroscopy instrument
-
     """
 
     def __init__(self, camera, back_lens, interferometer, bandpass_filter=None, interferometer_orientation=0):
         """
-        :param camera: 
+        :param camera:
         :type camera pycis.model.Camera
-        
-        :param back_lens: 
+
+        :param back_lens:
         :type back_lens: pycis.model.Lens
-        
+
         :param interferometer: a list of instances of pycis.model.InterferometerComponent. The first component in
         the list is the first component that the light passes through.
         :type interferometer: list
-        
+
         :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name (not actually implemented
         properly yet)
-
         """
 
         self.camera = camera
@@ -50,7 +48,6 @@ class Instrument(object):
     def input_checks(self):
         """
         check validity of __init__ arguments
-
         """
 
         assert isinstance(self.camera, pycis.model.Camera)
@@ -63,7 +60,6 @@ class Instrument(object):
     def get_crystals(self):
         """
         list all birefringent components present in the interferometer ( subset of self.interferometer list )
-
         """
 
         return [c for c in self.interferometer if isinstance(c, pycis.BirefringentComponent)]
@@ -71,7 +67,6 @@ class Instrument(object):
     def get_polarisers(self):
         """
         list all polarisers present in the interferometer ( subset of self.interferometer list )
-
         """
 
         return [c for c in self.interferometer if isinstance(c, pycis.LinearPolariser)]
@@ -79,21 +74,16 @@ class Instrument(object):
     def calculate_pixel_pos(self, x_coord=None, y_coord=None, crop=None, downsample=1):
         """
         Calculate x-y coordinates of the pixels of the camera's sensor -- for ray geometry calculations
-
         Converts from pixel coordinates (origin top left) to spatial coordinates (origin centre). If x_coord and
         y_coord are not specified, entire sensor will be evaluated (with specified cropping and downsampling).
-
         Coordinates can be cropped and downsampled to facilitate direct comparison with cropped / downsampled
         experimental image, forgoing the need to generate a full-sensor synthetic image, as some of that output won't be
         used. can this be a pycis.Camera method? If both crop and downsample are specified, crop carried out first.
-
         :param x_coord: array of pixel coordinates (x)
         :param y_coord: array of pixel coordinates (y)
         :param crop: (y1, y2, x1, x2)
         :param downsample:
-
         :return: x_pos, y_pos [ m ]
-
         """
 
         # TODO clean up!
@@ -127,14 +117,12 @@ class Instrument(object):
 
     def calculate_ray_inc_angles(self, x_pos, y_pos):
         """
-        incidence angles will be the same for all interferometer components (until arbitrary component misalignment 
+        incidence angles will be the same for all interferometer components (until arbitrary component misalignment
         implemented)
-        
+
         :param x_pos: x position (s), centred sensor coordinates [ m ]
         :param y_pos: y position (s), centred sensor coordinates [ m ]
-
         :return: incidence angles [ rad ]
-
         """
 
         assert np.shape(x_pos) == np.shape(y_pos)
@@ -147,13 +135,10 @@ class Instrument(object):
         """
         calculate azimuthal angles of rays through interferometer, given
         azimuthal angles vary with crystal orientation so are calculated separately
-
         :param x_pos: x position (s), centred sensor coordinates [ m ]
         :param y_pos: y position (s), centred sensor coordinates [ m ]
         :param crystal: instance of pycis.model.BirefringentComponent
-
         :return: azimuthal angles [ rad ]
-
         """
 
         assert np.shape(x_pos) == np.shape(y_pos)
@@ -169,11 +154,8 @@ class Instrument(object):
     def calculate_matrix(self, wl):
         """
         calculate the total Mueller matrix for the interferometer
-
         :param wl: [ m ]
-
         :return: instrument matrix
-
         """
 
         x_pos, y_pos = self.calculate_pixel_pos()
@@ -183,7 +165,6 @@ class Instrument(object):
         instrument_matrix = np.identity(4)
 
         for component in self.interferometer:
-
             azim_angle = self.calculate_ray_azim_angles(x_pos, y_pos, component)
             component_matrix = component.calculate_matrix(wl, inc_angle, azim_angle)
 
@@ -200,7 +181,6 @@ class Instrument(object):
         """
         assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
         'two-beam'. kwargs included for fitting purposes.
-
         :param wl:
         :param x_coord:
         :param y_coord:
@@ -209,9 +189,7 @@ class Instrument(object):
         :param crop:
         :param downsample:
         :param output_components:
-
         :return: phase delay [ rad ]
-
         """
 
         # calculate the angles of each pixel's line of sight through the interferometer
@@ -244,7 +222,7 @@ class Instrument(object):
         return contrast
 
     def calculate_ideal_transmission(self):
-        """ transmission is decreased due to polarisers, calculate this factor analytically for the special case of 
+        """ transmission is decreased due to polarisers, calculate this factor analytically for the special case of
         ideal interferometer"""
 
         pol_1, pol_2 = self.polarisers
@@ -255,10 +233,10 @@ class Instrument(object):
     def check_inst_mode(self):
         """
         instrument mode determines best way to calculate the interference pattern
-        
-        in the case of a perfectly aligned coherence imaging diagnostic in a simple 'two-beam' configuration, skip the 
+
+        in the case of a perfectly aligned coherence imaging diagnostic in a simple 'two-beam' configuration, skip the
         Mueller matrix calculation to the final result.
-        
+
         :return: type (str)
         """
 
@@ -271,7 +249,7 @@ class Instrument(object):
 
         # are there two polarisers, at the front and back of the interferometer?
         if len(self.polarisers) == 2 and (isinstance(self.interferometer[0], pycis.LinearPolariser) and
-                                              isinstance(self.interferometer[-1], pycis.LinearPolariser)):
+                                          isinstance(self.interferometer[-1], pycis.LinearPolariser)):
 
             # ...are they alligned?
             pol_1_orientation = self.interferometer[0].orientation
@@ -295,12 +273,10 @@ class Instrument(object):
 
     def calculate_ideal_phase_offset(self, wl, n_e=None, n_o=None):
         """
-        :param wl: 
-        :param n_e: 
+        :param wl:
+        :param n_e:
         :param n_o:
-
         :return: phase_offset [ rad ]
-
         """
 
         phase_offset = 0
@@ -310,7 +286,7 @@ class Instrument(object):
         return phase_offset
 
     def get_snr_intensity(self, line_name, snr):
-        """ Given spectral line and desired approximate image snr (central ROI), return the necessary input intensity I0 in units 
+        """ Given spectral line and desired approximate image snr (central ROI), return the necessary input intensity I0 in units
         of [photons/pixel/timestep]. """
 
         # TODO old, clean up / throw away
@@ -362,7 +338,7 @@ class Instrument(object):
 
         phase = phase_wp + phase_sp
 
-        group_delay  = kappa * phase
+        group_delay = kappa * phase
 
         t_characteristic = (line.m_i * C ** 2) / (2 * k_B * (np.pi * group_delay) ** 2)
 
@@ -426,7 +402,7 @@ class Instrument(object):
 
         w1d = f(sensor_diagonal_axis)
 
-        #w1d = np.interp(sensor_diagonal_axis, sensor_distance_sym, norm_etendue_sym)
+        # w1d = np.interp(sensor_diagonal_axis, sensor_distance_sym, norm_etendue_sym)
 
         l = self.camera.sensor_dim[1]
         m = sensor_half_width
@@ -435,7 +411,7 @@ class Instrument(object):
         [x, y] = np.meshgrid(xx, xx)
         r = np.sqrt(x ** 2 + y ** 2)
         w2d_2 = np.zeros([l, l])
-        w2d_2[r <= sensor_half_diagonal] = np.interp(r[r<=sensor_half_diagonal], sensor_diagonal_axis, w1d)
+        w2d_2[r <= sensor_half_diagonal] = np.interp(r[r <= sensor_half_diagonal], sensor_diagonal_axis, w1d)
 
         w2d_2[w2d_2 < 0] = 0
 
@@ -445,4 +421,3 @@ class Instrument(object):
         vignetted_photon_fluence[vignetted_photon_fluence < 0] = 0
 
         return vignetted_photon_fluence
-

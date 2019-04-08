@@ -91,25 +91,24 @@ def calculate_degree_coherence(spectrum, wl_axis, material='a-BBO', delay_max=10
 
     return degree_coherence, delay_axis
 
-
-if __name__ == '__main__':
-    import pystark
-
-    temp = 2  # [eV]
-    dens = 1e20  # [m-3]
-    bfield = 0.  # [T]
-    viewangle = 90 * np.pi / 180  # [rad]
-
-    # specify line
-    isotope = 'D'
-    n_upper = 5
-
-    bls = pystark.BalmerLineshape(n_upper, dens, temp, bfield, viewangle=viewangle)
-
-    spectrum = bls.ls_szd
-    wl_axis = bls.wl_axis
-
-    calculate_degree_coherence(spectrum, wl_axis, display=True, delay_max=30e-3)
+#
+# if __name__ == '__main__':
+#
+#     temp = 2  # [eV]
+#     dens = 1e20  # [m-3]
+#     bfield = 0.  # [T]
+#     viewangle = 90 * np.pi / 180  # [rad]
+#
+#     # specify line
+#     isotope = 'D'
+#     n_upper = 5
+#
+#     bls = pystark.BalmerLineshape(n_upper, dens, temp, bfield, viewangle=viewangle, line_model='voigt')
+#
+#     spectrum = bls.ls_szd
+#     wl_axis = bls.wl_axis
+#
+#     calculate_degree_coherence(spectrum, wl_axis, display=True, delay_max=30e-3)
 
 
 
