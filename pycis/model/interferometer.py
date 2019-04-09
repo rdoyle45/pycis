@@ -52,7 +52,7 @@ class InterferometerComponent:
 
     def calculate_matrix(self, wl, inc_angle, azim_angle):
         """
-        abstract method, calculate component's Mueller matrix
+        calculate component's Mueller matrix
 
         """
 

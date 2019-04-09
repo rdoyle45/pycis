@@ -103,8 +103,8 @@ class SynthImage:
             if self.spec_mode == 'unpolarised, monochromatic, uniform':
 
                 i0 = self.spec
-                phase = self.instrument.calculate_ideal_phase_delay(self.wl)
-                contrast = self.instrument.calculate_ideal_contrast()
+                phase = self.instrument.calculate_phase(self.wl)
+                contrast = self.instrument.calculate_contrast()
                 degree_coherence = contrast * np.exp(1j * phase)
 
                 igram = i0 / 4 * (1 + np.real(degree_coherence))
@@ -115,8 +115,8 @@ class SynthImage:
                 i0 = np.trapz(self.spec, self.wl, axis=0)
                 spec_norm = np.divide(self.spec, i0, where=i0 > 0)
 
-                phase = self.instrument.calculate_ideal_phase_delay(self.wl)
-                contrast = self.instrument.calculate_ideal_contrast()
+                phase = self.instrument.calculate_phase(self.wl)
+                contrast = self.instrument.calculate_contrast()
                 degree_coherence = np.trapz(spec_norm * contrast * np.exp(1j * phase), self.wl, axis=0)
 
                 igram = i0 / 4 * (1 + np.real(degree_coherence))

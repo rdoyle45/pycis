@@ -2,13 +2,12 @@ import numpy as np
 import pycis
 
 
-class Instrument(object):
+class Instrument:
     """
-    General coherence imaging instrument
+    Coherence imaging instrument base class
 
     """
-
-    def __init__(self, camera, back_lens, interferometer, bandpass_filter=None, interferometer_orientation=0):
+    def __init__(self, camera, back_lens, interferometer, bandpass_filter=None, int_orient=0):
         """
         :param camera:
         :type camera pycis.model.Camera
@@ -20,8 +19,11 @@ class Instrument(object):
         the list is the first component that the light passes through.
         :type interferometer: list
 
-        :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name (not actually implemented
-        properly yet)
+        :param bandpass_filter: pycis.model.BandpassFilter or string-type filter name
+        :type bandpass_filter: pycis.model.BandpassFilter
+
+        :param int_orient: interferometer orientation [ rad ]
+        :type int_orient: float
         """
 
         # input checks
@@ -29,43 +31,51 @@ class Instrument(object):
         assert isinstance(back_lens, pycis.model.Lens)
         assert isinstance(interferometer, list)
         assert all(isinstance(c, pycis.model.InterferometerComponent) for c in interferometer)
-        if self.bandpass_filter is not None:
-            assert isinstance(self.bandpass_filter, pycis.model.BandpassFilter)
+        if bandpass_filter is not None:
+            assert isinstance(bandpass_filter, pycis.model.BandpassFilter)
 
         self.camera = camera
         self.back_lens = back_lens
         self.interferometer = interferometer
-
-        self.crystals = self.get_crystals()
-        self.polarisers = self.get_polarisers()
-        self.interferometer_orientation = interferometer_orientation
-
-        # TODO implement bandpass_filter
         self.bandpass_filter = bandpass_filter
-        self.x_pos, self.y_pos = self.calculate_pixel_pos()
+        self.int_orient = int_orient
 
-        # assign instrument 'mode'
+        self.crystals = self._get_crystals()
+        self.polarisers = self._get_polarisers()
+        self.x_pos, self.y_pos = self._calculate_pixel_pos()
         self.inst_mode = self.check_inst_mode()
 
+        # TODO implement bandpass_filter properly
         # TODO implement crystal misalignment
+        # TODO order and position of interferometer components
 
+    def make_image(self, wl, spec):
+        """
+        :param wl: wavelengths [ m ]
+        :type wl: Union[float, np.ndarray]
 
+        :param spec: wavelength spectrum of the light observed [ ph / pixel / m / exposure ]
+        :type spec: Union[int, float, np.ndarray]
 
-    def get_crystals(self):
+        :return:
+        """
+        raise NotImplementedError
+
+    def _get_crystals(self):
         """
         list birefringent components present in the interferometer ( subset of self.interferometer list )
         """
 
         return [c for c in self.interferometer if isinstance(c, pycis.BirefringentComponent)]
 
-    def get_polarisers(self):
+    def _get_polarisers(self):
         """
         list polarisers present in the interferometer ( subset of self.interferometer list )
         """
 
         return [c for c in self.interferometer if isinstance(c, pycis.LinearPolariser)]
 
-    def calculate_pixel_pos(self, x_coord=None, y_coord=None, crop=None, downsample=1):
+    def _calculate_pixel_pos(self, x_coord=None, y_coord=None, crop=None, downsample=1):
         """
         Calculate x-y coordinates of the pixels of the camera's sensor -- for ray geometry calculations
         Converts from pixel coordinates (origin top left) to spatial coordinates (origin centre). If x_coord and
@@ -84,8 +94,6 @@ class Instrument(object):
         :param downsample:
         :return: x_pos, y_pos [ m ]
         """
-
-        # TODO clean up!
 
         sensor_dim = np.array(self.camera.sensor_dim)
         centre_pos = self.camera.pix_size * (sensor_dim - 2) / 2
@@ -114,7 +122,7 @@ class Instrument(object):
 
         return x_pos, y_pos
 
-    def calculate_ray_inc_angles(self, x_pos, y_pos):
+    def _calculate_ray_inc_angles(self, x_pos, y_pos):
         """
         incidence angles will be the same for all interferometer components (until arbitrary component misalignment
         implemented)
@@ -143,7 +151,7 @@ class Instrument(object):
 
         assert np.shape(x_pos) == np.shape(y_pos)
 
-        orientation = crystal.orientation + self.interferometer_orientation
+        orientation = crystal.orientation + self.int_orient
 
         # rotate x, y coordinates
         x_rot = (np.cos(orientation) * x_pos) + (np.sin(orientation) * y_pos)
@@ -151,84 +159,6 @@ class Instrument(object):
 
         return np.arctan2(x_rot, y_rot)
 
-    def calculate_matrix(self, wl):
-        """
-        calculate the total Mueller matrix for the interferometer
-        :param wl: [ m ]
-        :return: instrument matrix
-        """
-
-        x_pos, y_pos = self.calculate_pixel_pos()
-        inc_angle = self.calculate_ray_inc_angles(x_pos, y_pos)
-
-        subscripts = 'ij...,jl...->il...'
-        instrument_matrix = np.identity(4)
-
-        for component in self.interferometer:
-            azim_angle = self.calculate_ray_azim_angles(x_pos, y_pos, component)
-            component_matrix = component.calculate_matrix(wl, inc_angle, azim_angle)
-
-            # matrix multiplication
-            instrument_matrix = np.einsum(subscripts, component_matrix, instrument_matrix)
-
-        # account for orientation of the interferometer itself.
-        rot_mat = pycis.model.calculate_rot_mat(self.interferometer_orientation)
-
-        return np.einsum(subscripts, rot_mat, instrument_matrix)
-
-    def calculate_ideal_phase_delay(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
-                                    output_components=False):
-        """
-        assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
-        'two-beam'. kwargs included for fitting purposes.
-        :param wl:
-        :param x_coord:
-        :param y_coord:
-        :param n_e:
-        :param n_o:
-        :param crop:
-        :param downsample:
-        :param output_components:
-        :return: phase delay [ rad ]
-        """
-
-        # calculate the angles of each pixel's line of sight through the interferometer
-        x_pos, y_pos = self.calculate_pixel_pos(x_coord=x_coord, y_coord=y_coord, crop=crop, downsample=downsample)
-
-        inc_angles = self.calculate_ray_inc_angles(x_pos, y_pos)
-        azim_angles = self.calculate_ray_azim_angles(x_pos, y_pos, self.crystals[0])
-
-        # calculate phase delay contribution due to each crystal
-        phase = 0
-        for crystal in self.crystals:
-            phase += crystal.calculate_phase_delay(wl, inc_angles, azim_angles, n_e=n_e, n_o=n_o)
-
-        if not output_components:
-            return phase
-
-        else:
-            # calculate the phase_offset and phase_shape
-            phase_offset = self.calculate_ideal_phase_offset(wl, n_e=n_e, n_o=n_o)
-            phase_shape = phase - phase_offset
-
-            return phase_offset, phase_shape
-
-    def calculate_ideal_contrast(self):
-
-        contrast = 1
-        for crystal in self.crystals:
-            contrast *= crystal.contrast
-
-        return contrast
-
-    def calculate_ideal_transmission(self):
-        """ transmission is decreased due to polarisers, calculate this factor analytically for the special case of
-        ideal interferometer"""
-
-        pol_1, pol_2 = self.polarisers
-        tx = (pol_1.tx_1 ** 2 + pol_1.tx_2 ** 2) * (pol_2.tx_1 ** 2 + pol_2.tx_2 ** 2)
-
-        return tx
 
     def check_inst_mode(self):
         """
@@ -286,15 +216,148 @@ class Instrument(object):
         return phase_offset
 
 
-class GeneralInstrument(Instrument):
+class MatrixInstrument(Instrument):
+    """
+    Instrument whose interferogram is calculated using Mueller calculus
+
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def calculate_matrix(self, wl):
+        """
+        calculate Mueller matrix for interferometer
+
+        :param wl: [ m ]
+        :type wl: np.ndarray
+
+        :return: instrument matrix
+        """
+
+        x_pos, y_pos = self._calculate_pixel_pos()
+        inc_angle = self._calculate_ray_inc_angles(x_pos, y_pos)
+
+        subscripts = 'ij...,jl...->il...'
+        instrument_matrix = np.identity(4)
+
+        for component in self.interferometer:
+            azim_angle = self.calculate_ray_azim_angles(x_pos, y_pos, component)
+            component_matrix = component.calculate_matrix(wl, inc_angle, azim_angle)
+
+            # matrix multiplication
+            instrument_matrix = np.einsum(subscripts, component_matrix, instrument_matrix)
+
+        # account for orientation of the interferometer itself.
+        rot_mat = pycis.model.calculate_rot_mat(self.int_orient)
+
+        return np.einsum(subscripts, rot_mat, instrument_matrix)
 
 
-class SimpleCisInstrument(Instrument):
+class AnalyticInstrument(Instrument):
+    """
+    Instrument whose interferogram is generated analytically
+
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def calculate_phase(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
+                        output_components=False):
+        raise NotImplementedError
+
+    def calculate_contrast(self, wl, spec):
+        raise NotImplementedError
+
+    def calculate_brightness(self, wl, spec):
+        raise NotImplementedError
+
+    def calculate_tx(self):
+        raise NotImplementedError
+
+
+class SimpleCisInstrument(AnalyticInstrument):
     """
     Special-case coherence imaging instrument for simple CIS
 
     the birefringent interferometer components are all aligned / orthogonal and are sandwiched between aligned /
     orthogonal linear polarisers, which are offset by 45 degrees.
+
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def calculate_phase(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
+                        output_components=False):
+        """
+        assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
+        'two-beam'. kwargs included for fitting purposes.
+        :param wl:
+        :param x_coord:
+        :param y_coord:
+        :param n_e:
+        :param n_o:
+        :param crop:
+        :param downsample:
+        :param output_components:
+        :return: phase delay [ rad ]
+        """
+
+        # calculate the angles of each pixel's line of sight through the interferometer
+        x_pos, y_pos = self._calculate_pixel_pos(x_coord=x_coord, y_coord=y_coord, crop=crop, downsample=downsample)
+
+        inc_angles = self._calculate_ray_inc_angles(x_pos, y_pos)
+        azim_angles = self.calculate_ray_azim_angles(x_pos, y_pos, self.crystals[0])
+
+        # calculate phase delay contribution due to each crystal
+        phase = 0
+        for crystal in self.crystals:
+            phase += crystal.calculate_phase_delay(wl, inc_angles, azim_angles, n_e=n_e, n_o=n_o)
+
+        return phase
+
+    def calculate_contrast(self):
+        """
+
+        :return:
+        """
+
+        contrast = 1
+        for crystal in self.crystals:
+            contrast *= crystal.contrast
+
+        return contrast
+
+    def make_image(self, wl, spec):
+        """
+
+        :param wl:
+        :param spec:
+        :return:
+        """
+
+        i0 = np.trapz(spec, wl, axis=0)
+        spec_norm = np.divide(spec, i0, where=i0 > 0)
+
+        phase = self.calculate_phase(wl)
+        contrast = self.calculate_contrast()
+        degree_coherence = np.trapz(spec_norm * contrast * np.exp(1j * phase), wl, axis=0)
+
+        igram = i0 / 4 * (1 + np.real(degree_coherence))
+
+    def calculate_tx(self):
+        """
+        transmission is decreased due to polarisers, calculate this factor analytically for the special case of
+        ideal interferometer
+
+        """
+
+        pol_1, pol_2 = self.polarisers
+        tx = (pol_1.tx_1 ** 2 + pol_1.tx_2 ** 2) * (pol_2.tx_1 ** 2 + pol_2.tx_2 ** 2)
+
+        return tx
+
+class SpectroPolInstrument(Instrument):
+    """
 
     """
 
