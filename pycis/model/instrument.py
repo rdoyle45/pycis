@@ -1,12 +1,11 @@
 import numpy as np
-import os.path
-import scipy.interpolate
 import pycis
 
 
 class Instrument(object):
     """
-    Coherence imaging spectroscopy instrument
+    General coherence imaging instrument
+
     """
 
     def __init__(self, camera, back_lens, interferometer, bandpass_filter=None, interferometer_orientation=0):
@@ -25,19 +24,24 @@ class Instrument(object):
         properly yet)
         """
 
+        # input checks
+        assert isinstance(camera, pycis.model.Camera)
+        assert isinstance(back_lens, pycis.model.Lens)
+        assert isinstance(interferometer, list)
+        assert all(isinstance(c, pycis.model.InterferometerComponent) for c in interferometer)
+        if self.bandpass_filter is not None:
+            assert isinstance(self.bandpass_filter, pycis.model.BandpassFilter)
+
         self.camera = camera
         self.back_lens = back_lens
         self.interferometer = interferometer
 
         self.crystals = self.get_crystals()
         self.polarisers = self.get_polarisers()
-
         self.interferometer_orientation = interferometer_orientation
 
         # TODO implement bandpass_filter
         self.bandpass_filter = bandpass_filter
-        self.input_checks()
-
         self.x_pos, self.y_pos = self.calculate_pixel_pos()
 
         # assign instrument 'mode'
@@ -45,28 +49,18 @@ class Instrument(object):
 
         # TODO implement crystal misalignment
 
-    def input_checks(self):
-        """
-        check validity of __init__ arguments
-        """
 
-        assert isinstance(self.camera, pycis.model.Camera)
-        assert isinstance(self.back_lens, pycis.model.Lens)
-        assert all(isinstance(c, pycis.model.InterferometerComponent) for c in self.interferometer)
-
-        if self.bandpass_filter is not None:
-            assert isinstance(self.bandpass_filter, pycis.model.BandpassFilter)
 
     def get_crystals(self):
         """
-        list all birefringent components present in the interferometer ( subset of self.interferometer list )
+        list birefringent components present in the interferometer ( subset of self.interferometer list )
         """
 
         return [c for c in self.interferometer if isinstance(c, pycis.BirefringentComponent)]
 
     def get_polarisers(self):
         """
-        list all polarisers present in the interferometer ( subset of self.interferometer list )
+        list polarisers present in the interferometer ( subset of self.interferometer list )
         """
 
         return [c for c in self.interferometer if isinstance(c, pycis.LinearPolariser)]
@@ -76,9 +70,14 @@ class Instrument(object):
         Calculate x-y coordinates of the pixels of the camera's sensor -- for ray geometry calculations
         Converts from pixel coordinates (origin top left) to spatial coordinates (origin centre). If x_coord and
         y_coord are not specified, entire sensor will be evaluated (with specified cropping and downsampling).
+
         Coordinates can be cropped and downsampled to facilitate direct comparison with cropped / downsampled
-        experimental image, forgoing the need to generate a full-sensor synthetic image, as some of that output won't be
-        used. can this be a pycis.Camera method? If both crop and downsample are specified, crop carried out first.
+        experimental image, forgoing the need to generate a full-sensor synthetic image.
+
+        can this be a pycis.Camera method?
+
+        If both crop and downsample are specified, crop is carried out first.
+
         :param x_coord: array of pixel coordinates (x)
         :param y_coord: array of pixel coordinates (y)
         :param crop: (y1, y2, x1, x2)
@@ -135,6 +134,7 @@ class Instrument(object):
         """
         calculate azimuthal angles of rays through interferometer, given
         azimuthal angles vary with crystal orientation so are calculated separately
+
         :param x_pos: x position (s), centred sensor coordinates [ m ]
         :param y_pos: y position (s), centred sensor coordinates [ m ]
         :param crystal: instance of pycis.model.BirefringentComponent
@@ -285,139 +285,16 @@ class Instrument(object):
 
         return phase_offset
 
-    def get_snr_intensity(self, line_name, snr):
-        """ Given spectral line and desired approximate image snr (central ROI), return the necessary input intensity I0 in units
-        of [photons/pixel/timestep]. """
 
-        # TODO old, clean up / throw away
+class GeneralInstrument(Instrument):
 
-        # load line
-        line = pycis.model.Lineshape(line_name, 1, 0, 1)
 
-        _, _, _, wavelength_com = line.make(1000)
+class SimpleCisInstrument(Instrument):
+    """
+    Special-case coherence imaging instrument for simple CIS
 
-        if self.bandpass_filter is not None:
-            # estimate filters transmission at line wavelength
-            t_filter = self.bandpass_filter.interp_tx(wavelength_com)
-        else:
-            t_filter = 1
+    the birefringent interferometer components are all aligned / orthogonal and are sandwiched between aligned /
+    orthogonal linear polarisers, which are offset by 45 degrees.
 
-        qe = self.camera.qe
-        sigma_cam_e = self.camera.cam_noise
+    """
 
-        a = (t_filter * qe) ** 2
-        b = - snr ** 2 * t_filter * qe
-        c = - (snr * sigma_cam_e) ** 2
-
-        i0_1 = (-b + np.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
-        i0_2 = (-b - np.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
-
-        return i0_1
-
-    def get_contrast_ti(self, line_name, contrast):
-        """ Given spectral line and desired approximate image contrast, return necessary input ion temp in [eV]."""
-
-        # TODO old, clean up / throw away
-
-        C = pycis.tools.c
-        k_B = pycis.tools.k_B
-        E = pycis.tools.e
-
-        # load line
-        line = pycis.model.Lineshape(line_name, 1, 0, 1)
-
-        _, _, _, wavelength_com = line.make(1000)
-
-        # calculate characteristic temperature
-
-        biref, n_e, n_o, kappa, dBdlambda, d2Bdlambda2, d3Bdlambda3 = pycis.model.bbo_slo(wavelength_com)
-
-        phase_wp = uniaxial_crystal(wavelength_com, n_e, n_o, self.waveplate.thickness, 0, 0)
-
-        phase_sp = savart_plate(wavelength_com, n_e, n_o, self.savartplate.thickness, 0, 0)
-
-        phase = phase_wp + phase_sp
-
-        group_delay = kappa * phase
-
-        t_characteristic = (line.m_i * C ** 2) / (2 * k_B * (np.pi * group_delay) ** 2)
-
-        # calculate multiplet contrast
-
-        coherence_m = 0  # multiplet complex coherence
-        # loop over multiplet transitions:
-        line_no = line.line_no
-        lines_wl = np.zeros(line_no)
-        lines_rel_int = np.zeros(line_no)
-        for i in range(0, line_no):
-            lines_wl[i] = line.lines['wave_obs'].iloc[i]
-            lines_rel_int[i] = line.lines['rel_int'].iloc[i]
-
-        nu_0 = C / wavelength_com
-
-        for m in range(0, line_no):
-            nu_m = C / (lines_wl[m])  # [Hz]
-            xi_m = (nu_0 - nu_m) / nu_0
-            coherence_m += np.exp(2 * np.pi * 1j * group_delay * xi_m) * lines_rel_int[m]
-        contrast_m = abs(coherence_m)
-        phase_m = np.angle(coherence_m) / (2 * np.pi)  # [waves]
-
-        t_ion = - t_characteristic * np.log(contrast / contrast_m)  # [K]
-
-        t_ion *= (k_B / E)  # [eV]
-
-        return t_ion
-
-    def apply_vignetting(self, photon_fluence):
-        """account for instrument etendue to first order based on Scott's predictive matlab code. """
-
-        # TODO old, clean up / throw away
-
-        etendue = np.load(os.path.join(pycis.paths.instrument_path, 'etendue.npy'))
-        sensor_distance = np.load(os.path.join(pycis.paths.instrument_path, 'sensor_distance.npy'))
-
-        # convert sensor distance to (m)
-        sensor_distance *= 1e-3
-
-        sensor_distance_sym = np.concatenate([-sensor_distance[1:][::-1], sensor_distance])
-
-        # normalise etendue to value at centre
-        norm_etendue = etendue / etendue[0]
-
-        norm_etendue_sym = np.concatenate([norm_etendue[1:][::-1], norm_etendue])
-
-        # calculate how far sensor extends relative to sensor_distance
-        # assume a square sensor for now!
-
-        sensor_width = self.camera.pix_size * self.camera.sensor_dim[1]
-        sensor_half_width = sensor_width / 2
-        sensor_diagonal = np.sqrt(2) * sensor_width
-
-        sensor_half_diagonal = sensor_diagonal / 2
-
-        # linear splines for interpolation / extrapolation
-        f = scipy.interpolate.InterpolatedUnivariateSpline(sensor_distance_sym, norm_etendue_sym, k=1)
-
-        sensor_diagonal_axis = np.linspace(-sensor_half_diagonal, sensor_half_diagonal, self.camera.sensor_dim[1])
-
-        w1d = f(sensor_diagonal_axis)
-
-        # w1d = np.interp(sensor_diagonal_axis, sensor_distance_sym, norm_etendue_sym)
-
-        l = self.camera.sensor_dim[1]
-        m = sensor_half_width
-        xx = np.linspace(-m, m, l)
-
-        [x, y] = np.meshgrid(xx, xx)
-        r = np.sqrt(x ** 2 + y ** 2)
-        w2d_2 = np.zeros([l, l])
-        w2d_2[r <= sensor_half_diagonal] = np.interp(r[r <= sensor_half_diagonal], sensor_diagonal_axis, w1d)
-
-        w2d_2[w2d_2 < 0] = 0
-
-        # w2d_2 = pycis.tools.gauss2d(self.camera.sensor_dim[1], 1200)
-
-        vignetted_photon_fluence = photon_fluence * w2d_2
-        vignetted_photon_fluence[vignetted_photon_fluence < 0] = 0
-
-        return vignetted_photon_fluence
