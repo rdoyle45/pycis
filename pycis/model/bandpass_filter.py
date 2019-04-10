@@ -10,89 +10,54 @@ class BandpassFilter:
     base class for optical bandpass filters
     """
 
-    def __init__(self, wl, tx, ref_index, name=None):
+    def __init__(self, wl_bandpass, tx_bandpass, ref_index, name=None):
         """
-        :param wl: wavelength [ m ]
-        :param tx: transmission [ fraction ]
+        :param wl_bandpass: bandpass wavelength [ m ]
+        :param tx_bandpass: bandpass transmission [ fraction ]
         :param ref_index: refractive index
         :param name: 
         """
 
-        self.wl = wl
-        self.tx = tx
+        self.wl_bandpass = wl_bandpass
+        self.tx_bandpass = tx_bandpass
         self.ref_index = ref_index
         self.name = name
 
-        # rough central wavelength of filters
-        self.wl_centre = self.wl[np.argmax(self.tx)]
+        # central wavelength of filters (weighted mean)
+        self.wl_centre = np.sum(self.wl_bandpass * self.tx_bandpass) / np.sum(self.tx_bandpass)
 
-    # core methods inherited by all filters
-    def tilt(self, inc_angle):
+    def apply(self, wl, spec, inc_angle=0., display=False):
         """
-        Account for the blue-shift in the transmission profile caused by off-incidence rays (filters tilt), returning a
-        shifted wavelength axis.
-        
-        :param inc_angle: [ rad ]
-        :return: 
-        """
-
-        wavelength_shift = self.wl_centre * (np.sqrt(1 - (np.sin(inc_angle) / self.ref_index) ** 2) - 1)
-        wl_effective = self.wl + wavelength_shift
-
-        return wl_effective
-
-    def interp_tx(self, wl_target, inc_angle=0.):
-        """
-        interpolation filters transmission window at given wavelength and for a given incidence angle.
-        
-        :param wl_target: 
-        :param inc_angle: [ rad ]
-        :return: 
-        """
-
-        if inc_angle != 0:
-            wl_tilt = self.tilt(inc_angle)
-        else:
-            wl_tilt = self.wl
-
-        # interpolate filters transmission profile
-        tx_interp = np.interp(wl_target, wl_tilt, self.tx)
-        # TODO alternative interpolation schemes
-
-        return tx_interp
-
-    def apply(self, wl_target, spec_target, inc_angle=0., display=False):
-        """ 
         Apply filters to target spectrum.
 
-        :param wl_target: [ m ]
-        :param spec_target: light spectrum to be filtered [ arb. ]
+        :param wl: [ m ]
+        :param spec: light spectrum to be filtered [ arb. ]
         :param inc_angle: [ rad ]
         :param display: Boolean, plots interpolated filters profile and spectrum before and after filtering
 
-        :return: 
+        :return:
         """
 
         # interpolate transmission onto target wavelength axis
-        tx_interp = self.interp_tx(wl_target, inc_angle=inc_angle)
+        tx_interp = self._interp_tx(wl, inc_angle=inc_angle)
 
         # apply filters
-        filtered_spectrum = spec_target * tx_interp
+        filtered_spectrum = spec * tx_interp
 
         if display:
-            norm_factor = np.max(spec_target)
+            norm_factor = np.max(spec)
 
             fig, ax = plt.subplots()
             self.plot_tx(ax, inc_angle=0., color='grey', ls=':', label='filters profile - untilted')
             self.plot_tx(ax, inc_angle=inc_angle, color='k', label='filters profile - tilted')
-            ax.plot(wl_target, spec_target / norm_factor, label='target spectrum')
-            ax.plot(wl_target, filtered_spectrum / norm_factor, label='filtered spectrum')
+            ax.plot(wl, spec / norm_factor, label='target spectrum')
+            ax.plot(wl, filtered_spectrum / norm_factor, label='filtered spectrum')
 
             ax.set_xlabel('wavelength (m)')
             ax.set_ylabel('tx')
 
             leg = ax.legend(loc=0)
-            plt.show()
+            plt.show(block=True)
 
         return filtered_spectrum
 
@@ -102,7 +67,7 @@ class BandpassFilter:
 
         """
 
-        wl_effective = self.tilt(inc_angle)
+        wl_effective = self._tilt(inc_angle)
 
         if wl_units == 'nm':
             wl_plot = wl_effective * 1e9
@@ -110,14 +75,14 @@ class BandpassFilter:
             wl_plot = wl_effective
         else:
             raise Exception('invalid wl_units')
-        ax.plot(wl_plot, self.tx, **kwargs)
+        ax.plot(wl_plot, self.tx_bandpass, **kwargs)
         return
 
     def save_csv(self, name=None):
         """
-        save the filters properties to csv file in the filters repo directory, in the format that can be read using 
+        save the filters properties to csv file in the filters repo directory, in the format that can be read using
         'FilterFromFile' and 'FilterFromName'
-        :return: 
+        :return:
         """
 
         if name is None:
@@ -132,11 +97,45 @@ class BandpassFilter:
             csv_writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_NONE)
             csv_writer.writerow(['wl (m)', 'tx (fraction)', 'refractive index'])
 
-            for idx, (wl_idx, tx_idx) in enumerate(zip(self.wl, self.tx)):
+            for idx, (wl_idx, tx_idx) in enumerate(zip(self.wl_bandpass, self.tx_bandpass)):
                 if idx == 0:
                     csv_writer.writerow([wl_idx, tx_idx, self.ref_index])
                 else:
                     csv_writer.writerow([wl_idx, tx_idx])
+
+    def _tilt(self, inc_angle):
+        """
+        Account for the blue-shift in the transmission profile caused by off-incidence rays (filters tilt), returning a
+        shifted wavelength axis.
+        
+        :param inc_angle: [ rad ]
+        :return: 
+        """
+
+        wavelength_shift = self.wl_centre * (np.sqrt(1 - (np.sin(inc_angle) / self.ref_index) ** 2) - 1)
+        wl_effective = self.wl_bandpass + wavelength_shift
+
+        return wl_effective
+
+    def _interp_tx(self, wl_target, inc_angle=0.):
+        """
+        interpolation filters transmission window at given wavelength and for a given incidence angle.
+        
+        :param wl_target: 
+        :param inc_angle: [ rad ]
+        :return: 
+        """
+
+        if inc_angle != 0:
+            wl_tilt = self._tilt(inc_angle)
+        else:
+            wl_tilt = self.wl_bandpass
+
+        # interpolate filters transmission profile
+        tx_interp = np.interp(wl_target, wl_tilt, self.tx_bandpass)
+        # TODO alternative interpolation schemes
+
+        return tx_interp
 
 
 class AndoverSemiCustomFilter(BandpassFilter):
@@ -199,7 +198,7 @@ class AndoverSemiCustomFilter(BandpassFilter):
 
         interp_wavelength_axis = np.linspace(wl_lo, wl_hi, 100)
 
-        f = scipy.interpolate.InterpolatedUnivariateSpline(self.wls, self.tx, k=1, ext='zeros')
+        f = scipy.interpolate.InterpolatedUnivariateSpline(self.wls, self.tx_bandpass, k=1, ext='zeros')
         interp_transmission = f(interp_wavelength_axis)
 
         return interp_wavelength_axis, interp_transmission

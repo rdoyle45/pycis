@@ -1,4 +1,5 @@
 import numpy as np
+import xarray as xr
 import pycis
 
 
@@ -49,16 +50,14 @@ class Instrument:
         # TODO implement crystal misalignment
         # TODO order and position of interferometer components
 
-    def make_image(self, wl, spec):
+    def make_image(self, spec):
         """
-        :param wl: wavelengths [ m ]
-        :type wl: Union[float, np.ndarray]
-
-        :param spec: wavelength spectrum of the light observed [ ph / pixel / m / exposure ]
-        :type spec: Union[int, float, np.ndarray]
+        :param spec
+        :type xr.DataArray
 
         :return:
         """
+
         raise NotImplementedError
 
     def _get_crystals(self):
@@ -211,7 +210,7 @@ class Instrument:
 
         phase_offset = 0
         for crystal in self.crystals:
-            phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
+            phase_offset += crystal.calculate_phase(wl, 0., 0., n_e=n_e, n_o=n_o)
 
         return phase_offset
 
@@ -261,14 +260,13 @@ class AnalyticInstrument(Instrument):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def calculate_phase(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
-                        output_components=False):
+    def calculate_phase(self, spec):
         raise NotImplementedError
 
-    def calculate_contrast(self, wl, spec):
+    def calculate_contrast(self, spec):
         raise NotImplementedError
 
-    def calculate_brightness(self, wl, spec):
+    def calculate_brightness(self, spec):
         raise NotImplementedError
 
     def calculate_tx(self):
@@ -286,36 +284,89 @@ class SimpleCisInstrument(AnalyticInstrument):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def calculate_phase(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
-                        output_components=False):
-        """
-        assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
-        'two-beam'. kwargs included for fitting purposes.
-        :param wl:
-        :param x_coord:
-        :param y_coord:
-        :param n_e:
-        :param n_o:
-        :param crop:
-        :param downsample:
-        :param output_components:
-        :return: phase delay [ rad ]
+    def make_image(self, spec):
         """
 
-        # calculate the angles of each pixel's line of sight through the interferometer
-        x_pos, y_pos = self._calculate_pixel_pos(x_coord=x_coord, y_coord=y_coord, crop=crop, downsample=downsample)
+        :param spec:
+        :return:
+        """
 
-        inc_angles = self._calculate_ray_inc_angles(x_pos, y_pos)
-        azim_angles = self.calculate_ray_azim_angles(x_pos, y_pos, self.crystals[0])
+        # input checks
+        assert isinstance(spec, xr.DataArray)
+        # assert len(spec.dims) == 4
+        # assert 'stokes' in spec.dims
+        # assert len(spec['stokes']) == 4  # four Stokes parameters
+        assert 'wavelength' in spec.dims
+        # assert 'pixel_x' in spec.dims
+        # assert 'pixel_y' in spec.dims
+
+        i0 = spec.integrate('wavelength')
+        spec_norm = np.divide(spec, i0)
+        phase = self.calculate_phase(spec)
+        contrast = self.calculate_contrast(spec)
+        degree_coherence = (spec_norm * contrast * np.exp(1j * phase)).integrate('wavelength')
+
+        igram = i0 / 4 * (1 + degree_coherence.real)
+
+        return igram
+
+        # i0 = np.trapz(spec, wl, axis=0)
+        # spec_norm = np.divide(spec, i0, where=i0 > 0)
+        #
+        # phase = self.calculate_phase(wl)
+        # contrast = self.calculate_contrast()
+        # degree_coherence = np.trapz(spec_norm * contrast * np.exp(1j * phase), wl, axis=0)
+        #
+        # igram = i0 / 4 * (1 + np.real(degree_coherence))
+
+    def calculate_phase(self, spec):
+        """
+
+        :param spec:
+        :return:
+        """
+
+        wavelength = spec['wavelength']
+        ray_inc_angle = spec['ray_inc_angle']
+        ray_azim_angle = spec['ray_azim_angle']
 
         # calculate phase delay contribution due to each crystal
         phase = 0
         for crystal in self.crystals:
-            phase += crystal.calculate_phase_delay(wl, inc_angles, azim_angles, n_e=n_e, n_o=n_o)
+            phase += crystal.calculate_phase(wavelength, ray_inc_angle, ray_azim_angle)
 
         return phase
 
-    def calculate_contrast(self):
+    # def calculate_phase(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
+    #                     output_components=False):
+    #     """
+    #     assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
+    #     'two-beam'. kwargs included for fitting purposes.
+    #     :param wl:
+    #     :param x_coord:
+    #     :param y_coord:
+    #     :param n_e:
+    #     :param n_o:
+    #     :param crop:
+    #     :param downsample:
+    #     :param output_components:
+    #     :return: phase delay [ rad ]
+    #     """
+    #
+    #     # calculate the angles of each pixel's line of sight through the interferometer
+    #     x_pos, y_pos = self._calculate_pixel_pos(x_coord=x_coord, y_coord=y_coord, crop=crop, downsample=downsample)
+    #
+    #     inc_angles = self._calculate_ray_inc_angles(x_pos, y_pos)
+    #     azim_angles = self.calculate_ray_azim_angles(x_pos, y_pos, self.crystals[0])
+    #
+    #     # calculate phase delay contribution due to each crystal
+    #     phase = 0
+    #     for crystal in self.crystals:
+    #         phase += crystal.calculate_phase(wl, inc_angles, azim_angles, n_e=n_e, n_o=n_o)
+    #
+    #     return phase
+
+    def calculate_contrast(self, spec):
         """
 
         :return:
@@ -326,23 +377,6 @@ class SimpleCisInstrument(AnalyticInstrument):
             contrast *= crystal.contrast
 
         return contrast
-
-    def make_image(self, wl, spec):
-        """
-
-        :param wl:
-        :param spec:
-        :return:
-        """
-
-        i0 = np.trapz(spec, wl, axis=0)
-        spec_norm = np.divide(spec, i0, where=i0 > 0)
-
-        phase = self.calculate_phase(wl)
-        contrast = self.calculate_contrast()
-        degree_coherence = np.trapz(spec_norm * contrast * np.exp(1j * phase), wl, axis=0)
-
-        igram = i0 / 4 * (1 + np.real(degree_coherence))
 
     def calculate_tx(self):
         """
@@ -355,9 +389,4 @@ class SimpleCisInstrument(AnalyticInstrument):
         tx = (pol_1.tx_1 ** 2 + pol_1.tx_2 ** 2) * (pol_2.tx_1 ** 2 + pol_2.tx_2 ** 2)
 
         return tx
-
-class SpectroPolInstrument(Instrument):
-    """
-
-    """
 

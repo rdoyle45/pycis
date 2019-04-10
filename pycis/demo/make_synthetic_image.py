@@ -1,7 +1,58 @@
 import numpy as np
+import xarray as xr
 import matplotlib.pyplot as plt
 import pycis
 import time
+
+def demo_xr():
+
+    # define camera
+    # pco.edge 5.5 camera
+    bit_depth = 16
+    # sensor_dim = (2560, 2160)
+    sensor_dim = (1000, 1000)
+    pix_size = 6.5e-6
+    qe = 0.35
+    epercount = 0.46  # [e / count]
+    cam_noise = 2.5
+    cam = pycis.Camera(bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)
+
+    # define imaging lens
+    flength = 85e-3
+    backlens = pycis.Lens(flength)
+
+    # list interferometer components
+    pol_1 = pycis.LinearPolariser(0)
+    sp_1 = pycis.SavartPlate(np.pi / 4, 1e-3)
+    wp_1 = pycis.UniaxialCrystal(np.pi / 4.1, 1e-3, 0)
+    pol_2 = pycis.LinearPolariser(0)
+
+    # first component in interferometer list is the first component that the light passes through
+    interferometer = [pol_1, wp_1, sp_1, pol_2]
+
+    # bringing it together into an instrument
+
+    inst = pycis.SimpleCisInstrument(cam, backlens, interferometer)
+
+    # define spec
+    wavelength = np.array([465e-9, 465.01e-9, 700e-9])
+    wavelength = xr.DataArray(wavelength, dims=('wavelength'),
+                              coords=(wavelength,), name='wavelength')
+    ray_inc_angle = xr.DataArray(np.linspace(0, 10 * np.pi / 180, 500), dims=('ray_inc_angle',))
+    ray_azim_angle = xr.DataArray(np.linspace(0, 2 * np.pi, 500), dims=('ray_azim_angle',))
+
+    spec = (wavelength + ray_inc_angle + ray_azim_angle) ** 0 + 5e4
+    dims = ('wavelength', 'ray_inc_angle', 'ray_azim_angle')
+    coords = (wavelength, ray_inc_angle, ray_azim_angle)
+    spec = xr.DataArray(spec.values, dims=dims, coords=coords)
+
+    igram = inst.make_image(spec)
+
+    plt.figure()
+    igram.plot()
+    plt.show()
+    a = 5
+
 
 
 def demo_1():
@@ -110,4 +161,4 @@ def demo_2():
 
 
 if __name__ == '__main__':
-    demo_1()
+    demo_xr()

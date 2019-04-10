@@ -1,7 +1,7 @@
 import numpy as np
-import pycis
-from pycis.tools import is_scalar
+import xarray as xr
 
+import pycis
 
 def calculate_rot_mat(angle):
     """
@@ -13,10 +13,13 @@ def calculate_rot_mat(angle):
     """
 
     angle2 = 2 * angle
-    return np.array([[1, 0, 0, 0],
+
+    rot_mat = np.array([[1, 0, 0, 0],
                      [0, np.cos(angle2), np.sin(angle2), 0],
                      [0, -np.sin(angle2), np.cos(angle2), 0],
                      [0, 0, 0, 1]])
+
+    return xr.DataArray(rot_mat, dims=('mueller_v', 'mueller_h'))
 
 
 class InterferometerComponent:
@@ -87,10 +90,12 @@ class LinearPolariser(InterferometerComponent):
 
         """
 
-        m = 0.5 * np.array([[self.tx_2 ** 2 + self.tx_1 ** 2, self.tx_2 ** 2 - self.tx_1 ** 2, 0, 0],
+        mat = 0.5 * np.array([[self.tx_2 ** 2 + self.tx_1 ** 2, self.tx_2 ** 2 - self.tx_1 ** 2, 0, 0],
                             [self.tx_2 ** 2 - self.tx_1 ** 2, self.tx_2 ** 2 + self.tx_1 ** 2, 0, 0],
                             [0, 0, 2 * self.tx_2 * self.tx_1, 0],
                             [0, 0, 0, 2 * self.tx_2 * self.tx_1]])
+
+        mat = xr.DataArray(mat, dims=('mueller_v', 'mueller_h'))
 
         return self.orient(m)
 
@@ -128,7 +133,7 @@ class BirefringentComponent(InterferometerComponent):
         :return: 
         """
 
-        phase = self.calculate_phase_delay(wl, inc_angle, azim_angle)
+        phase = self.calculate_phase(wl, inc_angle, azim_angle)
 
         # TODO can i get rid of this using broadcasting?
 
@@ -146,12 +151,11 @@ class BirefringentComponent(InterferometerComponent):
 
         return self.orient(m)
 
-    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+    def calculate_phase(self, wavelength, ray_inc_angle, ray_azim_angle):
         """
         abstract method
 
         """
-
         raise NotImplementedError()
 
 
@@ -172,75 +176,46 @@ class UniaxialCrystal(BirefringentComponent):
         super().__init__(orientation, thickness, material=material, contrast=contrast, clr_aperture=clr_aperture)
         self.cut_angle = cut_angle
 
-    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+    def calculate_phase(self, wavelength, ray_inc_angle, ray_azim_angle):
         """
         calculate phase delay due to uniaxial crystal.
 
-        Vectorised. If inc_angle and azim_angle are arrays, they must have the same dimensions.  
-        source: Francisco E Veiras, Liliana I Perez, and María T Garea. “Phase shift formulas in uniaxial media: an 
+        source: Francisco E Veiras, Liliana I Perez, and María T Garea. “Phase shift formulas in uniaxial media: an
         application to waveplates
-        
-        Veiras defines optical path difference as OPL_o - OPL_e ie. +ve phase indicates a delayed extraordinary 
+
+        Veiras defines optical path difference as OPL_o - OPL_e ie. +ve phase indicates a delayed extraordinary
         ray
 
-        :param wl: wavelength [ m ]
-        :type wl: float or array-like (1-D)
+        :param wavelength:
+        :type wavelength: xr.DataArray
 
-        :param inc_angle: ray incidence angle [ rad ]
-        :type inc_angle: float or array-like (up to 2-D)
+        :param ray_inc_angle:
+        :type ray_inc_angle: xr.DataArray
 
-        :param azim_angle: ray azimuthal angle [ rad ]
-        :type azim_angle: float or array-like (up to 2-D)
-
-        :param n_e: manually set extraordinary refractive index (for fitting)
-        :type n_e: float
-
-        :param n_o: manually set ordinary refractive index (for fitting)
-        :type n_o: float
+        :param ray_azim_angle:
+        :type ray_azim_angle: xr.DataArray
 
         :return: phase [ rad ]
-
         """
 
-        # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
-        if n_e is None and n_o is None:
-            biref, n_e, n_o = pycis.model.dispersion(wl, self.material)
-        else:
-            assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
-
-        # if wl, theta and omega are arrays, vectorise
-        if not is_scalar(wl) and not is_scalar(inc_angle) and not is_scalar(azim_angle):
-
-            assert inc_angle.shape == azim_angle.shape
-
-            if inc_angle.ndim == 1:
-                # pad 1-D ray angle arrays
-
-                inc_angle = inc_angle[:, np.newaxis]
-                azim_angle = azim_angle[:, np.newaxis]
-
-            # tile wl arrays to image dimensions for vectorisation
-            reps = [1, inc_angle.shape[0], inc_angle.shape[1]]
-
-            wl = np.tile(wl[:, np.newaxis, np.newaxis], reps)
-            n_e = np.tile(n_e[:, np.newaxis, np.newaxis], reps)
-            n_o = np.tile(n_o[:, np.newaxis, np.newaxis], reps)
-
-        s_inc_angle = np.sin(inc_angle)
+        biref, n_e, n_o = pycis.dispersion(wavelength, self.material)
+        s_inc_angle = np.sin(ray_inc_angle)
 
         term_1 = np.sqrt(n_o ** 2 - s_inc_angle ** 2)
 
         term_2 = (n_o ** 2 - n_e ** 2) * \
-                 (np.sin(self.cut_angle) * np.cos(self.cut_angle) * np.cos(azim_angle) * s_inc_angle) / \
+                 (np.sin(self.cut_angle) * np.cos(self.cut_angle) * np.cos(ray_azim_angle) * s_inc_angle) / \
                  (n_e ** 2 * np.sin(self.cut_angle) ** 2 + n_o ** 2 * np.cos(self.cut_angle) ** 2)
 
         term_3 = - n_o * np.sqrt(
             (n_e ** 2 * (n_e ** 2 * np.sin(self.cut_angle) ** 2 + n_o ** 2 * np.cos(self.cut_angle) ** 2)) -
             ((n_e ** 2 - (n_e ** 2 - n_o ** 2) * np.cos(self.cut_angle) ** 2 * np.sin(
-                azim_angle) ** 2) * s_inc_angle ** 2)) / \
+                ray_azim_angle) ** 2) * s_inc_angle ** 2)) / \
                  (n_e ** 2 * np.sin(self.cut_angle) ** 2 + n_o ** 2 * np.cos(self.cut_angle) ** 2)
 
-        return 2 * np.pi * (self.thickness / wl) * (term_1 + term_2 + term_3)
+        phase = 2 * np.pi * (self.thickness / wavelength) * (term_1 + term_2 + term_3)
+
+        return phase
 
 
 class SavartPlate(BirefringentComponent):
@@ -258,29 +233,22 @@ class SavartPlate(BirefringentComponent):
         super().__init__(orientation, thickness, material=material, contrast=contrast, clr_aperture=clr_aperture)
         self.mode = mode
 
-    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+    def calculate_phase(self, wavelength, ray_inc_angle, ray_azim_angle):
         """
         calculate phase delay due to Savart plate.
 
-        Vectorised. If inc_angle and azim_angle are arrays, they must have the same dimensions.  
         source: Lei Wu, Chunmin Zhang, and Baochang Zhao. “Analysis of the lateral displacement and optical path difference
         in wide-field-of-view polarization interference imaging spectrometer”. In: Optics Communications 273.1 (2007), 
         pp. 67–73. issn: 00304018. doi: 10.1016/j.optcom.2006.12.034.
 
-        :param wl: wavelength [ m ]
-        :type wl: float or array-like
+        :param wavelength: wavelength [ m ]
+        :type wavelength: xr.DataArray
 
-        :param inc_angle: ray incidence angle [ rad ]
-        :type inc_angle: float or array-like
+        :param ray_inc_angle: ray incidence angle [ rad ]
+        :type ray_inc_angle: xr.DataArray
 
-        :param azim_angle: ray azimuthal angle [ rad ]
-        :type azim_angle: float or array-like
-
-        :param n_e: manually set extraordinary refractive index (for fitting)
-        :type n_e: float
-
-        :param n_o: manually set ordinary refractive index (for fitting)
-        :type n_o: float
+        :param ray_azim_angle: ray azimuthal angle [ rad ]
+        :type ray_azim_angle: xr.DataArray
 
         :return: phase [ rad ]
 
@@ -288,38 +256,15 @@ class SavartPlate(BirefringentComponent):
 
         if self.mode == 'francon':
 
-            # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
-            if n_e is None and n_o is None:
-                biref, n_e, n_o = pycis.model.dispersion(wl, self.material)
-            else:
-                assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
+            biref, n_e, n_o = pycis.model.dispersion(wavelength, self.material)
 
             a = 1 / n_e
             b = 1 / n_o
 
-            # if wl, theta and omega are arrays, vectorise
-            if not is_scalar(wl) and not is_scalar(inc_angle) and not is_scalar(azim_angle):
-
-                assert inc_angle.shape == azim_angle.shape
-
-                if inc_angle.ndim == 1:
-                    # pad 1-D ray angle arrays
-
-                    inc_angle = inc_angle[:, np.newaxis]
-                    azim_angle = azim_angle[:, np.newaxis]
-
-                # tile wl arrays to image dimensions for vectorisation
-                reps = [1, inc_angle.shape[0], inc_angle.shape[1]]
-
-                # tile wl arrays to image dimensions for vectorisation
-                wl = np.tile(wl[:, np.newaxis, np.newaxis], reps)
-                a = np.tile(a[:, np.newaxis, np.newaxis], reps)
-                b = np.tile(b[:, np.newaxis, np.newaxis], reps)
-
             # precalculate trig fns
-            c_azim_angle = np.cos(azim_angle)
-            s_azim_angle = np.sin(azim_angle)
-            s_inc_angle = np.sin(inc_angle)
+            c_azim_angle = np.cos(ray_azim_angle)
+            s_azim_angle = np.sin(ray_azim_angle)
+            s_inc_angle = np.sin(ray_inc_angle)
 
             # calculation
             term_1 = ((a ** 2 - b ** 2) / (a ** 2 + b ** 2)) * (c_azim_angle + s_azim_angle) * s_inc_angle
@@ -328,7 +273,7 @@ class SavartPlate(BirefringentComponent):
                      (c_azim_angle ** 2 - s_azim_angle ** 2) * s_inc_angle ** 2
 
             # minus sign here makes the OPD calculation consistent with Veiras' definition
-            phase = 2 * np.pi * - (self.thickness / (2 * wl)) * (term_1 + term_2)
+            phase = 2 * np.pi * - (self.thickness / (2 * wavelength)) * (term_1 + term_2)
 
         elif self.mode == 'veiras':
             # explicitly model plate as the combination of two uniaxial crystals
@@ -336,15 +281,15 @@ class SavartPlate(BirefringentComponent):
             or1 = self.orientation
             or2 = self.orientation - np.pi / 2
 
-            azim_angle1 = azim_angle
-            azim_angle2 = azim_angle - np.pi / 2
+            azim_angle1 = ray_azim_angle
+            azim_angle2 = ray_azim_angle - np.pi / 2
             t = self.thickness / 2
 
             crystal_1 = UniaxialCrystal(or1, t, cut_angle=-np.pi / 4, material=self.material)
             crystal_2 = UniaxialCrystal(or2, t, cut_angle=np.pi / 4, material=self.material)
 
-            phase = crystal_1.calculate_phase_delay(wl, inc_angle, azim_angle1, n_e=n_e, n_o=n_o) - \
-                    crystal_2.calculate_phase_delay(wl, inc_angle, azim_angle2, n_e=n_e, n_o=n_o)
+            phase = crystal_1.calculate_phase(wavelength, ray_inc_angle, azim_angle1) - \
+                    crystal_2.calculate_phase(wavelength, ray_inc_angle, azim_angle2)
 
         else:
             raise Exception('invalid SavartPlate.mode')
@@ -368,8 +313,7 @@ class QuarterWaveplate(BirefringentComponent):
 
         super().__init__(orientation, thickness, clr_aperture=clr_aperture)
 
-
-    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+    def calculate_phase(self, wavelength, ray_inc_angle, ray_azim_angle):
         """
         calculate phase delay due to ideal quarter waveplate
 
@@ -381,27 +325,10 @@ class QuarterWaveplate(BirefringentComponent):
         :return: phase [ rad ]
         """
 
-        if is_scalar(wl):
-            if is_scalar(inc_angle) and is_scalar(azim_angle):
-                ones_shape = 1
+        phase = wavelength + ray_inc_angle + ray_azim_angle
+        phase[:] = np.pi / 2
 
-            else:
-                assert isinstance(inc_angle, np.ndarray) and isinstance(azim_angle, np.ndarray)
-                assert inc_angle.shape == azim_angle.shape
-
-                ones_shape = np.ones_like(inc_angle)
-
-        elif isinstance(wl, np.ndarray) and isinstance(inc_angle, np.ndarray) and isinstance(azim_angle, np.ndarray):
-
-            assert wl.ndim == 1
-            assert inc_angle.shape == azim_angle.shape
-
-            ones_shape = np.ones(wl.shape[0], inc_angle.shape[0], inc_angle.shape[1])
-
-        else:
-            raise Exception('unable to interpret inputs')
-
-        return np.pi / 2 * ones_shape
+        return phase
 
 
 # TODO class FieldWidenedSavartPlate(BirefringentComponent):
