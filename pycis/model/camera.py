@@ -120,9 +120,9 @@ class PolCamera(Camera):
                                       [0, 0, 0, 0],
                                       [0, 0, 0, 0]])
 
-        self.mm_45deg = 0.5 * np.array([[1, 0, 1, 0],
+        self.mm_45deg = 0.5 * np.array([[1, 0, -1, 0],
                                        [0, 0, 0, 0],
-                                       [1, 0, 1, 0],
+                                       [-1, 0, 1, 0],
                                        [0, 0, 0, 0]])
 
         self.mm_90deg = 0.5 * np.array([[1, 1, 0, 0],
@@ -130,9 +130,9 @@ class PolCamera(Camera):
                                        [0, 0, 0, 0],
                                        [0, 0, 0, 0]])
 
-        self.mm_m45deg = 0.5 * np.array([[1, 0, -1, 0],
+        self.mm_m45deg = 0.5 * np.array([[1, 0, 1, 0],
                                         [0, 0, 0, 0],
-                                        [-1, 0, 1, 0],
+                                        [1, 0, 1, 0],
                                         [0, 0, 0, 0]])
 
         # pad to generate pixel array of Mueller matrices
@@ -147,8 +147,8 @@ class PolCamera(Camera):
 
         mueller_matrix[:, :, pix_idxs_y, pix_idxs_x] = self.mm_0deg[:, :, np.newaxis, np.newaxis]
         mueller_matrix[:, :, pix_idxs_y, pix_idxs_x + 1] = self.mm_45deg[:, :, np.newaxis, np.newaxis]
-        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x] = self.mm_90deg[:, :, np.newaxis, np.newaxis]
-        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x + 1] = self.mm_m45deg[:, :, np.newaxis, np.newaxis]
+        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x] = self.mm_m45deg[:, :, np.newaxis, np.newaxis]
+        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x + 1] = self.mm_90deg[:, :, np.newaxis, np.newaxis]
 
         self.mueller_matrix = mueller_matrix
 

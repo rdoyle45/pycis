@@ -14,8 +14,8 @@ def calculate_rot_mat(angle):
 
     angle2 = 2 * angle
     return np.array([[1, 0, 0, 0],
-                     [0, np.cos(angle2), np.sin(angle2), 0],
-                     [0, -np.sin(angle2), np.cos(angle2), 0],
+                     [0, np.cos(angle2), -np.sin(angle2), 0],
+                     [0, np.sin(angle2), np.cos(angle2), 0],
                      [0, 0, 0, 1]])
 
 
