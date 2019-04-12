@@ -1,5 +1,7 @@
 import numpy as np
 import xarray as xr
+import matplotlib.pyplot as plt
+
 import pycis
 
 
@@ -43,21 +45,48 @@ class Instrument:
 
         self.crystals = self._get_crystals()
         self.polarisers = self._get_polarisers()
-        self.x_pos, self.y_pos = self._calculate_pixel_pos()
         self.inst_mode = self.check_inst_mode()
 
         # TODO implement bandpass_filter properly
         # TODO implement crystal misalignment
-        # TODO order and position of interferometer components
+        # TODO position of interferometer components
 
-    def make_image(self, spec):
+    def make_image(self, spec, savepath=None):
         """
-        :param spec
-        :type xr.DataArray
+        calculate the intensity pattern (interferogram) at the output of the interferometer and capture an image.
+
+        :param spec:
+        :type spec: xr.DataArray
+
+        :param savepath:
+        :type savepath: str
 
         :return:
         """
 
+        igram = self.make_igram(spec)
+        image = self.camera.capture(igram)
+
+        if savepath is not None:
+            fig, ax = plt.subplots(111)
+            image.plot(ax=ax)
+            plt.savefig(savepath)
+
+        return image
+
+    def make_igram(self, spec):
+        """
+
+        :param spec:
+        :return:
+        """
+        raise NotImplementedError
+
+    def _input_checks(self):
+        """
+
+        :return:
+        """
         raise NotImplementedError
 
     def _get_crystals(self):
@@ -74,90 +103,27 @@ class Instrument:
 
         return [c for c in self.interferometer if isinstance(c, pycis.LinearPolariser)]
 
-    def _calculate_pixel_pos(self, x_coord=None, y_coord=None, crop=None, downsample=1):
+    def _get_ray_angles(self, component):
         """
-        Calculate x-y coordinates of the pixels of the camera's sensor -- for ray geometry calculations
-        Converts from pixel coordinates (origin top left) to spatial coordinates (origin centre). If x_coord and
-        y_coord are not specified, entire sensor will be evaluated (with specified cropping and downsampling).
+        get the angles of incidence and azimuth for the specified interferometer component
 
-        Coordinates can be cropped and downsampled to facilitate direct comparison with cropped / downsampled
-        experimental image, forgoing the need to generate a full-sensor synthetic image.
+        :param crystal:
+        :type crystal: pycis.model.InterferometerComponent
 
-        can this be a pycis.Camera method?
-
-        If both crop and downsample are specified, crop is carried out first.
-
-        :param x_coord: array of pixel coordinates (x)
-        :param y_coord: array of pixel coordinates (y)
-        :param crop: (y1, y2, x1, x2)
-        :param downsample:
-        :return: x_pos, y_pos [ m ]
+        :return: ray_inc_angles [ rad ], ray_azim_angles [ rad ]
         """
 
-        sensor_dim = np.array(self.camera.sensor_dim)
-        centre_pos = self.camera.pix_size * (sensor_dim - 2) / 2
+        # TODO specify misalignments here
 
-        if x_coord is not None and y_coord is not None:
-            # pixel coordinates on sensor have been manually specified
+        # incidence angles
+        ray_inc_angle = np.arctan2(np.sqrt(self.camera.x ** 2 + self.camera.y ** 2), self.back_lens.focal_length)
 
-            assert np.shape(x_coord) == np.shape(y_coord)
+        # azimuthal angles
+        orientation = component.orientation + self.int_orient
+        ray_azim_angle = np.arctan2(np.cos(orientation) * self.camera.x + np.sin(orientation) * self.camera.y,
+                                     -np.sin(orientation) * self.camera.x + np.cos(orientation) * self.camera.y)
 
-            x_pos = (x_coord - 0.5) * self.camera.pix_size - centre_pos[1]  # [ m ]
-            y_pos = (y_coord - 0.5) * self.camera.pix_size - centre_pos[0]  # [ m ]
-
-        else:
-            # entire sensor will be evaluated
-
-            if crop is None:
-                crop = (0, sensor_dim[0], 0, sensor_dim[1])
-
-            y_coord = np.arange(crop[0], crop[1])[::downsample]
-            x_coord = np.arange(crop[2], crop[3])[::downsample]
-
-            y_pos = (y_coord - 0.5) * self.camera.pix_size - centre_pos[0]  # [ m ]
-            x_pos = (x_coord - 0.5) * self.camera.pix_size - centre_pos[1]  # [ m ]
-
-            x_pos, y_pos = np.meshgrid(x_pos, y_pos)
-
-        return x_pos, y_pos
-
-    def _calculate_ray_inc_angles(self, x_pos, y_pos):
-        """
-        incidence angles will be the same for all interferometer components (until arbitrary component misalignment
-        implemented)
-
-        :param x_pos: x position (s), centred sensor coordinates [ m ]
-        :param y_pos: y position (s), centred sensor coordinates [ m ]
-        :return: incidence angles [ rad ]
-        """
-
-        assert np.shape(x_pos) == np.shape(y_pos)
-
-        inc_angles = np.arctan2(np.sqrt(x_pos ** 2 + y_pos ** 2), self.back_lens.focal_length)
-
-        return inc_angles
-
-    def calculate_ray_azim_angles(self, x_pos, y_pos, crystal):
-        """
-        calculate azimuthal angles of rays through interferometer, given
-        azimuthal angles vary with crystal orientation so are calculated separately
-
-        :param x_pos: x position (s), centred sensor coordinates [ m ]
-        :param y_pos: y position (s), centred sensor coordinates [ m ]
-        :param crystal: instance of pycis.model.BirefringentComponent
-        :return: azimuthal angles [ rad ]
-        """
-
-        assert np.shape(x_pos) == np.shape(y_pos)
-
-        orientation = crystal.orientation + self.int_orient
-
-        # rotate x, y coordinates
-        x_rot = (np.cos(orientation) * x_pos) + (np.sin(orientation) * y_pos)
-        y_rot = (- np.sin(orientation) * x_pos) + (np.cos(orientation) * y_pos)
-
-        return np.arctan2(x_rot, y_rot)
-
+        return ray_inc_angle, ray_azim_angle
 
     def check_inst_mode(self):
         """
@@ -200,24 +166,11 @@ class Instrument:
 
         return 'general'
 
-    def calculate_ideal_phase_offset(self, wl, n_e=None, n_o=None):
-        """
-        :param wl:
-        :param n_e:
-        :param n_o:
-        :return: phase_offset [ rad ]
-        """
-
-        phase_offset = 0
-        for crystal in self.crystals:
-            phase_offset += crystal.calculate_phase(wl, 0., 0., n_e=n_e, n_o=n_o)
-
-        return phase_offset
-
 
 class MatrixInstrument(Instrument):
     """
-    Instrument whose interferogram is calculated using Mueller calculus
+    Instrument whose interferogram is calculated using Mueller calculus. Used primarily for consistency checking
+    AnalyticInstrument subclasses, and for modelling optical misalignments.
 
     """
     def __init__(self, *args, **kwargs):
@@ -266,11 +219,11 @@ class AnalyticInstrument(Instrument):
     def calculate_contrast(self, spec):
         raise NotImplementedError
 
-    def calculate_brightness(self, spec):
-        raise NotImplementedError
+    # def calculate_brightness(self, spec):
+    #     raise NotImplementedError
 
-    def calculate_tx(self):
-        raise NotImplementedError
+    # def calculate_tx(self):
+    #     raise NotImplementedError
 
 
 class SimpleCisInstrument(AnalyticInstrument):
@@ -284,87 +237,63 @@ class SimpleCisInstrument(AnalyticInstrument):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def make_image(self, spec):
+    def make_igram(self, spec):
         """
+        calculation follows p35 of S. Silburn's thesis
 
         :param spec:
+        :type spec: xr.DataArray
         :return:
         """
 
         # input checks
         assert isinstance(spec, xr.DataArray)
-        # assert len(spec.dims) == 4
-        # assert 'stokes' in spec.dims
-        # assert len(spec['stokes']) == 4  # four Stokes parameters
         assert 'wavelength' in spec.dims
-        # assert 'pixel_x' in spec.dims
-        # assert 'pixel_y' in spec.dims
+        assert 'x' in spec.dims
+        assert 'y' in spec.dims
 
-        i0 = spec.integrate('wavelength')
+        i0 = spec.sum('wavelength')
         spec_norm = np.divide(spec, i0)
-        phase = self.calculate_phase(spec)
+        phase = self.calculate_phase(spec['wavelength'])
         contrast = self.calculate_contrast(spec)
-        degree_coherence = (spec_norm * contrast * np.exp(1j * phase)).integrate('wavelength')
+        degree_coherence = (spec_norm * contrast * np.exp(1j * phase))
 
-        igram = i0 / 4 * (1 + degree_coherence.real)
+        return i0 / 4 * (1 + degree_coherence.real)
 
-        return igram
-
-        # i0 = np.trapz(spec, wl, axis=0)
-        # spec_norm = np.divide(spec, i0, where=i0 > 0)
-        #
-        # phase = self.calculate_phase(wl)
-        # contrast = self.calculate_contrast()
-        # degree_coherence = np.trapz(spec_norm * contrast * np.exp(1j * phase), wl, axis=0)
-        #
-        # igram = i0 / 4 * (1 + np.real(degree_coherence))
-
-    def calculate_phase(self, spec):
+    def calculate_phase(self, wavelength):
         """
 
-        :param spec:
-        :return:
-        """
+        :param wavelength:
+        :type wavelength: xr.DataArray
 
-        wavelength = spec['wavelength']
-        ray_inc_angle = spec['ray_inc_angle']
-        ray_azim_angle = spec['ray_azim_angle']
+        :return: phase [ rad ]
+        """
 
         # calculate phase delay contribution due to each crystal
+        # TODO subtract phase for anti-aligned components?
         phase = 0
         for crystal in self.crystals:
+            ray_inc_angle, ray_azim_angle = self._get_ray_angles(crystal)
             phase += crystal.calculate_phase(wavelength, ray_inc_angle, ray_azim_angle)
 
         return phase
 
-    # def calculate_phase(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
-    #                     output_components=False):
-    #     """
-    #     assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
-    #     'two-beam'. kwargs included for fitting purposes.
-    #     :param wl:
-    #     :param x_coord:
-    #     :param y_coord:
-    #     :param n_e:
-    #     :param n_o:
-    #     :param crop:
-    #     :param downsample:
-    #     :param output_components:
-    #     :return: phase delay [ rad ]
-    #     """
-    #
-    #     # calculate the angles of each pixel's line of sight through the interferometer
-    #     x_pos, y_pos = self._calculate_pixel_pos(x_coord=x_coord, y_coord=y_coord, crop=crop, downsample=downsample)
-    #
-    #     inc_angles = self._calculate_ray_inc_angles(x_pos, y_pos)
-    #     azim_angles = self.calculate_ray_azim_angles(x_pos, y_pos, self.crystals[0])
-    #
-    #     # calculate phase delay contribution due to each crystal
-    #     phase = 0
-    #     for crystal in self.crystals:
-    #         phase += crystal.calculate_phase(wl, inc_angles, azim_angles, n_e=n_e, n_o=n_o)
-    #
-    #     return phase
+
+    def calculate_ideal_phase_offset(self, wl, n_e=None, n_o=None):
+        """
+        :param wl:
+        :param n_e:
+        :param n_o:
+        :return: phase_offset [ rad ]
+        """
+
+        phase_offset = 0
+        for crystal in self.crystals:
+            phase_offset += crystal.calculate_phase(wl, 0., 0., n_e=n_e, n_o=n_o)
+
+        return phase_offset
+
+
 
     def calculate_contrast(self, spec):
         """
@@ -378,15 +307,127 @@ class SimpleCisInstrument(AnalyticInstrument):
 
         return contrast
 
-    def calculate_tx(self):
+
+class SimplePolCamCisInstrument(AnalyticInstrument):
+    """
+    Special-case coherence imaging instrument for simple polarisation camera CIS
+
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def make_igram(self, spec, savepath=None):
         """
-        transmission is decreased due to polarisers, calculate this factor analytically for the special case of
-        ideal interferometer
+        calculation follows p35 of S. Silburn's thesis
 
+        :param spec:
+        :type spec: xr.DataArray
+        :return:
         """
 
-        pol_1, pol_2 = self.polarisers
-        tx = (pol_1.tx_1 ** 2 + pol_1.tx_2 ** 2) * (pol_2.tx_1 ** 2 + pol_2.tx_2 ** 2)
+        # input checks
+        assert isinstance(spec, xr.DataArray)
+        assert 'wavelength' in spec.dims
+        assert 'x' in spec.dims
+        assert 'y' in spec.dims
 
-        return tx
+        i0 = spec.sum('wavelength')
+        spec_norm = np.divide(spec, i0)
+        phase = self.calculate_phase(spec['wavelength'])
+        contrast = self.calculate_contrast(spec)
+        degree_coherence = (spec_norm * contrast * np.exp(1j * phase))
+
+        return i0 / 4 * (1 + degree_coherence.real)
+
+    def calculate_phase(self, wavelength):
+        """
+
+        :param wavelength:
+        :type wavelength: xr.DataArray
+
+        :return: phase [ rad ]
+        """
+
+        # calculate phase delay contribution due to each crystal
+        # TODO subtract phase for anti-aligned components?
+        phase = 0
+        for crystal in self.crystals:
+            ray_inc_angle, ray_azim_angle = self._get_ray_angles(crystal)
+            phase += crystal.calculate_phase(wavelength, ray_inc_angle, ray_azim_angle)
+
+        return phase
+
+    def calculate_contrast(self, spec):
+        """
+
+        :return:
+        """
+
+        contrast = 1
+        for crystal in self.crystals:
+            contrast *= crystal.contrast
+
+        return contrast
+
+
+class DoubleDelayPolCamCisInstrument(AnalyticInstrument):
+    """
+    Special-case coherence imaging instrument for double delay polarisation camera CIS setup
+
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def make_igram(self, spec):
+        """
+        calculation follows p35 of S. Silburn's thesis
+
+        :param spec:
+        :type spec: xr.DataArray
+        :return:
+        """
+
+        # input checks
+        assert isinstance(spec, xr.DataArray)
+        assert 'wavelength' in spec.dims
+        assert 'x' in spec.dims
+        assert 'y' in spec.dims
+
+        i0 = spec.sum('wavelength')
+        spec_norm = np.divide(spec, i0)
+        phase = self.calculate_phase(spec['wavelength'])
+        contrast = self.calculate_contrast(spec)
+        degree_coherence = (spec_norm * contrast * np.exp(1j * phase)).sum('wavelength')
+
+        return i0 / 4 * (1 + degree_coherence.real)
+
+    def calculate_phase(self, wavelength):
+        """
+
+        :param wavelength:
+        :type wavelength: xr.DataArray
+
+        :return: phase [ rad ]
+        """
+
+        # calculate phase delay contribution due to each crystal
+        # TODO subtract phase for anti-aligned components?
+        phase = 0
+        for crystal in self.crystals:
+            ray_inc_angle, ray_azim_angle = self._get_ray_angles(crystal)
+            phase += crystal.calculate_phase(wavelength, ray_inc_angle, ray_azim_angle)
+
+        return phase
+
+    def calculate_contrast(self, spec):
+        """
+
+        :return:
+        """
+
+        contrast = 1
+        for crystal in self.crystals:
+            contrast *= crystal.contrast
+
+        return contrast
 

@@ -97,7 +97,7 @@ class LinearPolariser(InterferometerComponent):
 
         mat = xr.DataArray(mat, dims=('mueller_v', 'mueller_h'))
 
-        return self.orient(m)
+        return self.orient(mat)
 
 
 class BirefringentComponent(InterferometerComponent):

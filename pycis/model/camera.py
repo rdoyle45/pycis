@@ -1,5 +1,8 @@
 import numpy as np
+import xarray as xr
 import matplotlib.pyplot as plt
+
+import pycis
 
 
 class Camera(object):
@@ -27,7 +30,28 @@ class Camera(object):
         self.cam_noise = cam_noise
         self.bit_depth = bit_depth
 
-    def capture(self, intensity, clean=False, display=False):
+        self.x, self.y = self._get_sensor_coords()
+        # TODO downsampling and cropping?
+
+    def _get_sensor_coords(self):
+        """
+        get sensor pixel coordinates in xy plane in [ m ]
+
+        (x = 0, y = 0) is the optic axis. By default this is aligned with the centrepoint of the sensor.
+
+        :return:
+        """
+        centre_pos = self.pix_size * np.array(self.sensor_dim) / 2  # [ m ]
+
+        x = (np.arange(self.sensor_dim[0]) + 0.5) * self.pix_size - centre_pos[0]  # [ m ]
+        y = (np.arange(self.sensor_dim[1]) + 0.5) * self.pix_size - centre_pos[1]  # [ m ]
+
+        x = xr.DataArray(x, dims=('x',), coords=(x,), name='x')
+        y = xr.DataArray(y, dims=('y',), coords=(y,), name='y')
+
+        return x, y
+
+    def capture(self, spec, clean=False, display=False):
         """ model sensor signal given photon fluence (photons / pixel / camera timestep).
         
         :param intensity: stokes vector
@@ -38,8 +62,14 @@ class Camera(object):
         # np.random.seed()
         np.random.seed()
 
+        # spectral response of camera assumed uniform
+        spec = spec.sum('wavelength')
+
+        # polarisation response of camera neglected (for now)
+
+
         # account for quantum efficiency
-        electron_fluence = intensity * self.qe
+        electron_fluence = spec * self.qe
 
         if not clean:
             # add shot noise
@@ -53,7 +83,7 @@ class Camera(object):
         signal = electron_fluence / self.epercount
 
         # digitise at bitrate of sensor
-        signal = np.digitize(signal, np.arange(0, 2 ** self.bit_depth))
+        signal.values = np.digitize(signal.values, np.arange(0, 2 ** self.bit_depth))
 
         if display:
             fig, ax = plt.subplots()
@@ -98,13 +128,13 @@ class Camera(object):
 
 
 class PolCamera(Camera):
-    """ Polarisation camera, eg. Photron Chrysta """
+    """ camera with micro-polariser array"""
 
-    def __init__(self, bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise):
+    def __init__(self, bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise, pol_angles=np.array([[0, 45], [135, 90]])):
         """
 
-        :param format:
-        :type format: str
+        :param pol_angles: [ deg ]
+        :type pol_angles: np.ndarray
 
         """
 
@@ -112,6 +142,7 @@ class PolCamera(Camera):
         assert sensor_dim[1] % 2 == 0
 
         super().__init__(bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)
+        self.pol_angles = pol_angles
 
         # define Mueller matrices for the 4 polariser orientations
 
@@ -151,6 +182,10 @@ class PolCamera(Camera):
         mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x + 1] = self.mm_m45deg[:, :, np.newaxis, np.newaxis]
 
         self.mueller_matrix = mueller_matrix
+
+    def _get_micropolariser_mueller_mat(self, pol_angle):
+        lp = pycis.model.LinearPolariser()
+
 
     def capture(self, intensity, clean=False, display=False):
         """
