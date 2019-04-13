@@ -87,11 +87,14 @@ def demo_2():
     backlens = pycis.Lens(flength)
 
     # define interferometer components
-    wp = pycis.UniaxialCrystal(np.pi / 4, 4.48e-3, 0)
+    wp2 = pycis.UniaxialCrystal(np.pi / 4, 4.48e-3, 0)
     qwp = pycis.QuarterWaveplate(0)
-    pol = pycis.LinearPolariser(0)
+    pol1 = pycis.LinearPolariser(0)
+    pol2 = pycis.LinearPolariser(0)
+    wp1 = pycis.UniaxialCrystal(np.pi / 4, 6.5e-3, 0)
+    sp1 = pycis.SavartPlate(np.pi / 4, 4e-3)
     # first component in interferometer list is the first component that the light passes through
-    interferometer = [pol, wp, qwp]
+    interferometer = [pol1, sp1, wp1, pol2, wp2, qwp]
 
     # bringing it together into an instrument
     inst = pycis.Instrument(cam, backlens, interferometer)
@@ -104,8 +107,9 @@ def demo_2():
     e = time.time()
     print(e - s, ' seconds')
 
-    I0, phi, contrast = pycis.polcam_demod(si.igram)
-    I02, phi2, contrast2 = pycis.polcam_demod2(si.igram)
+    dc, phase, contrast = pycis.fourier_demod_2d(si.igram, display=True, nfringes=40)
+    I0, phi, contrast = pycis.polcam_demod(dc)
+    # I02, phi2, contrast2 = pycis.polcam_demod2(si.igram)
 
     fig1 = plt.figure()
     gs1 = matplotlib.gridspec.GridSpec(nrows=2, ncols=2)
@@ -120,18 +124,18 @@ def demo_2():
         i = ax.imshow(im)
         fig1.colorbar(i, ax=ax)
 
-    fig2 = plt.figure()
-    gs2 = matplotlib.gridspec.GridSpec(nrows=2, ncols=2)
-    ax1 = fig2.add_subplot(gs2[0])
-    ax2 = fig2.add_subplot(gs2[1])
-    ax3 = fig2.add_subplot(gs2[2])
-    ax4 = fig2.add_subplot(gs2[3])
-
-    axes = (ax1, ax2, ax3, ax4)
-    ims = (si.igram, I02, phi2, contrast2)
-    for ax, im in zip(axes, ims):
-        i = ax.imshow(im)
-        fig1.colorbar(i, ax=ax)
+    # fig2 = plt.figure()
+    # gs2 = matplotlib.gridspec.GridSpec(nrows=2, ncols=2)
+    # ax1 = fig2.add_subplot(gs2[0])
+    # ax2 = fig2.add_subplot(gs2[1])
+    # ax3 = fig2.add_subplot(gs2[2])
+    # ax4 = fig2.add_subplot(gs2[3])
+    #
+    # axes = (ax1, ax2, ax3, ax4)
+    # ims = (si.igram, I02, phi2, contrast2)
+    # for ax, im in zip(axes, ims):
+    #     i = ax.imshow(im)
+    #     fig1.colorbar(i, ax=ax)
 
     plt.show()
 
