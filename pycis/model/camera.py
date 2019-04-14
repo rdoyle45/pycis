@@ -65,8 +65,9 @@ class Camera(object):
         # spectral response of camera assumed uniform
         spec = spec.sum('wavelength')
 
-        # polarisation response of camera neglected (for now)
-
+        # no polarisation sensitivity
+        if 'stokes' in spec.dims:
+            spec = spec.isel(stokes=0).squeeze('stokes')
 
         # account for quantum efficiency
         electron_fluence = spec * self.qe

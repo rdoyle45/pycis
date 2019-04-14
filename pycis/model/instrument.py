@@ -293,8 +293,6 @@ class SimpleCisInstrument(AnalyticInstrument):
 
         return phase_offset
 
-
-
     def calculate_contrast(self, spec):
         """
 
@@ -387,19 +385,7 @@ class DoubleDelayPolCamCisInstrument(AnalyticInstrument):
         :return:
         """
 
-        # input checks
-        assert isinstance(spec, xr.DataArray)
-        assert 'wavelength' in spec.dims
-        assert 'x' in spec.dims
-        assert 'y' in spec.dims
-
-        i0 = spec.sum('wavelength')
-        spec_norm = np.divide(spec, i0)
-        phase = self.calculate_phase(spec['wavelength'])
-        contrast = self.calculate_contrast(spec)
-        degree_coherence = (spec_norm * contrast * np.exp(1j * phase)).sum('wavelength')
-
-        return i0 / 4 * (1 + degree_coherence.real)
+        return
 
     def calculate_phase(self, wavelength):
         """
@@ -410,14 +396,7 @@ class DoubleDelayPolCamCisInstrument(AnalyticInstrument):
         :return: phase [ rad ]
         """
 
-        # calculate phase delay contribution due to each crystal
-        # TODO subtract phase for anti-aligned components?
-        phase = 0
-        for crystal in self.crystals:
-            ray_inc_angle, ray_azim_angle = self._get_ray_angles(crystal)
-            phase += crystal.calculate_phase(wavelength, ray_inc_angle, ray_azim_angle)
-
-        return phase
+        return
 
     def calculate_contrast(self, spec):
         """
@@ -425,9 +404,5 @@ class DoubleDelayPolCamCisInstrument(AnalyticInstrument):
         :return:
         """
 
-        contrast = 1
-        for crystal in self.crystals:
-            contrast *= crystal.contrast
-
-        return contrast
+        return
 
