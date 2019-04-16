@@ -2,7 +2,7 @@ import numpy as np
 from . import despeckle as apply_despeckle
 from scipy.constants import pi
 
-def polcam_demod(im, pixel_order=np.array([[0,45],[135,90]]), despeckle=False, uncertainty_out=False, components_out=False):
+def polcam_demod(im, pixel_order=np.array([[0,45],[135,90]]), despeckle=False, components_out=False):
     '''
     Demodulation of polarisation camera CIS data.
 
@@ -22,8 +22,6 @@ def polcam_demod(im, pixel_order=np.array([[0,45],[135,90]]), despeckle=False, u
 
         despeckle (bool)        : Whether to apply despeckle filter
 
-        uncertainty_out (bool)  : Whether to also return estimates of the phase & contrast uncertainties
-
         components_out (bool)   : Whether to also return the 4 individual polarised images.
 
     Returns:
@@ -34,9 +32,6 @@ def polcam_demod(im, pixel_order=np.array([[0,45],[135,90]]), despeckle=False, u
         Contrast image
 
         and if requested:
-
-        Dictionary containing keys 'delta_phi' and 'delta_contrast' which are \
-        sort of estimates of the uncertainties.
 
         Dictionary containing integer keys 0,45,90 and 135 containing the \
         individual polarised images. The keys correspond to the polariser angles.
@@ -66,36 +61,15 @@ def polcam_demod(im, pixel_order=np.array([[0,45],[135,90]]), despeckle=False, u
     # Isolate and remove the DC offset (mean of quadrature samples)
     I0 = signal.mean(axis=2)
     signal = signal - np.tile(I0[:,:,np.newaxis],(1,1,4))
-
-
-    # Contrast (calculate based on 2 different pixel combinations and average to help noise robustness)
-    contrast = np.sqrt( signal[:,:,0]**2 + signal[:,:,1]**2 )   / I0
-    contrast2 = np.sqrt( signal[:,:,2]**2 + signal[:,:,3]**2 ) / I0
-    contrast = (contrast + contrast2) / 2
-
-    # Phase (calculate based on 2 different pixel combinations and average to help noise robustness)
-    phi = np.arctan2(signal[:,:,1],signal[:,:,0])
-    phi2 = np.arctan2(signal[:,:,3],signal[:,:,2])
-
-    # Since we're averaging 2 phase measurements, make sure we don't end up with problems if the noise makes the phase wrap.
-    phi2 = phi2 + -np.sign(phi2)*pi
-    phi2[phi2 - phi > pi] = phi2[phi2 - phi > pi] - 2*pi
-    phi2[phi2 - phi < -pi] = phi2[phi2 - phi < -pi] + 2*pi
-
-    phi = (phi2 + phi)/2
-    phi[phi < -pi] = phi[phi < -pi] + 2*pi
-    phi[phi > pi] = phi[phi > pi] - 2*pi
-
-    # Scale the intensity correctly.
     I0 = I0 * 2
 
-    output = (I0,phi,contrast)
+    # Contrast (calculate based on 2 different pixel combinations and average to help noise robustness)
+    contrast = (np.sqrt(np.sum(signal[:,:,:2]**2,axis=2)) + np.sqrt(np.sum(signal[:,:,2:]**2,axis=2)) )  / I0
 
-    if uncertainty_out:
-        # Here we give the uncertainty based on the differences of the phase and contrast calculated from the two 
-        # sets of pixel combinations.
-        uncertainty = {'delta_phi':np.abs(phi2 - phi), 'delta_contrast':np.abs(contrast2 - contrast)}
-        output = output + (uncertainty,)
+    # Phase (calculate based on 2 different pixel combinations and average to help noise robustness)
+    phi = np.arctan2(signal[:,:,2] - signal[:,:,0],signal[:,:,3] - signal[:,:,0])
+
+    output = (I0,phi,contrast)
 
     if components_out:
         signal = signal + np.tile(I0[:,:,np.newaxis],(1,1,4)) / 2
