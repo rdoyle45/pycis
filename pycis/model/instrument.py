@@ -144,12 +144,7 @@ class Instrument(object):
         assert np.shape(x_pos) == np.shape(y_pos)
 
         orientation = crystal.orientation + self.interferometer_orientation
-
-        # rotate x, y coordinates
-        x_rot = (np.cos(orientation) * x_pos) + (np.sin(orientation) * y_pos)
-        y_rot = (- np.sin(orientation) * x_pos) + (np.cos(orientation) * y_pos)
-
-        return np.arctan2(x_rot, y_rot)
+        return np.arctan2(y_pos, x_pos) + np.pi - orientation
 
     def calculate_matrix(self, wl):
         """
@@ -283,7 +278,7 @@ class Instrument(object):
         for crystal in self.crystals:
             phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
 
-        return phase_offset
+        return -phase_offset
 
     def get_snr_intensity(self, line_name, snr):
         """ Given spectral line and desired approximate image snr (central ROI), return the necessary input intensity I0 in units

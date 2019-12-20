@@ -17,7 +17,6 @@ from matplotlib import image as mpimg
 import pycis
 
 
-
 def phase_shift_wl_poly(wl_shift, theta):
     """ nth order polynomial describing relationship between wavelength * phase shift and wavelength shift.
     
@@ -29,20 +28,22 @@ def phase_shift_wl_poly(wl_shift, theta):
 
     group_delay_0 = theta[0]
     phase_shift_wl = - group_delay_0 * wl_shift
-
     poly_order = len(theta)
 
     if poly_order > 1:
         for i in range(2, poly_order+1):
-            phase_shift_wl += theta[i - 1] * wl_shift ** (i)
+            phase_shift_wl += theta[i - 1] * wl_shift ** i
 
     return phase_shift_wl
+
 
 def poly1(x, a):
     return a * x
 
+
 def poly2(x, a, b):
     return a * x + b * x ** 2
+
 
 def poly3(x, a, b, c):
     return a * x + b * x ** 2 + c * x ** 3

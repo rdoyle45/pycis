@@ -194,7 +194,8 @@ def get_img(path, display=False):
 
     assert os.path.isfile(path)
 
-    img = np.array(Image.open(path), dtype=np.float64)
+    # img = np.array(Image.open(path), dtype=np.float64)
+    img = np.array(plt.imread(path), dtype=np.float64)
 
     if display:
         fig = plt.figure()
@@ -279,12 +280,9 @@ def get_phase_img_stack(path, rot90=0, fmt='tif', overwrite=False, **kwargs):
     else:
 
         img_stack = get_img_stack(path, rot90=rot90, fmt=fmt, overwrite=overwrite)
-        # img_stack = np.flipud(np.fliplr(img_stack))
 
         intensity, phase, contrast = pycis.fourier_demod_2d(img_stack, mask=True, despeckle=True)
-
         phase_img_stack = phase
-
         np.save(phase_img_stack_path, phase_img_stack)
 
     return phase_img_stack

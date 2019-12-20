@@ -114,41 +114,39 @@ class PolCamera(Camera):
         super().__init__(bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)
 
         # define Mueller matrices for the 4 polariser orientations
-
-        self.mm_0deg = 0.5 * np.array([[1, -1, 0, 0],
-                                      [-1, 1, 0, 0],
+        self.mm_0deg = 0.5 * np.array([[1, 1, 0, 0],
+                                      [1, 1, 0, 0],
                                       [0, 0, 0, 0],
                                       [0, 0, 0, 0]])
 
-        self.mm_45deg = 0.5 * np.array([[1, 0, -1, 0],
+        self.mm_45deg = 0.5 * np.array([[1, 0, 1, 0],
                                        [0, 0, 0, 0],
-                                       [-1, 0, 1, 0],
+                                       [1, 0, 1, 0],
                                        [0, 0, 0, 0]])
 
-        self.mm_90deg = 0.5 * np.array([[1, 1, 0, 0],
-                                       [1, 1, 0, 0],
+        self.mm_90deg = 0.5 * np.array([[1, -1, 0, 0],
+                                       [-1, 1, 0, 0],
                                        [0, 0, 0, 0],
                                        [0, 0, 0, 0]])
 
-        self.mm_m45deg = 0.5 * np.array([[1, 0, 1, 0],
+        self.mm_m45deg = 0.5 * np.array([[1, 0, -1, 0],
                                         [0, 0, 0, 0],
-                                        [1, 0, 1, 0],
+                                        [-1, 0, 1, 0],
                                         [0, 0, 0, 0]])
 
         # pad to generate pixel array of Mueller matrices
 
         # there is probably a better way of doing this...
-
         pix_idxs_y = np.arange(0, sensor_dim[0], 2)
         pix_idxs_x = np.arange(0, sensor_dim[1], 2)
         pix_idxs_y, pix_idxs_x = np.meshgrid(pix_idxs_y, pix_idxs_x)
 
         mueller_matrix = np.zeros([4, 4, self.sensor_dim[0], self.sensor_dim[1]])
 
-        mueller_matrix[:, :, pix_idxs_y, pix_idxs_x] = self.mm_0deg[:, :, np.newaxis, np.newaxis]
-        mueller_matrix[:, :, pix_idxs_y, pix_idxs_x + 1] = self.mm_45deg[:, :, np.newaxis, np.newaxis]
-        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x] = self.mm_m45deg[:, :, np.newaxis, np.newaxis]
-        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x + 1] = self.mm_90deg[:, :, np.newaxis, np.newaxis]
+        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x + 1] = self.mm_45deg[:, :, np.newaxis, np.newaxis]
+        mueller_matrix[:, :, pix_idxs_y, pix_idxs_x + 1] = self.mm_90deg[:, :, np.newaxis, np.newaxis]
+        mueller_matrix[:, :, pix_idxs_y + 1, pix_idxs_x] = self.mm_0deg[:, :, np.newaxis, np.newaxis]
+        mueller_matrix[:, :, pix_idxs_y, pix_idxs_x] = self.mm_m45deg[:, :, np.newaxis, np.newaxis]
 
         self.mueller_matrix = mueller_matrix
 

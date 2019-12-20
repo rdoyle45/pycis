@@ -54,10 +54,10 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
         nfringes = np.unravel_index(fft_img[15:][:].argmax(), fft_img.shape)[0] + 15
 
     # generate window function
-    fft_length = int(img.shape[0] / 2)
+    fft_length = fft_img.shape[0]
     window_1d = pycis.demod.window(fft_length, nfringes, width_factor=1., fn='tukey')
     window_2d = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
-    window_2d *= (1 - scipy.signal.tukey(fft_img.shape[1], alpha=0.6))
+    # window_2d *= (1 - scipy.signal.tukey(fft_img.shape[1], alpha=0.6))
 
     # plt.figure()
     # plt.imshow(window_2d)
@@ -183,7 +183,6 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
 
         pg_dc_window = np.abs(1 - window_2d) ** 2
         pg_carrier_window = np.abs(window_2d) ** 2
-
         area = np.trapz(np.trapz(np.ones_like(window_2d), y_mesh_window, axis=0), x_arr_window)
 
         carrier_noise_coeff = np.sqrt(np.trapz(np.trapz(pg_carrier_window, y_mesh_window, axis=0), x_arr_window) / area)
@@ -267,7 +266,7 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
             cbar32 = fig3.colorbar(im32, ax=ax32)
             ax32.set_title('contrast noise')
 
-        plt.show(block=True)
+        plt.show()
 
     if uncertainty_out:
         return dc, phase, contrast, uncertainty

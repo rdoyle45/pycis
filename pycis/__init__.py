@@ -1,5 +1,4 @@
 import traceback
-from . paths import *
 
 try:
     from .demod import *
@@ -17,7 +16,7 @@ except ImportError:
     print(traceback.format_exc())
 
 try:
-    from .calib import *
+    from calib import *
 except ImportError:
     print(traceback.format_exc())
 

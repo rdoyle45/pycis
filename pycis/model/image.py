@@ -25,7 +25,6 @@ class SynthImage:
         :param input_spec: wavelength spectrum of the light observed [ ph / pixel / m / exposure ]. See
         SynthImage.check_spec_mode for formatting
         :type input_spec: Union[float, np.ndarray]
-
         """
 
         self.instrument = instrument
@@ -213,7 +212,8 @@ class SynthImage:
         """ Image synthetic image. """
 
         if vmax is None:
-            vmax = 2 ** self.instrument.camera.bit_depth
+            # vmax = 2 ** self.instrument.camera.bit_depth
+            vmax = self.igram.max()
 
         savename = 'img'
         self._imshow(self.igram, 'gray', 'camera signal (ADU)', save, savename, vmin=vmin, vmax=vmax)

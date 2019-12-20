@@ -82,7 +82,7 @@ def gen_gif(path_in, pattern='.*', fn_out='movie.gif', duration=0.5, file_range=
             print('gif was not produced')
             return  ## return from function without renaming
 
-    with imageio.get_writer(os.path.join(path_out, fn_out), mode='I', format='GIF-FI', duration=duration) as writer:  # duration = 0.4
+    with imageio.get_writer(os.path.join(path_out, fn_out), mode='I', format='GIF-FI', duration=0.12) as writer:  # duration = 0.4
 
         for i, filename in enumerate(filenames):
             image = imageio.imread(os.path.join(path_in, filename))
@@ -93,8 +93,9 @@ def gen_gif(path_in, pattern='.*', fn_out='movie.gif', duration=0.5, file_range=
 
     print('Wrote gif containing {} frames to: {}'.format(nframes, os.path.join(path_in, fn_out)))
 
+
 if __name__ == '__main__':
-    path_in = '/home/jallcock/projects/density_imaging/density_imaging/JET/saved_kt3b_data/saved_images/demo_gif/81484/'
+    path_in = '/Users/jsallcock/Documents/physics/phd/output/animations/uniaxial_crystal_cut_angle/imgs/'
     fn_out = 'movie.gif'  # Output file name
 
     # pattern = '.*f{number}.png'
@@ -104,6 +105,6 @@ if __name__ == '__main__':
     file_number_range = None  # No number filter
 
     repeat = {0: 5, -1: 10}  # Number of additional times to repeat each frame number
-    duration = 0.05  # Frame duration in seconds
+    duration = 1.0  # Frame duration in seconds
 
     gen_gif(path_in, pattern, duration=duration, fn_out=fn_out, file_range=file_number_range, repeat=repeat)

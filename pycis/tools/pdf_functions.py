@@ -5,6 +5,16 @@ import matplotlib.pyplot as plt
 import pycis
 
 
+def norm_pdf(mean, std, x=None):
+    if x is None:
+        nstd = 6
+        npts = 1000
+        lb, ub = mean - nstd * std, mean + nstd * std
+        x = np.linspace(lb, ub, npts)
+    pdf = 1 / (std * np.sqrt(2 * np.pi)) * np.exp(- (x - mean) ** 2 / (2 * std ** 2))
+    return pdf, x
+
+
 def phase_pdf(amplitude, sigma, npts=3001, display=False):
     """ probability density function for the angle / argument / phase of a circular, bivariate normal distribution --
     used in handling Fourier demodulation uncertainty.
@@ -20,18 +30,17 @@ def phase_pdf(amplitude, sigma, npts=3001, display=False):
 
     # for high SNR, do the calculation in log-space to avoid numerical overflow in np.exp()
     if phase_sigma < 0.1 * np.pi:
-        print('1')
-
-        phase_err_axis = np.linspace(-np.pi / 2, np.pi / 2, npts)
+        phase_err_axis = np.linspace(-np.pi / 2, np.pi / 2, 5001)
         q = amplitude * np.cos(phase_err_axis) / (np.sqrt(2) * sigma)
 
-        log_pdf = np.log(1 / (2 * np.pi)) - (q / np.cos(phase_err_axis)) ** 2 + \
-                  pycis.tools.logsumexp(np.array([np.zeros_like(q), np.log(q * np.sqrt(np.pi)) + q ** 2 + np.log(1 + scipy.special.erf(q))]), axis=0)
-
+        log_pdf = np.log(1 / (2 * np.pi)) + \
+                  -(q / np.cos(phase_err_axis)) ** 2 + \
+                  scipy.special.logsumexp(np.array(
+                      [np.zeros_like(q), np.log(q * np.sqrt(np.pi)) + q ** 2 + np.log(1 + scipy.special.erf(q))]),
+                                          axis=0)
         phase_pdf = np.exp(log_pdf)
     else:
-        print('2')
-        phase_err_axis = np.linspace(-np.pi, np.pi, 5001)
+        phase_err_axis = np.linspace(-np.pi, np.pi, npts)
         q = amplitude * np.cos(phase_err_axis) / (np.sqrt(2) * sigma)
 
         phase_pdf = 1 / (2 * np.pi) * np.exp(-(q / np.cos(phase_err_axis)) ** 2) * \
@@ -48,27 +57,25 @@ def phase_pdf(amplitude, sigma, npts=3001, display=False):
     return phase_pdf, phase_err_axis
 
 
-def contrast_pdf(contdc_tru, sigma_contdc, dc_tru, sigma_dc, contrast_axis, npts=3000, display=False):
+def contrast_pdf(contdc, contdc_sigma, dc_tru, dc_sigma, contrast_axis, npts=8000, display=False):
     """  Numerically evaluate the Rician-Normal ratio distribution to calculate the contrast distribution.
 
-    :param contdc_tru:
-    :param sigma_contdc:
+    :param contdc:
+    :param contdc_sigma:
     :param dc_tru:
-    :param sigma_dc:
+    :param dc_sigma:
     :param contrast_axis:
     :param npts: number of points in contrast axis
     :param display:
     :return:
     """
 
-    dc_axis = np.linspace(dc_tru - 5 * sigma_dc, dc_tru + 5 * sigma_dc, npts)
-
+    dc_axis = np.linspace(dc_tru - 8 * dc_sigma, dc_tru + 8 * dc_sigma, npts)
     dc_mesh, contrast_mesh = np.meshgrid(dc_axis, contrast_axis)
     contdc_mesh = dc_mesh * contrast_mesh
 
-    pdf_contdc = scipy.stats.rice.pdf(contdc_mesh, contdc_tru / sigma_contdc, scale=sigma_contdc, loc=0.)
-    pdf_dc = 1 / (sigma_dc * np.sqrt(2 * np.pi)) * np.exp(- (dc_mesh - dc_tru) ** 2 / (2 * sigma_dc ** 2))
-
+    pdf_contdc = scipy.stats.rice.pdf(contdc_mesh, contdc / contdc_sigma, scale=contdc_sigma, loc=0.)
+    pdf_dc, _ = norm_pdf(dc_tru, dc_sigma, x=dc_mesh)
     joint_pdf = pdf_contdc * pdf_dc
 
     # normalise joint PDF

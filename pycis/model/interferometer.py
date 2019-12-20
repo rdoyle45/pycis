@@ -5,7 +5,7 @@ from pycis.tools import is_scalar
 
 def calculate_rot_mat(angle):
     """
-    general Mueller matrix for frame rotation
+    general Mueller matrix for frame rotation (anti-clockwise from x-axis)
 
     :param angle: rotation angle [ rad ]
     :return:
@@ -14,8 +14,8 @@ def calculate_rot_mat(angle):
 
     angle2 = 2 * angle
     return np.array([[1, 0, 0, 0],
-                     [0, np.cos(angle2), -np.sin(angle2), 0],
-                     [0, np.sin(angle2), np.cos(angle2), 0],
+                     [0, np.cos(angle2), np.sin(angle2), 0],
+                     [0, -np.sin(angle2), np.cos(angle2), 0],
                      [0, 0, 0, 1]])
 
 
@@ -354,7 +354,7 @@ class SavartPlate(BirefringentComponent):
 
 class QuarterWaveplate(BirefringentComponent):
     """
-    Idealised quarter waveplate
+    Ideal quarter waveplate
 
     """
 
@@ -396,12 +396,63 @@ class QuarterWaveplate(BirefringentComponent):
             assert wl.ndim == 1
             assert inc_angle.shape == azim_angle.shape
 
-            ones_shape = np.ones(wl.shape[0], inc_angle.shape[0], inc_angle.shape[1])
+            ones_shape = np.ones([wl.shape[0], inc_angle.shape[0], inc_angle.shape[1]])
 
         else:
             raise Exception('unable to interpret inputs')
 
         return np.pi / 2 * ones_shape
+
+
+class HalfWaveplate(BirefringentComponent):
+    """
+    Ideal half waveplate
+
+    """
+
+    def __init__(self, orientation, clr_aperture=None):
+        """
+
+        :param orientation:
+        """
+
+        thickness = 1.  # this value is arbitrary
+
+        super().__init__(orientation, thickness, clr_aperture=clr_aperture)
+
+    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+        """
+        calculate phase delay due to ideal half waveplate
+
+        :param wl:
+        :param inc_angle:
+        :param azim_angle:
+        :param n_e:
+        :param n_o:
+        :return: phase [ rad ]
+        """
+
+        if is_scalar(wl):
+            if is_scalar(inc_angle) and is_scalar(azim_angle):
+                ones_shape = 1
+
+            else:
+                assert isinstance(inc_angle, np.ndarray) and isinstance(azim_angle, np.ndarray)
+                assert inc_angle.shape == azim_angle.shape
+
+                ones_shape = np.ones_like(inc_angle)
+
+        elif isinstance(wl, np.ndarray) and isinstance(inc_angle, np.ndarray) and isinstance(azim_angle, np.ndarray):
+
+            assert wl.ndim == 1
+            assert inc_angle.shape == azim_angle.shape
+
+            ones_shape = np.ones(wl.shape[0], inc_angle.shape[0], inc_angle.shape[1])
+
+        else:
+            raise Exception('unable to interpret inputs')
+
+        return np.pi * ones_shape
 
 
 # TODO class FieldWidenedSavartPlate(BirefringentComponent):

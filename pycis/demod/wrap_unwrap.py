@@ -20,36 +20,6 @@ def wrap(phase, units='rad'):
 
     return (phase + period / 2) % period - (period / 2)
 
-def wrap_centre(phase):
-    """
-    Wrap centre of a phase image into (- pi, pi] radian interval.
-
-    :param phase: [ rad ]
-
-    :return: phase_wc [ rad ]
-    """
-
-    assert isinstance(phase, np.ndarray)
-    assert phase.ndim == 2
-
-    phase_wc = copy.deepcopy(phase)
-
-    # wrap image centre into [-pi, +pi] (assumed projection of optical axis onto detector)
-    y_centre_idx = np.round((np.size(phase, 0) - 1) / 2).astype(np.int)
-    x_centre_idx = np.round((np.size(phase, 1) - 1) / 2).astype(np.int)
-    phase_centre = phase_wc[y_centre_idx, x_centre_idx]
-
-    if phase_centre > 0:
-        while abs(phase_centre) > np.pi:
-            phase_wc -= 2 * np.pi
-            phase_centre = phase_wc[y_centre_idx, x_centre_idx]
-    else:
-        while abs(phase_centre) > np.pi:
-            phase_wc += 2 * np.pi
-            phase_centre = phase_wc[y_centre_idx, x_centre_idx]
-
-    return phase_wc
-
 
 def unwrap(phase, centre=True):
     """
@@ -64,8 +34,6 @@ def unwrap(phase, centre=True):
     phase delay -- a handy quantity to know. Numpy's np.unwrap function sets the 0th array element to be wrapped, set
     'centre' to False to return this numpy-like behaviour. 'centre' defaults to True, wrapping the phase at the array
     centre.
-
-    (The good ideas here are Scott's.)
 
     :param phase: input phase [ rad ], 1-D or 2-D.
     :type phase: np.ndarray
@@ -126,6 +94,37 @@ def unwrap(phase, centre=True):
         raise Exception('# ERROR #   Phase input must be 1D or 2D array_like.')
 
     return phase_uw
+
+
+# def wrap_centre(phase):
+#     """
+#     Wrap centre of a phase image into (- pi, pi] radian interval.
+#
+#     :param phase: [ rad ]
+#
+#     :return: phase_wc [ rad ]
+#     """
+#
+#     assert isinstance(phase, np.ndarray)
+#     assert phase.ndim == 2
+#
+#     phase_wc = copy.deepcopy(phase)
+#
+#     # wrap image centre into [-pi, +pi] (assumed projection of optical axis onto detector)
+#     y_centre_idx = np.round((np.size(phase, 0) - 1) / 2).astype(np.int)
+#     x_centre_idx = np.round((np.size(phase, 1) - 1) / 2).astype(np.int)
+#     phase_centre = phase_wc[y_centre_idx, x_centre_idx]
+#
+#     if phase_centre > 0:
+#         while abs(phase_centre) > np.pi:
+#             phase_wc -= 2 * np.pi
+#             phase_centre = phase_wc[y_centre_idx, x_centre_idx]
+#     else:
+#         while abs(phase_centre) > np.pi:
+#             phase_wc += 2 * np.pi
+#             phase_centre = phase_wc[y_centre_idx, x_centre_idx]
+#
+#     return phase_wc
 
 
 

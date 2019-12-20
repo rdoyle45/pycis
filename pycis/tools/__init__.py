@@ -11,6 +11,7 @@ from. utils import *
 from .generate_gif import *
 from .norm_height import *
 from . img_tools import *
+from . generate_gif import *
 
 try:
     from . contrast_curve import *

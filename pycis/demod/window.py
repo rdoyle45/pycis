@@ -7,7 +7,7 @@ fns = {'hanning': scipy.signal.hanning,
       'tukey': scipy.signal.windows.tukey}
 
 
-def window(rfft_length, nfringes, fn='tukey', width_factor=1., alpha=0.5):
+def window(rfft_length, nfringes, window_width=None, fn='tukey', width_factor=1., alpha=0.5):
     """ Generate a filters window for isolating the carrier (fringe) frequency. 
     
     :param rfft_length: length of the real FFT to be filtered
@@ -24,7 +24,9 @@ def window(rfft_length, nfringes, fn='tukey', width_factor=1., alpha=0.5):
 
     assert fn in fns
 
-    window_width = int(nfringes * width_factor)
+    if window_width == None:
+        window_width = int(nfringes * width_factor)
+
     pre_zeros = [0] * int(nfringes - window_width / 2)
 
     if fn == 'tukey':
@@ -37,7 +39,7 @@ def window(rfft_length, nfringes, fn='tukey', width_factor=1., alpha=0.5):
 
     post_zeros = [0] * (rfft_length - window_width - int(nfringes - window_width / 2 - 1))
 
-    return np.concatenate((pre_zeros, window_fn, post_zeros))[:rfft_length + 1]
+    return np.concatenate((pre_zeros, window_fn, post_zeros))[:rfft_length]
 
 
 if __name__ == '__main__':

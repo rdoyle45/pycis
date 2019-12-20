@@ -1,14 +1,14 @@
 import sys
 sys.path.append('/home/ssilburn/Python/lib')
 
-from pyIpx.movieReader import ipxReader
+# from pyIpx.movieReader import ipxReader
 # import calcam
 import pycis
 from scipy.io import loadmat
 import os
 import pandas
 import numpy as np
-from pyEquilibrium import equilibrium
+# from pyEquilibrium import equilibrium
 from scipy.interpolate import interp2d, griddata, interp1d
 import matplotlib.cm
 import matplotlib.pyplot as plt

@@ -78,7 +78,7 @@ def safe_len(var):
         return len(var)
 
 
-def get_roi(input_image, centre=None, roi_dim=(50, 50), display=False):
+def get_roi(input_image, centre=None, roi_dim=(250, 250), display=False):
     """ Given an input image, returns the centred region of interest (ROI) with user-specified dimensions. """
 
     y_dim, x_dim = np.shape(input_image)
@@ -168,6 +168,7 @@ Is there a good way to do the following? I wrote a simple console app to upload 
 
 def deg2rad(deg):
     return deg * np.pi / 180
+
 
 def rad2deg(rad):
     return rad * 180 / np.pi
