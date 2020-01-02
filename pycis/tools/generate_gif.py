@@ -11,6 +11,7 @@ try:
 except ImportError:
     pass
 
+
 def fn_filter(dir, pattern, recursive=False, unique=False):
     """ Filenames in a given directory that match the search pattern
     TODO: add compatibility for non raw string file paths
