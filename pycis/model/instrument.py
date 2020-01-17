@@ -98,7 +98,9 @@ class Instrument(object):
 
             x_pos = (x_coord - 0.5) * self.camera.pix_size - centre_pos[1]  # [ m ]
             y_pos = (y_coord - 0.5) * self.camera.pix_size - centre_pos[0]  # [ m ]
-
+            print(x_pos, y_pos)
+            # x_pos = np.abs(x_pos)
+            print(x_pos, y_pos)
         else:
             # entire sensor will be evaluated
 
@@ -112,6 +114,7 @@ class Instrument(object):
             x_pos = (x_coord - 0.5) * self.camera.pix_size - centre_pos[1]  # [ m ]
 
             x_pos, y_pos = np.meshgrid(x_pos, y_pos)
+            # x_pos = list(np.abs(x_pos))
 
         return x_pos, y_pos
 

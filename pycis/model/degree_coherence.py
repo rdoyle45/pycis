@@ -97,6 +97,31 @@ def measure_degree_coherence_xr(spectrum, delay, material=None):
     return degree_coherence
 
 
+def calculate_degree_coherence_full(spectrum, wl_axis, l_wp, material='a-BBO'):
+    """
+
+    :param spectrum:
+    :param wl_axis:
+    :return:
+    """
+
+    assert len(spectrum) == len(wl_axis)
+
+    freq_axis = c / wl_axis
+    spectrum_freq = spectrum * wl_axis ** 2 / c
+    freq_com = np.trapz(freq_axis * spectrum_freq, freq_axis) / np.trapz(spectrum_freq, freq_axis)  # weighted mean
+    biref = pycis.dispersion(wl_axis, material=material)[0]
+    biref_com = pycis.dispersion(c / freq_com, material=material)[0]
+
+    integrand = spectrum_freq * np.exp(-2 * np.pi * 1j * l_wp * biref * freq_axis / c)
+    degree_coherence = np.trapz(integrand, freq_axis, axis=0)
+    delay_com = 2 * np.pi * l_wp * biref_com * freq_com / c
+
+    return degree_coherence, delay_com
+
+
+
+
 def plot_degree_coherence(spectrum, wl_axis, delay_max=5e4, material=None, npts=None, axes=None, display=True):
     """
     basically the same as above but evaluated over many interferometer delays to make a nice plot
@@ -159,7 +184,7 @@ def plot_degree_coherence(spectrum, wl_axis, delay_max=5e4, material=None, npts=
 
         # ax2.plot(delay_axis, np.real(degree_coherence), color='C0', label='Re($\gamma$)', lw=0.7)
         # ax2.plot(delay_axis, np.imag(degree_coherence), color='C1', label='Im($\gamma$)', lw=0.7)
-        # ax2.plot(delay_axis, abs(degree_coherence), ls='--', label='$|\gamma|$', lw=2)
+        ax2.plot(delay_axis, abs(degree_coherence), ls='--', label='$|\gamma|$', lw=2)
         # ax2.plot(delay_axis, contrast_lz, ls=':', lw=2)
 
         # fwhm = pystark.get_fwhm_stark(n_upper, e_dens)
