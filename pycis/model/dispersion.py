@@ -41,10 +41,10 @@ d = {'kato1986':
 
 # set material default sources
 default_sources = {'calcite': 'ghosh',
-                   # 'b-BBO': 'eimerl',
-                   'b-BBO': 'kato2010',
-                   'a-BBO': 'newlightphotonics',
-                   # 'a-BBO': 'agoptics',
+                   'b-BBO': 'eimerl',
+                   # 'b-BBO': 'kato2010',
+                   # 'a-BBO': 'newlightphotonics',
+                   'a-BBO': 'agoptics',
                    # 'a-BBO': 'kim',
                    'YVO': 'shi'}
 
