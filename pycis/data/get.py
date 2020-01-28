@@ -1,5 +1,5 @@
 import sys
-# sys.path.append('/home/rdoyle/CIS') 
+sys.path.append('/home/rdoyle/CIS') 
 
 from pyIpx.movieReader import ipxReader
 import calcam
