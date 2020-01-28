@@ -1,26 +1,26 @@
 import sys
-sys.path.append('/home/ssilburn/Python/lib')
+# sys.path.append('/home/rdoyle/CIS') 
 
-# from pyIpx.movieReader import ipxReader
-# import calcam
+from pyIpx.movieReader import ipxReader
+import calcam
 import pycis
 from scipy.io import loadmat
 import os
 import pandas
 import numpy as np
-# from pyEquilibrium import equilibrium
+from pyEquilibrium import equilibrium
 from scipy.interpolate import interp2d, griddata, interp1d
 import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib.colors
 
 # Where the MAST calibrations are stored.
-cal_lut_file = '/work/ssilburn/CIS_MATLAB_calibrations/LUT.xlsx'
-cal_dir = '/work/ssilburn/CIS_MATLAB_calibrations'
+cal_lut_file = '/home/rdoyle/CIS/ssilburn/CIS_MATLAB_calibrations/LUT.xlsx'
+cal_dir = '/home/rdoyle/CIS/ssilburn/CIS_MATLAB_calibrations'
 
 try:
     # Load the ol' custom flow colour map
-    cmd = np.loadtxt('/home/ssilburn/Python/CIS/flow_cmap.txt')
+    cmd = np.loadtxt('/home/rdoyle/CIS/ssilburn/CIS/flow_cmap.txt')
     flow = matplotlib.colors.LinearSegmentedColormap.from_list('flow', cmd, N=128)
 except:
     flow=0
