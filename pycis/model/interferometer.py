@@ -101,12 +101,16 @@ class BirefringentComponent(InterferometerComponent):
 
     """
 
-    def __init__(self, orientation, thickness, material='a-BBO', contrast=1, clr_aperture=None):
+    def __init__(self, orientation, thickness, material='a-BBO', source=None, contrast=1, clr_aperture=None):
         """
         :param thickness: [ m ]
         :type thickness: float
 
         :param material: string denoting crystal material
+        :type material: str
+
+        :param source: string denoting source of Sellmeier coefficients describing dispersion in the crystal. If
+        blank, the default material source specified in pycis.model.dispersion
         :type material: str
 
         :param contrast: arbitrary contrast degradation factor for crystal, uniform contrast only for now.
@@ -116,6 +120,7 @@ class BirefringentComponent(InterferometerComponent):
 
         self.thickness = thickness
         self.material = material
+        self.source = source
         self.contrast = contrast
 
     def calculate_matrix(self, wl, inc_angle, azim_angle):
@@ -161,7 +166,7 @@ class UniaxialCrystal(BirefringentComponent):
 
     """
 
-    def __init__(self, orientation, thickness, cut_angle, material='a-BBO', contrast=1, clr_aperture=None):
+    def __init__(self, orientation, thickness, cut_angle, material='a-BBO', source=None, contrast=1, clr_aperture=None):
         """
         
         :param cut_angle: [ rad ] angle between optic axis and crystal front face
@@ -204,7 +209,7 @@ class UniaxialCrystal(BirefringentComponent):
 
         # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
         if n_e is None and n_o is None:
-            biref, n_e, n_o = pycis.model.dispersion(wl, self.material)
+            biref, n_e, n_o = pycis.model.dispersion(wl, self.material, source=self.source)
         else:
             assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
 
@@ -249,13 +254,15 @@ class SavartPlate(BirefringentComponent):
 
     """
 
-    def __init__(self, orientation, thickness, material='a-BBO', mode='francon', contrast=1, clr_aperture=None):
+    def __init__(self, orientation, thickness, material='a-BBO', source=None, mode='francon', contrast=1,
+                 clr_aperture=None):
         """
         :param mode: source for the equation for phase delay: 'francon' (approx.) or 'veiras' (exact)
         :type mode: string
 
         """
-        super().__init__(orientation, thickness, material=material, contrast=contrast, clr_aperture=clr_aperture)
+        super().__init__(orientation, thickness, material=material, source=source, contrast=contrast,
+                         clr_aperture=clr_aperture)
         self.mode = mode
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
@@ -290,7 +297,7 @@ class SavartPlate(BirefringentComponent):
 
             # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
             if n_e is None and n_o is None:
-                biref, n_e, n_o = pycis.model.dispersion(wl, self.material)
+                biref, n_e, n_o = pycis.model.dispersion(wl, self.material, source=self.source)
             else:
                 assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
 
@@ -367,7 +374,6 @@ class QuarterWaveplate(BirefringentComponent):
         thickness = 1.  # this value is arbitrary
 
         super().__init__(orientation, thickness, clr_aperture=clr_aperture)
-
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
         """
