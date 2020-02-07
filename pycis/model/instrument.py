@@ -100,6 +100,7 @@ class Instrument(object):
             y_pos = (y_coord - 0.5) * self.camera.pix_size - centre_pos[0]  # [ m ]
             print(x_pos, y_pos)
             # x_pos = np.abs(x_pos)
+            # y_pos = np.abs(y_pos)
             print(x_pos, y_pos)
         else:
             # entire sensor will be evaluated
@@ -192,7 +193,6 @@ class Instrument(object):
 
         # calculate the angles of each pixel's line of sight through the interferometer
         x_pos, y_pos = self.calculate_pixel_pos(x_coord=x_coord, y_coord=y_coord, crop=crop, downsample=downsample)
-
         inc_angles = self.calculate_ray_inc_angles(x_pos, y_pos)
         azim_angles = self.calculate_ray_azim_angles(x_pos, y_pos, self.crystals[0])
 
