@@ -71,10 +71,6 @@ class FlowGeoMatrix():
 		if inv_emis is None:
 			self.inv_emis = sart.solve(geom_mat.data, self._data_vector(shot,frame, geom_mat))
 	
-	def test(self):
-
-		print(self.inv_emis[0])
-
 	def _data_vector(self, shot, frame, geom_mat):
 
 		cis_image = CISImage(shot, frame)
