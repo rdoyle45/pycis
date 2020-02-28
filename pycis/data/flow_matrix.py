@@ -87,7 +87,7 @@ class FlowGeoMatrix:
 
         # Solve y = Ax + b for x, the inverted emissivity matrix
         if inv_emis is None:
-            self.inv_emis = sart.solve(geom_mat.data, self._data_vector())[0]
+            self.inv_emis = sart.solve(self.geom_data, self._data_vector())[0]
 
         ray_start_coords = self.raydata.ray_start_coords.reshape(-1, 3, order=self.order)
         ray_end_coords = self.raydata.ray_end_coords.reshape(-1, 3, order=self.order)
