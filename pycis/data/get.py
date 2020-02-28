@@ -1,26 +1,29 @@
 import sys
-sys.path.append('/home/ssilburn/Python/lib')
+sys.path.append('/home/rdoyle/CIS')
 
-# from pyIpx.movieReader import ipxReader
-# import calcam
+from pyIpx.movieReader import ipxReader
+import calcam
 import pycis
 from scipy.io import loadmat
 import os
 import pandas
 import numpy as np
-# from pyEquilibrium import equilibrium
+from pyEquilibrium import equilibrium
 from scipy.interpolate import interp2d, griddata, interp1d
 import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib.colors
 
+import pyuda
+client = pyuda.Client()
+
 # Where the MAST calibrations are stored.
-cal_lut_file = '/work/ssilburn/CIS_MATLAB_calibrations/LUT.xlsx'
-cal_dir = '/work/ssilburn/CIS_MATLAB_calibrations'
+cal_lut_file = '/home/rdoyle/ssilburn/CIS_MATLAB_calibrations/LUT.xlsx'
+cal_dir = '/home/rdoyle/ssilburn/CIS_MATLAB_calibrations'
 
 try:
     # Load the ol' custom flow colour map
-    cmd = np.loadtxt('/home/ssilburn/Python/CIS/flow_cmap.txt')
+    cmd = np.loadtxt('/home/rdoyle/ssilburn/CIS/flow_cmap.txt')
     flow = matplotlib.colors.LinearSegmentedColormap.from_list('flow', cmd, N=128)
 except:
     flow=0
@@ -38,9 +41,8 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, time):
+    def __init__(self, shot, frame):
         """ Accessing the MAST CIS raw_data. Code written by Scott Silburn. """
-
         # Get raw raw_data
         self.shot = shot
         if shot > 28630 and shot < 30472:
@@ -48,11 +50,22 @@ class CISImage():
         else:
             raise ValueError('There was no CIS diagnostic for this shot!')
         # Get the raw_data using ipxReader and set the timestamp to the actual frame time stamp.
-        ipxreader = ipxReader(shot=shot, camera=cam)
-        ipxreader.set_frame_time(time)
-        _, self.raw_data, header = ipxreader.read()
-        self.raw_data = self.raw_data / 64
-        self.time = header['time_stamp']
+        #ipxreader = ipxReader(shot=shot, camera=cam)
+        #ipxreader.set_frame_time(time)
+        #_, self.raw_data, header = ipxreader.read()
+        
+        #self.raw_data = self.raw_data / 64
+        #self.time = header['time_stamp']
+
+        try:
+            ipx_data = client.get('NEWIPX::read(filename=/net/fuslsa/data/MAST_Data/{0}/LATEST/rbc0{0}.ipx, frame={1})'.format(shot,frame), '')
+        except ValueError:
+            raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
+
+        frame = ipx_data.frames[0]
+        self.raw_data = frame.k
+
+        self.time = frame.time
 
         # Get calibrations
         self._get_calibrations()
@@ -147,6 +160,7 @@ class CISImage():
 
         elif type == 'I0_flow':
             cm = matplotlib.cm.get_cmap(cmap)
+            print(clim)
             vmap = self.v_los - clim[0] * 1e3
             vmap[vmap > (clim[1] - clim[0]) * 1e3] = (clim[1] - clim[0]) * 1e3
             vmap[vmap < 0] = 0
@@ -232,7 +246,7 @@ class CISImage():
 
         if cal_ref_shot is None:
             raise ValueError('No calib found for this pulse!')
-
+        
         # Load the MATLAB calib raw_data!
         matfile_path = os.path.join(cal_dir, '{:s}.mat'.format(calib_log['matlab_file'][cal_ref_shot]))
         matfile_data = loadmat(matfile_path)
@@ -254,7 +268,7 @@ class CISImage():
         del matfile_data
 
         # Get the view geometry frmo Calcam - not currently used
-        '''
+        ''' 
         calcam_name = 'CIS/{:s}'.format( '-'.join( calib_log['extrinsics'][cal_ref_shot].split('-')[1:]) )
         try:
             raydata = calcam.RayData(calcam_name)
