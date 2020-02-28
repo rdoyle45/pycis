@@ -1,3 +1,4 @@
+import random
 import time
 import numpy as np
 import calcam
@@ -97,13 +98,14 @@ class FlowGeoMatrix:
         n_los = self.raydata.x.size
 
         inds = list(range(n_los))
+        random.shuffle(inds)
         last_status_update = 0.
 
         self.ray_cell_data = []
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(self._get_ray_cell_interactions, (ray_start_coords[inds, :], ray_end_coords[inds, :]), 10)):
+            for i, data in enumerate(cpupool.imap(self._get_ray_cell_interactions, np.hstack((ray_start_coords[inds,:], ray_end_coords[inds,:])), 10)):
 
                 self.ray_cell_data.append(data)
 
@@ -123,7 +125,10 @@ class FlowGeoMatrix:
 
     def _get_ray_cell_interactions(self, rays):
 
-        positions, interacted_cells = self.grid.get_cell_intersections(rays[0], rays[1])
+        ray_start_coords = np.array(rays[:3])
+        ray_end_coords = np.array(rays[3:])
+
+        positions, interacted_cells = self.grid.get_cell_intersections(ray_start_coords, ray_end_coords)
 
         return positions, interacted_cells
 
