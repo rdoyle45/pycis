@@ -103,7 +103,7 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in cpupool.imap(self._get_ray_cell_interactions, np.hstack((ray_start_coords[inds,:], ray_end_coords[inds,:]))):
+            for i, data in enumerate(cpupool.imap(self._get_ray_cell_interactions, np.hstack((ray_start_coords[inds,:], ray_end_coords[inds,:])))):
 
                 self.ray_cell_data.append(data)
 
