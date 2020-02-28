@@ -83,7 +83,7 @@ class FlowGeoMatrix:
                 raise Exception('PoloidalVolumeGrid object not provided for grid.')
 
         self.grid = self.geom_mat.grid
-        self.geom_data = geom_mat.data
+        self.geom_data = self.geom_mat.data
 
         # Solve y = Ax + b for x, the inverted emissivity matrix
         if inv_emis is None:
