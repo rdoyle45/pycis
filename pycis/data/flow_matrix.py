@@ -1,3 +1,4 @@
+import copy
 import random
 import time
 import numpy as np
@@ -83,7 +84,7 @@ class FlowGeoMatrix:
             else:
                 raise Exception('PoloidalVolumeGrid object not provided for grid.')
 
-        self.grid = self.geom_mat.grid
+        self.grid = copy.copy(self.geom_mat.grid)
         self.geom_data = self.geom_mat.data
 
         # Solve y = Ax + b for x, the inverted emissivity matrix
