@@ -97,6 +97,7 @@ class FlowGeoMatrix:
         n_los = self.raydata.x.size
 
         inds = list(range(n_los))
+        last_status_update = 0.
 
         self.ray_cell_data = []
 
