@@ -87,7 +87,7 @@ class FlowGeoMatrix:
                 print('Generating default square grid for MAST.')
                 self.grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
 
-            self.geom_mat = calcam.gm.GeometryMatrix(grid, self.raydata)
+            self.geom_mat = calcam.gm.GeometryMatrix(self.grid, self.raydata)
 
         self.geom_data = self.geom_mat.data
 
