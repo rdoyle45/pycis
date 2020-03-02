@@ -132,7 +132,6 @@ class FlowGeoMatrix:
 
         return emis_vector
 
-grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
 
 def _get_ray_cell_interactions(grid, rays):
 
