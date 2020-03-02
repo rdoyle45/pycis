@@ -3,16 +3,13 @@ import random
 import time
 import numpy as np
 import calcam
-from calcam.gm import misc, config, PoloidalVolumeGrid
+from calcam.gm import misc, config
 import matplotlib.pyplot as plt
 import multiprocessing
 from pyEquilibrium.equilibrium import equilibrium
 from pycis.solvers import sart
 from .get import CISImage, get_Bfield
-
-
-class CalcamGrid(PoloidalVolumeGrid):
-    pass
+from functools import partial
 
 
 class FlowGeoMatrix:
@@ -114,7 +111,7 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(_get_ray_cell_interactions, rays, 10)):
+            for i, data in enumerate(cpupool.imap(partial(_get_ray_cell_interactions, self.grid), rays, 10)):
 
                 self.ray_cell_data.append(data)  # Store ray interaction data
 
@@ -137,7 +134,7 @@ class FlowGeoMatrix:
 
 grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
 
-def _get_ray_cell_interactions(self, rays):
+def _get_ray_cell_interactions(grid, rays):
 
     ray_start_coords = np.array(rays[:3])
     ray_end_coords = np.array(rays[3:])
