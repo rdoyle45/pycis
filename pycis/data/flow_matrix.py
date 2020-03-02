@@ -99,17 +99,19 @@ class FlowGeoMatrix:
         n_cells = self.grid.n_cells
         n_los = self.raydata.x.size
 
+        # Shuffling indices results in a better time remaining estimation
         inds = list(range(n_los))
         random.shuffle(inds)
         last_status_update = 0.
 
+        rays = np.hstack((ray_start_coords[inds, :], ray_end_coords[inds, :]))  # Combine coords for imap
         self.ray_cell_data = []
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(self._get_ray_cell_interactions, np.hstack((ray_start_coords[inds,:], ray_end_coords[inds,:])), 10)):
+            for i, data in enumerate(cpupool.imap(self._get_ray_cell_interactions, rays, 1000)):
 
-                self.ray_cell_data.append(data)
+                self.ray_cell_data.append(data)  # Store ray interaction data
 
                 if time.time() - last_status_update > 1. and calc_status_callback is not None:
                     calc_status_callback(float(i) / n_los)
