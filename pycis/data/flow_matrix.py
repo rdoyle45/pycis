@@ -108,7 +108,8 @@ class FlowGeoMatrix:
         # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
         # each interacts with a cell wall
         if calc_status_callback is not None:
-            calc_status_callback('Calculating geometry matrix elements using {:d} CPUs...'.format(config.n_cpus))
+            calc_status_callback('Calculating sight-line cell interactions using {:d} '
+                                 'CPUs...'.format(config.n_cpus))
 
         last_status_update = 0.
 
@@ -117,7 +118,7 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(partial(_get_ray_cell_interactions, self.grid), rays, 1000)):
+            for i, data in enumerate(cpupool.imap(partial(self._get_ray_cell_interactions, self.grid), rays, 10)):
 
                 self.ray_cell_data.append(data)  # Store ray interaction data
 
@@ -138,12 +139,11 @@ class FlowGeoMatrix:
 
         return emis_vector
 
+    def _get_ray_cell_interactions(self, grid, rays):
 
-def _get_ray_cell_interactions(grid, rays):
+        ray_start_coords = np.array(rays[:3])
+        ray_end_coords = np.array(rays[3:])
 
-    ray_start_coords = np.array(rays[:3])
-    ray_end_coords = np.array(rays[3:])
+        positions, interacted_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
 
-    positions, interacted_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
-
-    return positions, interacted_cells
+        return positions, interacted_cells
