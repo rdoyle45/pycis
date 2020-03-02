@@ -104,6 +104,12 @@ class FlowGeoMatrix:
         # Shuffling indices results in a better time remaining estimation
         inds = list(range(n_los))
         random.shuffle(inds)
+
+        # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
+        # each interacts with a cell wall
+        if calc_status_callback is not None:
+            calc_status_callback('Calculating geometry matrix elements using {:d} CPUs...'.format(config.n_cpus))
+
         last_status_update = 0.
 
         rays = np.hstack((ray_start_coords[inds, :], ray_end_coords[inds, :]))  # Combine coords for imap
@@ -111,7 +117,7 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(partial(_get_ray_cell_interactions, self.grid), rays, 10)):
+            for i, data in enumerate(cpupool.imap(partial(_get_ray_cell_interactions, self.grid), rays, 1000)):
 
                 self.ray_cell_data.append(data)  # Store ray interaction data
 
