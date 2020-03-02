@@ -114,7 +114,7 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(self._get_ray_cell_interactions, rays, 10)):
+            for i, data in enumerate(cpupool.imap(_get_ray_cell_interactions, rays, 10)):
 
                 self.ray_cell_data.append(data)  # Store ray interaction data
 
@@ -135,11 +135,13 @@ class FlowGeoMatrix:
 
         return emis_vector
 
-    def _get_ray_cell_interactions(self, rays):
+grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
 
-        ray_start_coords = np.array(rays[:3])
-        ray_end_coords = np.array(rays[3:])
+def _get_ray_cell_interactions(self, rays):
 
-        positions, interacted_cells = self.grid.get_cell_intersections(ray_start_coords, ray_end_coords)
+    ray_start_coords = np.array(rays[:3])
+    ray_end_coords = np.array(rays[3:])
 
-        return positions, interacted_cells
+    positions, interacted_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
+
+    return positions, interacted_cells
