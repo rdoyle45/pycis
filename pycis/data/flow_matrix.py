@@ -140,7 +140,7 @@ class FlowGeoMatrix:
         return emis_vector
 
 
-def get_ray_cell_interactions(self, grid, rays):
+def get_ray_cell_interactions(grid, rays):
 
     ray_start_coords = np.array(rays[:3])
     ray_end_coords = np.array(rays[3:])
