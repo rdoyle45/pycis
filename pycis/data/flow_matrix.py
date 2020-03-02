@@ -148,4 +148,35 @@ def get_ray_cell_interactions(grid, rays):
 
     positions, interacted_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
 
+    b_field_coords = _get_b_field_coords(positions, ray_start_coords, ray_end_coords)
+
     return positions, interacted_cells
+
+def _get_b_field_coords(pos, ray_start, ray_end):
+
+    ray_vector = ray_end - ray_start  # Vector pointing along the sightline
+    ray_length = np.sqrt(np.sum((ray_end - ray_start)**2 ))
+
+    relative_position = pos/ray_length
+    n_interactions = len(relative_position)
+    b_field_coords = np.ndarray(shape=(n_interactions, 10))
+
+    # Segment midpoints at which to take B-field values
+    b_field_points = np.arange(0.05, 1, 0.1)
+
+    for i in range(n_interactions-1):
+        for j in range(10):
+
+            seg_start = ray_start + relative_position[i]*ray_vector
+            seg_end = ray_start + relative_position[i+]*ray_vector
+
+            seg_vector = seg_end - seg_start
+            b_field_coords[i][j] = ray_start + b_field_points[j]*seg_vector
+
+    return b_field_coords
+
+
+
+def convert_xy_R(coords):
+
+
