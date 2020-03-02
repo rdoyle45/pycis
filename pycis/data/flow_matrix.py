@@ -109,13 +109,16 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(self._get_ray_cell_interactions, rays, 1000)):
+            for i, data in enumerate(cpupool.imap(self._get_ray_cell_interactions, rays, 10)):
 
                 self.ray_cell_data.append(data)  # Store ray interaction data
 
                 if time.time() - last_status_update > 1. and calc_status_callback is not None:
                     calc_status_callback(float(i) / n_los)
                     last_status_update = time.time()
+
+        if calc_status_callback is not None:
+            calc_status_callback(1.)
 
     def _data_vector(self):
 
