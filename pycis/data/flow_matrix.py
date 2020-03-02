@@ -10,6 +10,7 @@ from pyEquilibrium.equilibrium import equilibrium
 from pycis.solvers import sart
 from .get import CISImage, get_Bfield
 
+grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
 
 class FlowGeoMatrix:
     """
@@ -80,7 +81,7 @@ class FlowGeoMatrix:
                 self.geom_mat = calcam.gm.GeometryMatrix.fromfile(geom_mat)
         else:
             if grid:
-                self.geom_mat = calcam.gm.GeometryMatrix(grid, raydata)
+                self.geom_mat = calcam.gm.GeometryMatrix(grid, self.raydata)
             else:
                 raise Exception('PoloidalVolumeGrid object not provided for grid.')
 
@@ -89,8 +90,8 @@ class FlowGeoMatrix:
         self.geom_data = self.geom_mat.data
 
         # Solve y = Ax + b for x, the inverted emissivity matrix
-        if inv_emis is None:
-            self.inv_emis = sart.solve(self.geom_data, self._data_vector())[0]
+#        if inv_emis is None:
+ #           self.inv_emis = sart.solve(self.geom_data, self._data_vector())[0]
 
         ray_start_coords = self.raydata.ray_start_coords.reshape(-1, 3, order=self.order)
         ray_end_coords = self.raydata.ray_end_coords.reshape(-1, 3, order=self.order)
@@ -109,7 +110,7 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(self._get_ray_cell_interactions, rays, 10)):
+            for i, data in enumerate(cpupool.imap(get_ray_cell_interactions, rays, 10)):
 
                 self.ray_cell_data.append(data)  # Store ray interaction data
 
@@ -119,6 +120,8 @@ class FlowGeoMatrix:
 
         if calc_status_callback is not None:
             calc_status_callback(1.)
+
+        #self.ray_cell_data = multi_test(rays, n_los, calc_status_callback=calc_status_callback)
 
     def _data_vector(self):
 
@@ -130,13 +133,35 @@ class FlowGeoMatrix:
 
         return emis_vector
 
-    def _get_ray_cell_interactions(self, rays):
 
-        ray_start_coords = np.array(rays[:3])
-        ray_end_coords = np.array(rays[3:])
+def multi_test(rays, n_los, calc_status_callback=None):
 
-        positions, interacted_cells = self.grid.get_cell_intersections(ray_start_coords, ray_end_coords)
+    raycell = []
+    last_status_update = 0.
 
-        return positions, interacted_cells
+    with multiprocessing.Pool(config.n_cpus) as cpupool:
+        calc_status_callback(0.)
+        for i, data in enumerate(cpupool.imap(get_ray_cell_interactions, rays, 10)):
+
+            raycell.append(data)  # Store ray interaction data
+
+            if time.time() - last_status_update > 1. and calc_status_callback is not None:
+                calc_status_callback(float(i) / n_los)
+                last_status_update = time.time()
+
+    if calc_status_callback is not None:
+        calc_status_callback(1.)
+
+    return raycell
+
+
+def get_ray_cell_interactions(rays):
+
+    ray_start_coords = np.array(rays[:3])
+    ray_end_coords = np.array(rays[3:])
+
+    positions, interacted_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
+
+    return positions, interacted_cells
 
 
