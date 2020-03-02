@@ -82,7 +82,7 @@ class FlowGeoMatrix:
                 self.grid = copy.copy(self.geom_mat.grid)
         else:
             if grid:
-                self.grid = grid
+                self.grid = copy.copy(grid)
             else:
                 print('Generating default square grid for MAST.')
                 self.grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
