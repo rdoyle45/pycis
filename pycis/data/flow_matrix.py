@@ -20,7 +20,7 @@ class FlowGeoMatrix:
     stored as a sparse matrix using the scipy.sprase.csr_matrix class.
 
     The matrix, denoted by Nu_ij, and is constructed as per eq. 4.6.6 [1], where
-    epsilon_0,j is inv_emis[0], Epsilon_ij' is geom_mat.data, B_k djfd and l_k is ksjdksj
+    epsilon_0,j is inv_emis[0], Epsilon_ij' is geom_mat.data, B_k djfd and l_k is l_k_vectors
 
     References:
         [1] SILBURN,SCOTT,ALAN(2014)A Doppler Coherence Imaging Diagnostic for
@@ -66,6 +66,8 @@ class FlowGeoMatrix:
         self.shot = shot
         self.frame = frame
         self.order = pixel_order
+
+        b_field_funcs = get_Bfield(self.shot, self.frame)  # Functions to calculate B-field components at a given point
 
         if raydata:
             if isinstance(raydata, str):
@@ -119,7 +121,7 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(partial(get_ray_cell_interactions, self.grid), rays, 10)):
+            for i, data in enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid, b_field_funcs), rays, 10)):
 
                 self.ray_cell_data.append(data)  # Store ray interaction data
 
@@ -141,16 +143,22 @@ class FlowGeoMatrix:
         return emis_vector
 
 
-def get_ray_cell_interactions(grid, rays):
+def calculate_geom_mat_elements(grid, b_field_funcs, rays):
 
     ray_start_coords = np.array(rays[:3])
     ray_end_coords = np.array(rays[3:])
 
     positions, interacted_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
 
-    b_field_coords = _get_b_field_coords(positions, ray_start_coords, ray_end_coords)
+    b_field_coords, l_k_vectors = _get_b_field_coords(positions, ray_start_coords, ray_end_coords)
+    coords_in_RZ, theta = _convert_xy_r(b_field_coords)
+
+    b_field_rtz = _get_b_field_comp(b_field_funcs, coords_in_RZ)
+
+    b_field_xyz = _convert_rt_xy(b_field_rtz, theta)
 
     return positions, interacted_cells
+
 
 def _get_b_field_coords(pos, ray_start, ray_end):
 
@@ -164,19 +172,75 @@ def _get_b_field_coords(pos, ray_start, ray_end):
     # Segment midpoints at which to take B-field values
     b_field_points = np.arange(0.05, 1, 0.1)
 
+    l_k_vectors = []  # This variable represents the l_k vector in the formula for flow geometry matrix
+
     for i in range(n_interactions-1):
+
+        #  Start and end points of the the parts of each sight line that lie in each cell
+        seg_start = ray_start + relative_position[i] * ray_vector
+        seg_end = ray_start + relative_position[i + 1] * ray_vector
+
+        # Vector describing those parts
+        seg_vector = seg_end - seg_start
+
+        l_k_vectors.append(seg_vector*0.1)
+
         for j in range(10):
 
-            seg_start = ray_start + relative_position[i]*ray_vector
-            seg_end = ray_start + relative_position[i+]*ray_vector
-
-            seg_vector = seg_end - seg_start
             b_field_coords[i][j] = ray_start + b_field_points[j]*seg_vector
 
-    return b_field_coords
+    return b_field_coords, l_k_vectors
 
 
+def _convert_xy_r(coords):
 
-def convert_xy_R(coords):
+    b_field_theta = []
+    b_field_coords = coords.reshape(-1, 3, order='C')
+
+    b_field_RZ = np.ndarray(shape=(len(b_field_coords), 2))
+
+    for i, row in enumerate(b_field_coords):
+
+        b_field_RZ[i][0] = np.sqrt(row[0]**2 + row[1]**2)
+        b_field_RZ[i][1] = row[2]
+
+        theta = np.arctan2(row[1], row[0])
+
+        if row[1] < 0:
+            theta = 2*np.pi + theta
+
+        b_field_theta.append(theta)
+
+    return b_field_RZ, b_field_theta
 
 
+def _get_b_field_comp(b_funcs, coords):
+
+    # Functions to calculate the
+    bt = b_funcs[0]
+    br = b_funcs[1]
+    bz = b_funcs[2]
+
+    b_field_comp = np.ndarray(shape=(len(coords), 3))
+
+    for i, row in enumerate(coords):
+
+        b_field_comp[i][0] = br(row[0], row[1])
+        b_field_comp[i][1] = bt(row[0], row[1])
+        b_field_comp[i][2] = bz(row[0], row[1])
+
+    return b_field_comp
+
+
+def _convert_rt_xy(comps, theta):
+
+    b_field_xyz = np.ndarray(shape=comps.shape)
+
+    for i, (b_field, theta) in enumerate(zip(comps, theta)):
+
+        c, s = np.cos(theta), np.sin(theta)
+        rot_mat = np.array(((c, -s, 0), (s, c, 0), (0, 0, 1)))  # Rotation Matrix
+
+        b_field_xyz[i] = np.matmul(rot_mat, b_field_xyz.transpose()).transpose()
+
+    return b_field_xyz
