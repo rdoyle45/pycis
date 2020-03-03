@@ -117,13 +117,13 @@ class FlowGeoMatrix:
         last_status_update = 0.
 
         rays = np.hstack((ray_start_coords[inds, :], ray_end_coords[inds, :]))  # Combine coords for imap
-        self.ray_cell_data = []
+        self.mag_length = []
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
             for i, data in enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid, b_field_funcs), rays, 10)):
 
-                self.ray_cell_data.append(data)  # Store ray interaction data
+                self.mag_length.append(data)  # Store ray interaction data
 
                 if time.time() - last_status_update > 1. and calc_status_callback is not None:
                     calc_status_callback(float(i) / n_los)
@@ -148,16 +148,30 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     ray_start_coords = np.array(rays[:3])
     ray_end_coords = np.array(rays[3:])
 
+    # Calculate the positions and cells that a sight line intersects
     positions, interacted_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
 
     b_field_coords, l_k_vectors = _get_b_field_coords(positions, ray_start_coords, ray_end_coords)
     coords_in_RZ, theta = _convert_xy_r(b_field_coords)
 
     b_field_rtz = _get_b_field_comp(b_field_funcs, coords_in_RZ)
-
     b_field_xyz = _convert_rt_xy(b_field_rtz, theta)
 
-    return positions, interacted_cells
+    seg_factor = len(b_field_xyz)/len(l_k_vectors)
+    b_dot_l = np.ndarray(shape=(len(l_k_vectors),1))
+
+    for i in range(len(l_k_vectors)):
+        total_seg_val = 0
+        for j in range(len(b_field_xyz)):
+
+            index = seg_factor*i + j
+            b_l = np.dot(b_field_xyz[index], l_k_vectors[i])
+
+            total_seg_val += b_l
+
+        b_dot_l[i] = total_seg_val
+
+    return b_dot_l, interacted_cells
 
 
 def _get_b_field_coords(pos, ray_start, ray_end):
@@ -172,7 +186,7 @@ def _get_b_field_coords(pos, ray_start, ray_end):
     # Segment midpoints at which to take B-field values
     b_field_points = np.arange(0.05, 1, 0.1)
 
-    l_k_vectors = []  # This variable represents the l_k vector in the formula for flow geometry matrix
+    l_k = []  # This variable represents the l_k vector in the formula for flow geometry matrix
 
     for i in range(n_interactions-1):
 
@@ -183,11 +197,13 @@ def _get_b_field_coords(pos, ray_start, ray_end):
         # Vector describing those parts
         seg_vector = seg_end - seg_start
 
-        l_k_vectors.append(seg_vector*0.1)
+        l_k.append(seg_vector*0.1)
 
         for j in range(10):
 
             b_field_coords[i][j] = ray_start + b_field_points[j]*seg_vector
+
+    l_k_vectors = np.asarray(l_k)
 
     return b_field_coords, l_k_vectors
 
@@ -244,3 +260,5 @@ def _convert_rt_xy(comps, theta):
         b_field_xyz[i] = np.matmul(rot_mat, b_field_xyz.transpose()).transpose()
 
     return b_field_xyz
+
+
