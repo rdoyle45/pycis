@@ -121,8 +121,7 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap((partial(calculate_geom_mat_elements, self.grid, b_field_funcs)),
-                                                   rays, 10)):
+            for i, data in enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid, b_field_funcs),rays, 10)):
 
                 self.mag_length.append(data)  # Store ray interaction data
 
@@ -178,11 +177,11 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
 def _get_b_field_coords(pos, ray_start, ray_end):
 
     ray_vector = ray_end - ray_start  # Vector pointing along the sightline
-    ray_length = np.sqrt(np.sum((ray_end - ray_start)**2 ))
+    ray_length = np.sqrt(np.sum(ray_vector**2))
 
     relative_position = pos/ray_length
     n_interactions = len(relative_position)
-    b_field_coords = np.ndarray(shape=(n_interactions, 10))
+    b_field_coords = np.ndarray(shape=(n_interactions, 10, 3))
 
     # Segment midpoints at which to take B-field values
     b_field_points = np.arange(0.05, 1, 0.1)
@@ -202,7 +201,7 @@ def _get_b_field_coords(pos, ray_start, ray_end):
 
         for j in range(10):
 
-            b_field_coords[i][j] = ray_start + b_field_points[j]*seg_vector
+            b_field_coords[i][j] = np.asarray(ray_start + b_field_points[j]*seg_vector)
 
     l_k_vectors = np.asarray(l_k)
 
