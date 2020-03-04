@@ -121,9 +121,11 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid, b_field_funcs),rays, 10)):
-
-                self.mag_length.append(data)  # Store ray interaction data
+            for (i, data), pixel in zip(enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid, b_field_funcs),rays, 10)), inds):
+                
+                if data is not None:
+                    b_l = data[0]
+                    cell = data[1]
 
                 if time.time() - last_status_update > 1. and calc_status_callback is not None:
                     calc_status_callback(float(i) / n_los)
@@ -142,6 +144,7 @@ class FlowGeoMatrix:
 
         return emis_vector
 
+    def _weighting_matrix(self):
 
 def calculate_geom_mat_elements(grid, b_field_funcs, rays):
 
@@ -149,20 +152,25 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     ray_end_coords = np.array(rays[3:])
 
     # Calculate the positions and cells that a sight line intersects
-    positions, interacted_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
+    positions, intersected_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
 
     b_field_coords, l_k_vectors = _get_b_field_coords(positions, ray_start_coords, ray_end_coords)
+
+    # Ray may not interact with any cells, in which case no data is to be output
+    if not isinstance(b_field_coords, np.ndarray):
+        return None
+
     coords_in_RZ, theta = _convert_xy_r(b_field_coords)
 
     b_field_rtz = _get_b_field_comp(b_field_funcs, coords_in_RZ)
     b_field_xyz = _convert_rt_xy(b_field_rtz, theta)
 
-    seg_factor = len(b_field_xyz)/len(l_k_vectors)
+    seg_factor = int(len(b_field_xyz)/len(l_k_vectors))
     b_dot_l = np.ndarray(shape=(len(l_k_vectors),1))
 
     for i in range(len(l_k_vectors)):
         total_seg_val = 0
-        for j in range(len(b_field_xyz)):
+        for j in range(seg_factor):
 
             index = seg_factor*i + j
             b_l = np.dot(b_field_xyz[index], l_k_vectors[i])
@@ -170,8 +178,30 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
             total_seg_val += b_l
 
         b_dot_l[i] = total_seg_val
+    
+    cell_no = np.zeros(positions.size-1)    
+    in_cell = set()
 
-    return b_dot_l, interacted_cells
+    # Convert the lists of intersected cells in to sets for later convenience.
+    intersected_cells = [set(cells) for cells in intersected_cells]
+
+    for i in range(positions.size):
+
+        if len(in_cell) == 0:
+            # Entering the grid
+            in_cell = intersected_cells[i]
+
+        else:
+            # Going from one cell to another         
+            leaving_cell = list(intersected_cells[i] & in_cell)
+
+            if len(leaving_cell) == 1:
+
+                cell_no[i-1] = leaving_cell[0]
+                in_cell = intersected_cells[i]
+                in_cell.remove(leaving_cell[0])
+
+    return b_dot_l, cell_no
 
 
 def _get_b_field_coords(pos, ray_start, ray_end):
@@ -180,15 +210,19 @@ def _get_b_field_coords(pos, ray_start, ray_end):
     ray_length = np.sqrt(np.sum(ray_vector**2))
 
     relative_position = pos/ray_length
-    n_interactions = len(relative_position)
-    b_field_coords = np.ndarray(shape=(n_interactions, 10, 3))
+    if len(relative_position):
+        n_segs = len(relative_position) - 1
+    else:
+        return None, None
+
+    b_field_coords = np.ndarray(shape=(n_segs, 10, 3))
 
     # Segment midpoints at which to take B-field values
     b_field_points = np.arange(0.05, 1, 0.1)
 
     l_k = []  # This variable represents the l_k vector in the formula for flow geometry matrix
 
-    for i in range(n_interactions-1):
+    for i in range(n_segs):
 
         #  Start and end points of the the parts of each sight line that lie in each cell
         seg_start = ray_start + relative_position[i] * ray_vector
@@ -201,7 +235,7 @@ def _get_b_field_coords(pos, ray_start, ray_end):
 
         for j in range(10):
 
-            b_field_coords[i][j] = np.asarray(ray_start + b_field_points[j]*seg_vector)
+            b_field_coords[i][j] = np.asarray(seg_start + b_field_points[j]*seg_vector)
 
     l_k_vectors = np.asarray(l_k)
 
@@ -254,7 +288,7 @@ def _convert_rt_xy(comps, theta):
         c, s = np.cos(theta), np.sin(theta)
         rot_mat = np.array(((c, -s, 0), (s, c, 0), (0, 0, 1)))  # Rotation Matrix
 
-        b_field_xyz[i] = np.matmul(rot_mat, b_field_xyz.transpose()).transpose()
+        b_field_xyz[i] = np.matmul(rot_mat, b_field.transpose()).transpose()
 
     return b_field_xyz
 
