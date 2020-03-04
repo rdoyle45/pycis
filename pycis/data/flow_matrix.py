@@ -222,9 +222,6 @@ def _convert_xy_r(coords):
 
         theta = np.arctan2(row[1], row[0])
 
-        if row[1] < 0:
-            theta = 2*np.pi + theta
-
         b_field_theta.append(theta)
 
     return b_field_RZ, b_field_theta
