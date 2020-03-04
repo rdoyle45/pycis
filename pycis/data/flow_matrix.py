@@ -121,7 +121,8 @@ class FlowGeoMatrix:
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid, b_field_funcs), rays, 10)):
+            for i, data in enumerate(cpupool.imap((partial(calculate_geom_mat_elements, self.grid, b_field_funcs)),
+                                                   rays, 10)):
 
                 self.mag_length.append(data)  # Store ray interaction data
 
