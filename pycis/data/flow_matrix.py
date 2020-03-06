@@ -10,7 +10,7 @@ from pyEquilibrium.equilibrium import equilibrium
 from pycis.solvers import sart
 from .get import CISImage, get_Bfield
 from functools import partial
-
+from scipy import sparse
 
 class FlowGeoMatrix:
     """
@@ -91,11 +91,11 @@ class FlowGeoMatrix:
 
             self.geom_mat = calcam.gm.GeometryMatrix(self.grid, self.raydata)
 
-        self.geom_data = self.geom_mat.data
+        geom_data = self.geom_mat.data
 
         # Solve y = Ax + b for x, the inverted emissivity matrix
         if inv_emis is None:
-            self.inv_emis = sart.solve(self.geom_data, self._data_vector())[0]
+            self.inv_emis = sart.solve(geom_data, self._data_vector())[0]
 
         ray_start_coords = self.raydata.ray_start_coords.reshape(-1, 3, order=self.order)
         ray_end_coords = self.raydata.ray_end_coords.reshape(-1, 3, order=self.order)
@@ -107,6 +107,36 @@ class FlowGeoMatrix:
         # Shuffling indices results in a better time remaining estimation
         inds = list(range(n_los))
         random.shuffle(inds)
+
+        # Generate the weighting matrix data
+        weight_rowinds = []
+        weight_colinds = []
+        weight_values = []
+
+        for row in range(n_los):
+            row_data = sparse.find(geom_mat.data[row, :])
+            cols = row_data[1]
+            values = row_data[2]
+
+            if cols.shape[0] == 0:
+                break
+
+            denom = 0
+            for i, val in zip(cols, values):
+                denom += val * inv_emis[i]
+
+            for index, data in zip(cols, values):
+                if inv_emis[index] != 0:
+                    weight_rowinds.append(row)
+                    weight_colinds.append(index)
+                    weight_values.append(inv_emis[index] / denom)
+
+        # Reshape array and combine to a sparse matrix
+        weight_rowinds = np.asarray(weight_rowinds).reshape(-1,)
+        weight_colinds = np.asarray(weight_colinds).reshape(-1,)
+        weight_values = np.asarray(weight_values).reshape(-1,)
+
+        self.weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds,weight_colinds)), shape=(n_los,n_cells))
 
         # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
         # each interacts with a cell wall
@@ -144,7 +174,6 @@ class FlowGeoMatrix:
 
         return emis_vector
 
-    def _weighting_matrix(self):
 
 def calculate_geom_mat_elements(grid, b_field_funcs, rays):
 
