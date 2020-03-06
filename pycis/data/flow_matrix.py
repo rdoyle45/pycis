@@ -139,7 +139,7 @@ class FlowGeoMatrix:
         inds = list(range(n_los))
         random.shuffle(inds)
 
-        weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, n_los, self.inv_emis)
+        weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis)
         weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)),
                                              shape=(n_los, n_cells))
 
@@ -665,8 +665,9 @@ def _convert_rt_xy(comps, theta):
     return b_field_xyz
 
 
-def _weighting_matrix(data, n_los, inv_emis):
+def _weighting_matrix(data, inv_emis):
 
+    print("Calculating Weighting Matrix...")
     # Generate the weighting matrix data
     weight_rowinds = []
     weight_colinds = []
