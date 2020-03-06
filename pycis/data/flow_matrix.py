@@ -314,8 +314,9 @@ def _weighting_matrix(data, n_los, inv_emis):
 
     # Loop over each row, extracting the non-zero columns and calculating the weighting value at
     # that row and cell value
-    for row in range(n_los):
-        row_data = sparse.find(data[row, :])
+    for i, row in enumerate(data):
+
+        row_data = sparse.find(row)
         cols = row_data[1]
         values = row_data[2]
 
@@ -328,7 +329,7 @@ def _weighting_matrix(data, n_los, inv_emis):
 
         for index, data in zip(cols, values):
             if inv_emis[index] != 0:
-                weight_rowinds.append(row)
+                weight_rowinds.append(i)
                 weight_colinds.append(index)
                 weight_values.append(inv_emis[index] / denom)
 
