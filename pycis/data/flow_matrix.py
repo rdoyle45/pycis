@@ -108,35 +108,8 @@ class FlowGeoMatrix:
         inds = list(range(n_los))
         random.shuffle(inds)
 
-        # Generate the weighting matrix data
-        weight_rowinds = []
-        weight_colinds = []
-        weight_values = []
-
-        for row in range(n_los):
-            row_data = sparse.find(geom_mat.data[row, :])
-            cols = row_data[1]
-            values = row_data[2]
-
-            if cols.shape[0] == 0:
-                break
-
-            denom = 0
-            for i, val in zip(cols, values):
-                denom += val * inv_emis[i]
-
-            for index, data in zip(cols, values):
-                if inv_emis[index] != 0:
-                    weight_rowinds.append(row)
-                    weight_colinds.append(index)
-                    weight_values.append(inv_emis[index] / denom)
-
-        # Reshape array and combine to a sparse matrix
-        weight_rowinds = np.asarray(weight_rowinds).reshape(-1,)
-        weight_colinds = np.asarray(weight_colinds).reshape(-1,)
-        weight_values = np.asarray(weight_values).reshape(-1,)
-
-        self.weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds,weight_colinds)), shape=(n_los,n_cells))
+        weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, n_los, self.inv_emis)
+        weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)), shape=(n_los,n_cells))
 
         # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
         # each interacts with a cell wall
@@ -147,15 +120,18 @@ class FlowGeoMatrix:
         last_status_update = 0.
 
         rays = np.hstack((ray_start_coords[inds, :], ray_end_coords[inds, :]))  # Combine coords for imap
-        self.mag_length = []
+        b_l_matrix_data = []
 
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
-            for (i, data), pixel in zip(enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid, b_field_funcs),rays, 10)), inds):
+            for (i, data), pixel in zip(enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid,
+                                                                       b_field_funcs), rays, 10)), inds):
                 
                 if data is not None:
                     b_l = data[0]
                     cell = data[1]
+
+                    b_l_matrix_data.append([pixel, cell, b_l])
 
                 if time.time() - last_status_update > 1. and calc_status_callback is not None:
                     calc_status_callback(float(i) / n_los)
@@ -163,6 +139,12 @@ class FlowGeoMatrix:
 
         if calc_status_callback is not None:
             calc_status_callback(1.)
+
+        b_l_matrix_data = np.asarray(b_l_matrix_data)
+        b_l_sparse_matrix = sparse.csr_matrix((b_l_matrix_data[:, 2], (b_l_matrix_data[:, 0], b_l_matrix_data[:, 1])),
+                                              shape=(n_los, n_cells))
+
+        self.data = weighting_matrix.multiply(b_l_sparse_matrix)
 
     def _data_vector(self):
 
@@ -195,7 +177,7 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     b_field_xyz = _convert_rt_xy(b_field_rtz, theta)
 
     seg_factor = int(len(b_field_xyz)/len(l_k_vectors))
-    b_dot_l = np.ndarray(shape=(len(l_k_vectors),1))
+    b_dot_l = np.ndarray(shape=(len(l_k_vectors), 1))
 
     for i in range(len(l_k_vectors)):
         total_seg_val = 0
@@ -320,5 +302,40 @@ def _convert_rt_xy(comps, theta):
         b_field_xyz[i] = np.matmul(rot_mat, b_field.transpose()).transpose()
 
     return b_field_xyz
+
+
+def _weighting_matrix(data, n_los, inv_emis):
+
+    # Generate the weighting matrix data
+    weight_rowinds = []
+    weight_colinds = []
+    weight_values = []
+
+    # Loop over each row, extracting the non-zero columns and calculating the weighting value at
+    # that row and cell value
+    for row in range(n_los):
+        row_data = sparse.find(data[row, :])
+        cols = row_data[1]
+        values = row_data[2]
+
+        if cols.shape[0] == 0:
+            break
+
+        denom = 0
+        for i, val in zip(cols, values):
+            denom += val * inv_emis[i]
+
+        for index, data in zip(cols, values):
+            if inv_emis[index] != 0:
+                weight_rowinds.append(row)
+                weight_colinds.append(index)
+                weight_values.append(inv_emis[index] / denom)
+
+    # Reshape array and combine to a sparse matrix
+    weight_rowinds = np.asarray(weight_rowinds).reshape(-1, )
+    weight_colinds = np.asarray(weight_colinds).reshape(-1, )
+    weight_values = np.asarray(weight_values).reshape(-1, )
+
+    return  weight_rowinds, weight_colinds, weight_values
 
 
