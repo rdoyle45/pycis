@@ -109,7 +109,8 @@ class FlowGeoMatrix:
         random.shuffle(inds)
 
         weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, n_los, self.inv_emis)
-        weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)), shape=(n_los,n_cells))
+        weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)),
+                                             shape=(n_los, n_cells))
 
         # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
         # each interacts with a cell wall
