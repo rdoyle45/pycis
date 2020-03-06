@@ -120,8 +120,8 @@ class FlowGeoMatrix:
             self.pixel_order = None
             self.pixel_mask = None
 
-        self.image_geometry = raydata.transform
-        self.history = {'los': raydata.history, 'grid': grid.history, 'matrix': 'Created by {:s} on {:s} at {:s}'.format(misc.username, misc.hostname,
+        self.image_geometry = self.raydata.transform
+        self.history = {'los': self.raydata.history, 'grid': self.grid.history, 'matrix': 'Created by {:s} on {:s} at {:s}'.format(misc.username, misc.hostname,
                         misc.get_formatted_time())}
 
         # Solve y = Ax + b for x, the inverted emissivity matrix
