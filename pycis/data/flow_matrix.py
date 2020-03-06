@@ -101,13 +101,13 @@ class FlowGeoMatrix:
                                 'casting.\n Please set the "fullchip" attribute of the raydata object to either '
                                 '"Display" or "Original".')
             else:
-                self.image_coords = raydata.fullchip
-                self.binning = raydata.binning
+                self.image_coords = self.raydata.fullchip
+                self.binning = self.raydata.binning
                 self.pixel_order = pixel_order
                 if self.image_coords.lower() == 'original':
-                    imdims = (np.array(raydata.transform.get_original_shape()[::-1]) / self.binning).astype(int)
+                    imdims = (np.array(self.raydata.transform.get_original_shape()[::-1]) / self.binning).astype(int)
                 elif self.image_coords.lower() == 'display':
-                    imdims = (np.array(raydata.transform.get_display_shape()[::-1]) / self.binning).astype(int)
+                    imdims = (np.array(self.raydata.transform.get_display_shape()[::-1]) / self.binning).astype(int)
                 else:
                     raise Exception("Raydata object does not contain information on the image orientation used for ray "
                                     "casting.\n Please set the \"fullchip\" attribute of the raydata object to either "
