@@ -139,7 +139,24 @@ class FlowGeoMatrix:
         inds = list(range(n_los))
         random.shuffle(inds)
 
-        weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis)
+        print("Calculating Weighting Matrix...")
+        # Generate the weighting matrix data
+        weight_rowinds = []
+        weight_colinds = []
+        weight_values = []
+
+        with multiprocessing.Pool(config.n_cpus) as cpupool:
+            for i, data in enumerate(cpupool.imap(partial(_weighting_matrix, self.inv_emis, geom_data),
+                                                  range(n_los), 10)):
+
+                if data:
+                    weight_rowinds += data[0]
+                    weight_colinds += data[1]
+                    weight_values += data[2]
+
+        print("done weighting")
+
+        #weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis)
         weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)),
                                              shape=(n_los, n_cells))
 
@@ -665,40 +682,57 @@ def _convert_rt_xy(comps, theta):
     return b_field_xyz
 
 
-def _weighting_matrix(data, inv_emis):
+def _weighting_matrix(inv_emis, data, row_no):
 
-    print("Calculating Weighting Matrix...")
-    # Generate the weighting matrix data
+    # print("Calculating Weighting Matrix...")
+    # # Generate the weighting matrix data
     weight_rowinds = []
     weight_colinds = []
     weight_values = []
+    #
+    # # Loop over each row, extracting the non-zero columns and calculating the weighting value at
+    # # that row and cell value
+    # for i, row in enumerate(data):
+    #
+    #     row_data = sparse.find(row)
+    #     cols = row_data[1]
+    #     values = row_data[2]
+    #
+    #     if cols.shape[0] == 0:
+    #         break
+    #
+    #     denom = 0
+    #     for i, val in zip(cols, values):
+    #         denom += val * inv_emis[i]
+    #
+    #     for index, data in zip(cols, values):
+    #         if inv_emis[index] != 0:
+    #             weight_rowinds.append(i)
+    #             weight_colinds.append(index)
+    #             weight_values.append(inv_emis[index] / denom)
 
-    # Loop over each row, extracting the non-zero columns and calculating the weighting value at
-    # that row and cell value
-    for i, row in enumerate(data):
+    row_data = sparse.find(data[row_no,:])
+    cols = row_data[1]
+    values = row_data[2]
 
-        row_data = sparse.find(row)
-        cols = row_data[1]
-        values = row_data[2]
+    if cols.shape[0] == 0:
+        return None
 
-        if cols.shape[0] == 0:
-            break
+    denom = 0
+    for i, val in zip(cols, values):
+        denom += val * inv_emis[i]
 
-        denom = 0
-        for i, val in zip(cols, values):
-            denom += val * inv_emis[i]
-
-        for index, data in zip(cols, values):
-            if inv_emis[index] != 0:
-                weight_rowinds.append(i)
-                weight_colinds.append(index)
-                weight_values.append(inv_emis[index] / denom)
+    for index, data in zip(cols, values):
+        if inv_emis[index] != 0:
+            weight_rowinds.append(row_no)
+            weight_colinds.append(index)
+            weight_values.append(inv_emis[index] / denom)
 
     # Reshape array and combine to a sparse matrix
     weight_rowinds = np.asarray(weight_rowinds).reshape(-1, )
     weight_colinds = np.asarray(weight_colinds).reshape(-1, )
     weight_values = np.asarray(weight_values).reshape(-1, )
 
-    return weight_rowinds, weight_colinds, weight_values
+    return (weight_rowinds, weight_colinds, weight_values)
 
 
