@@ -140,40 +140,7 @@ class FlowGeoMatrix:
         inds = list(range(n_los))
         random.shuffle(inds)
 
-        print("Calculating Weighting Matrix...")
-        # Generate the weighting matrix data
-        weight_rowinds = []
-        weight_colinds = []
-        weight_values = []
-
-        calc_status_callback('Calculating sight-line cell interactions using {:d} '
-                             'CPUs...'.format(config.n_cpus))
-        last_status_update = 0.
-        with multiprocessing.Pool(config.n_cpus) as cpupool:
-            calc_status_callback(0.)
-            for i, data in enumerate(cpupool.imap(partial(_weighting_matrix, self.inv_emis, geom_data),
-                                                  inds, 10)):
-
-                if data:
-                    weight_rowinds += data[0]
-                    weight_colinds += data[1]
-                    weight_values += data[2]
-
-                if time.time() - last_status_update > 1. and calc_status_callback is not None:
-                    calc_status_callback(float(i) / n_los)
-                    last_status_update = time.time()
-
-        if calc_status_callback is not None:
-            calc_status_callback(1.)
-
-        print("done weighting")
-
-        # Reshape array and combine to a sparse matrix
-        weight_rowinds = np.asarray(weight_rowinds).reshape(-1, )
-        weight_colinds = np.asarray(weight_colinds).reshape(-1, )
-        weight_values = np.asarray(weight_values).reshape(-1, )
-
-        #weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis)
+        weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis)
         weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)),
                                              shape=(n_los, n_cells))
 
@@ -702,55 +669,38 @@ def _convert_rt_xy(comps, theta):
 
 def _weighting_matrix(inv_emis, data, row_no):
 
-    # print("Calculating Weighting Matrix...")
+    print("Calculating Weighting Matrix...")
     # # Generate the weighting matrix data
     weight_rowinds = []
     weight_colinds = []
     weight_values = []
-    #
-    # # Loop over each row, extracting the non-zero columns and calculating the weighting value at
-    # # that row and cell value
-    # for i, row in enumerate(data):
-    #
-    #     row_data = sparse.find(row)
-    #     cols = row_data[1]
-    #     values = row_data[2]
-    #
-    #     if cols.shape[0] == 0:
-    #         break
-    #
-    #     denom = 0
-    #     for i, val in zip(cols, values):
-    #         denom += val * inv_emis[i]
-    #
-    #     for index, data in zip(cols, values):
-    #         if inv_emis[index] != 0:
-    #             weight_rowinds.append(i)
-    #             weight_colinds.append(index)
-    #             weight_values.append(inv_emis[index] / denom)
 
-    row_data = sparse.find(data[row_no,:])
-    cols = row_data[1]
-    values = row_data[2]
+    # Loop over each row, extracting the non-zero columns and calculating the weighting value at
+    # that row and cell value
+    for i, row in enumerate(data):
 
-    if cols.shape[0] == 0:
-        return None
+        row_data = sparse.find(row)
+        cols = row_data[1]
+        values = row_data[2]
 
-    denom = 0
-    for i, val in zip(cols, values):
-        denom += val * inv_emis[i]
+        if cols.shape[0] == 0:
+            break
 
-    for index, data in zip(cols, values):
-        if inv_emis[index] != 0:
-            weight_rowinds.append(row_no)
-            weight_colinds.append(index)
-            weight_values.append(inv_emis[index] / denom)
+        denom = 0
+        for i, val in zip(cols, values):
+            denom += val * inv_emis[i]
 
-    # # Reshape array and combine to a sparse matrix
-    # weight_rowinds = np.asarray(weight_rowinds).reshape(-1, )
-    # weight_colinds = np.asarray(weight_colinds).reshape(-1, )
-    # weight_values = np.asarray(weight_values).reshape(-1, )
+        for index, data in zip(cols, values):
+            if inv_emis[index] != 0:
+                weight_rowinds.append(i)
+                weight_colinds.append(index)
+                weight_values.append(inv_emis[index] / denom)
 
-    return (weight_rowinds, weight_colinds, weight_values)
+    # Reshape array and combine to a sparse matrix
+    weight_rowinds = np.asarray(weight_rowinds).reshape(-1, )
+    weight_colinds = np.asarray(weight_colinds).reshape(-1, )
+    weight_values = np.asarray(weight_values).reshape(-1, )
+
+    return weight_rowinds, weight_colinds, weight_values
 
 
