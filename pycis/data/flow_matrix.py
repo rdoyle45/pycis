@@ -69,8 +69,6 @@ class FlowGeoMatrix:
         self.shot = shot
         self.frame = frame
 
-        b_field_funcs = get_Bfield(self.shot, self.frame)  # Functions to calculate B-field components at a given point
-
         if raydata:
             if isinstance(raydata, str):
                 self.raydata = calcam.RayData(raydata)  # Open RayData File
@@ -126,7 +124,10 @@ class FlowGeoMatrix:
 
         # Solve y = Ax + b for x, the inverted emissivity matrix
         if inv_emis is None:
-            self.inv_emis = sart.solve(geom_data, self._data_vector())[0]
+            emis_vector, self.time = self._data_vector()
+            self.inv_emis = sart.solve(geom_data, emis_vector)[0]
+
+        b_field_funcs = get_Bfield(self.shot, self.time)  # Functions to calculate B-field components at a given point
 
         ray_start_coords = self.raydata.ray_start_coords.reshape(-1, 3, order=self.pixel_order)
         ray_end_coords = self.raydata.ray_end_coords.reshape(-1, 3, order=self.pixel_order)
@@ -545,10 +546,11 @@ class FlowGeoMatrix:
         # Load in CIS intensity data
         cis_image = CISImage(self.shot, self.frame)
         cis_data = cis_image.I0
+        cis_time = cis_image.time
 
         emis_vector = self.geom_mat.format_image(cis_data)  # Construct data vector for CIS data
 
-        return emis_vector
+        return emis_vector, cis_time
 
 
 def calculate_geom_mat_elements(grid, b_field_funcs, rays):
