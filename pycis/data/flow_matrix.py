@@ -156,6 +156,9 @@ class FlowGeoMatrix:
         rays = np.hstack((ray_start_coords[inds, :], ray_end_coords[inds, :]))  # Combine coords for imap
         b_l_matrix_data = []
 
+        # Progress bar indicating how much of the weighting matrix has been completed
+        progressbar = Bar('Weighting Matrix', max=len(inds), suffix='%(percent)d%%')
+
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
             for (i, data), pixel in zip(enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid,
@@ -171,6 +174,8 @@ class FlowGeoMatrix:
                 if time.time() - last_status_update > 1. and calc_status_callback is not None:
                     calc_status_callback(float(i) / n_los)
                     last_status_update = time.time()
+                progressbar.next()
+        progressbar.finish()
 
         if calc_status_callback is not None:
             calc_status_callback(1.)
@@ -676,6 +681,7 @@ def _weighting_matrix(data, inv_emis):
     weight_colinds = []
     weight_values = []
 
+    # Progress bar indicating how much of the weighting matrix has been completed
     progressbar = Bar('Weighting Matrix', max=data.shape[0], suffix='%(percent)d%%')
 
     # Loop over each row, extracting the non-zero columns and calculating the weighting value at
