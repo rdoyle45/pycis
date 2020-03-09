@@ -11,6 +11,7 @@ from pycis.solvers import sart
 from .get import CISImage, get_Bfield
 from functools import partial
 from scipy import sparse, io
+from progress.bar import Bar
 import os
 import json
 
@@ -667,13 +668,15 @@ def _convert_rt_xy(comps, theta):
     return b_field_xyz
 
 
-def _weighting_matrix(inv_emis, data, row_no):
+def _weighting_matrix(data, inv_emis):
 
     print("Calculating Weighting Matrix...")
     # # Generate the weighting matrix data
     weight_rowinds = []
     weight_colinds = []
     weight_values = []
+
+    progressbar = Bar('Weighting Matrix', max=len(data), suffix='%(percent)d%%')
 
     # Loop over each row, extracting the non-zero columns and calculating the weighting value at
     # that row and cell value
@@ -695,6 +698,9 @@ def _weighting_matrix(inv_emis, data, row_no):
                 weight_rowinds.append(i)
                 weight_colinds.append(index)
                 weight_values.append(inv_emis[index] / denom)
+
+        progressbar.next()
+    progressbar.finish()
 
     # Reshape array and combine to a sparse matrix
     weight_rowinds = np.asarray(weight_rowinds).reshape(-1, )
