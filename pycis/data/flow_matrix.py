@@ -152,7 +152,7 @@ class FlowGeoMatrix:
         with multiprocessing.Pool(config.n_cpus) as cpupool:
             calc_status_callback(0.)
             for i, data in enumerate(cpupool.imap(partial(_weighting_matrix, self.inv_emis, geom_data),
-                                                  range(n_los), 10)):
+                                                  inds, 10)):
 
                 if data:
                     weight_rowinds += data[0]
