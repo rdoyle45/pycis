@@ -676,7 +676,7 @@ def _weighting_matrix(data, inv_emis):
     weight_colinds = []
     weight_values = []
 
-    progressbar = Bar('Weighting Matrix', max=len(data), suffix='%(percent)d%%')
+    progressbar = Bar('Weighting Matrix', max=data.shape[0], suffix='%(percent)d%%')
 
     # Loop over each row, extracting the non-zero columns and calculating the weighting value at
     # that row and cell value
