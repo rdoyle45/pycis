@@ -168,8 +168,8 @@ class FlowGeoMatrix:
                     b_l = data[0]
                     cells = data[1]
                     for cell_no, b_l_data in zip(cells, b_l):
-                        if weighting_matrix[pixel, cell_no] != 0:
-                            b_l_matrix_data.append([pixel, cell_no, b_l_data])
+                        if weighting_matrix[pixel, int(cell_no)] != 0:
+                            b_l_matrix_data.append([pixel, int(cell_no), b_l_data[0]])
 
                 if time.time() - last_status_update > 1. and calc_status_callback is not None:
                     calc_status_callback(float(i) / n_los)
