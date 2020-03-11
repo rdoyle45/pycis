@@ -514,6 +514,39 @@ class FlowGeoMatrix:
         self.image_geometry.set_pixel_aspect(f['im_px_aspect'], relative_to='Original')
         self.image_geometry.set_image_shape(*self.binning * np.array(self.pixel_mask.shape[::-1]), coords=self.image_coords)
 
+    @classmethod
+    def fromfile(cls, filename):
+        """
+        Load a saved geometry matrix from disk.
+
+        Parameters:
+
+            filename (str)  : File name to load from. Can be a NumPy (.npz), MATLAB (.mat) or \
+                              zipped ASCII (.zip) file.
+
+        Returns:
+
+            calcam.GeometryMatrix : Loaded geometry matrix.
+
+        """
+        geommat = cls(None, None)
+
+        try:
+            fmt = filename.split('.')[1:][-1]
+        except IndexError:
+            raise ValueError(
+                'Given file name does not include file extension; extension must be specified to determine file type!')
+
+        if fmt == 'npz':
+            geommat._load_npz(filename)
+        elif fmt == 'mat':
+            geommat._load_matlab(filename)
+        else:
+            raise ValueError(
+                'File extension "{:s}" not understood; should be an "npz", "mat" or "zip" file.'.format(fmt))
+
+        return geommat
+
     def _data_vector(self):
 
         # Load in CIS intensity data
