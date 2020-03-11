@@ -67,124 +67,125 @@ class FlowGeoMatrix:
     def __init__(self, shot, frame, raydata=None, geom_mat=None, grid=None, inv_emis=None, pixel_order='C',
                  calc_status_callback=misc.LoopProgPrinter().update):
 
-        self.shot = shot
-        self.frame = frame
+        if shot is not None:
+            self.shot = shot
+            self.frame = frame
 
-        if raydata:
-            if isinstance(raydata, str):
-                self.raydata = calcam.RayData(raydata)  # Open RayData File
-        else:
-            raise Exception('No RayData object or saved file provided. Please provide a file or run '
-                            'calcam.raycast_sightlines()')
-
-        # Open GeometryMatrix file, if no file is provided one will be constructed from the
-        # grid and ray data provided
-        if geom_mat:
-            if isinstance(geom_mat, str):
-                self.geom_mat = calcam.gm.GeometryMatrix.fromfile(geom_mat)
-                self.grid = copy.copy(self.geom_mat.grid)
-        else:
-            if grid:
-                self.grid = copy.copy(grid)
+            if raydata:
+                if isinstance(raydata, str):
+                    self.raydata = calcam.RayData(raydata)  # Open RayData File
             else:
-                print('Generating default square grid for MAST.')
-                self.grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
+                raise Exception('No RayData object or saved file provided. Please provide a file or run '
+                                'calcam.raycast_sightlines()')
 
-            self.geom_mat = calcam.gm.GeometryMatrix(self.grid, self.raydata)
-
-        geom_data = self.geom_mat.data
-
-        if self.raydata.fullchip:
-            if self.raydata.fullchip is True:
-                raise Exception('Raydata object does not contain information on the image orientation used for ray '
-                                'casting.\n Please set the "fullchip" attribute of the raydata object to either '
-                                '"Display" or "Original".')
+            # Open GeometryMatrix file, if no file is provided one will be constructed from the
+            # grid and ray data provided
+            if geom_mat:
+                if isinstance(geom_mat, str):
+                    self.geom_mat = calcam.gm.GeometryMatrix.fromfile(geom_mat)
+                    self.grid = copy.copy(self.geom_mat.grid)
             else:
-                self.image_coords = self.raydata.fullchip
-                self.binning = self.raydata.binning
-                self.pixel_order = pixel_order
-                if self.image_coords.lower() == 'original':
-                    imdims = (np.array(self.raydata.transform.get_original_shape()[::-1]) / self.binning).astype(int)
-                elif self.image_coords.lower() == 'display':
-                    imdims = (np.array(self.raydata.transform.get_display_shape()[::-1]) / self.binning).astype(int)
+                if grid:
+                    self.grid = copy.copy(grid)
                 else:
-                    raise Exception("Raydata object does not contain information on the image orientation used for ray "
-                                    "casting.\n Please set the \"fullchip\" attribute of the raydata object to either "
-                                    "\"Display\" or \"Original\".")
-                self.pixel_mask = np.ones(imdims, dtype=bool)
-        else:
+                    print('Generating default square grid for MAST.')
+                    self.grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
 
-            self.image_coords = None
-            self.binning = None
-            self.pixel_order = None
-            self.pixel_mask = None
+                self.geom_mat = calcam.gm.GeometryMatrix(self.grid, self.raydata)
 
-        self.image_geometry = self.raydata.transform
-        self.history = {'los': self.raydata.history, 'grid': self.grid.history, 'matrix': 'Created by {:s} on {:s} at {:s}'.format(misc.username, misc.hostname,
-                        misc.get_formatted_time())}
+            geom_data = self.geom_mat.data
 
-        # Solve y = Ax + b for x, the inverted emissivity matrix
-        if inv_emis is None:
-            emis_vector, self.time = self._data_vector()
-            self.inv_emis = sart.solve(geom_data, emis_vector)[0]
+            if self.raydata.fullchip:
+                if self.raydata.fullchip is True:
+                    raise Exception('Raydata object does not contain information on the image orientation used for ray '
+                                    'casting.\n Please set the "fullchip" attribute of the raydata object to either '
+                                    '"Display" or "Original".')
+                else:
+                    self.image_coords = self.raydata.fullchip
+                    self.binning = self.raydata.binning
+                    self.pixel_order = pixel_order
+                    if self.image_coords.lower() == 'original':
+                        imdims = (np.array(self.raydata.transform.get_original_shape()[::-1]) / self.binning).astype(int)
+                    elif self.image_coords.lower() == 'display':
+                        imdims = (np.array(self.raydata.transform.get_display_shape()[::-1]) / self.binning).astype(int)
+                    else:
+                        raise Exception("Raydata object does not contain information on the image orientation used for ray "
+                                        "casting.\n Please set the \"fullchip\" attribute of the raydata object to either "
+                                        "\"Display\" or \"Original\".")
+                    self.pixel_mask = np.ones(imdims, dtype=bool)
+            else:
 
-        b_field_funcs = get_Bfield(self.shot, self.time)  # Functions to calculate B-field components at a given point
+                self.image_coords = None
+                self.binning = None
+                self.pixel_order = None
+                self.pixel_mask = None
 
-        ray_start_coords = self.raydata.ray_start_coords.reshape(-1, 3, order=self.pixel_order)
-        ray_end_coords = self.raydata.ray_end_coords.reshape(-1, 3, order=self.pixel_order)
+            self.image_geometry = self.raydata.transform
+            self.history = {'los': self.raydata.history, 'grid': self.grid.history, 'matrix': 'Created by {:s} on {:s} at {:s}'.format(misc.username, misc.hostname,
+                            misc.get_formatted_time())}
 
-        # Number of grid cells and sight lines
-        n_cells = self.grid.n_cells
-        n_los = self.raydata.x.size
+            # Solve y = Ax + b for x, the inverted emissivity matrix
+            if inv_emis is None:
+                emis_vector, self.time = self._data_vector()
+                self.inv_emis = sart.solve(geom_data, emis_vector)[0]
 
-        # Shuffling indices results in a better time remaining estimation
-        inds = list(range(n_los))
-        random.shuffle(inds)
+            b_field_funcs = get_Bfield(self.shot, self.time)  # Functions to calculate B-field components at a given point
 
-        weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis)
-        weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)),
-                                             shape=(n_los, n_cells))
+            ray_start_coords = self.raydata.ray_start_coords.reshape(-1, 3, order=self.pixel_order)
+            ray_end_coords = self.raydata.ray_end_coords.reshape(-1, 3, order=self.pixel_order)
 
-        # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
-        # each interacts with a cell wall
-        if calc_status_callback is not None:
-            calc_status_callback('Calculating sight-line cell interactions using {:d} '
-                                 'CPUs...'.format(config.n_cpus))
+            # Number of grid cells and sight lines
+            n_cells = self.grid.n_cells
+            n_los = self.raydata.x.size
 
-        last_status_update = 0.
+            # Shuffling indices results in a better time remaining estimation
+            inds = list(range(n_los))
+            random.shuffle(inds)
 
-        rays = np.hstack((ray_start_coords[inds, :], ray_end_coords[inds, :]))  # Combine coords for imap
-        b_l_matrix_data = []
+            weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis)
+            weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)),
+                                                 shape=(n_los, n_cells))
 
-        # Progress bar indicating how much of the weighting matrix has been completed
-        progressbar = Bar('Weighting Matrix', max=len(inds), suffix='%(percent)d%%')
+            # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
+            # each interacts with a cell wall
+            if calc_status_callback is not None:
+                calc_status_callback('Calculating sight-line cell interactions using {:d} '
+                                     'CPUs...'.format(config.n_cpus))
 
-        with multiprocessing.Pool(config.n_cpus) as cpupool:
-            calc_status_callback(0.)
-            for (i, data), pixel in zip(enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid,
-                                                                       b_field_funcs), rays, 10)), inds):
-                
-                if data is not None:
-                    b_l = data[0]
-                    cells = data[1]
-                    for cell_no, b_l_data in zip(cells, b_l):
-                        if weighting_matrix[pixel, int(cell_no)] != 0:
-                            b_l_matrix_data.append([pixel, int(cell_no), b_l_data[0]])
+            last_status_update = 0.
 
-                if time.time() - last_status_update > 1. and calc_status_callback is not None:
-                    calc_status_callback(float(i) / n_los)
-                    last_status_update = time.time()
-                progressbar.next()
-        progressbar.finish()
+            rays = np.hstack((ray_start_coords[inds, :], ray_end_coords[inds, :]))  # Combine coords for imap
+            b_l_matrix_data = []
 
-        if calc_status_callback is not None:
-            calc_status_callback(1.)
+            # Progress bar indicating how much of the weighting matrix has been completed
+            progressbar = Bar('Weighting Matrix', max=len(inds), suffix='%(percent)d%%')
 
-        b_l_matrix_data = np.asarray(b_l_matrix_data)
-        b_l_sparse_matrix = sparse.csr_matrix((b_l_matrix_data[:, 2], (b_l_matrix_data[:, 0], b_l_matrix_data[:, 1])),
-                                              shape=(n_los, n_cells))
+            with multiprocessing.Pool(config.n_cpus) as cpupool:
+                calc_status_callback(0.)
+                for (i, data), pixel in zip(enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid,
+                                                                           b_field_funcs), rays, 10)), inds):
 
-        self.data = weighting_matrix.multiply(b_l_sparse_matrix)
+                    if data is not None:
+                        b_l = data[0]
+                        cells = data[1]
+                        for cell_no, b_l_data in zip(cells, b_l):
+                            if weighting_matrix[pixel, int(cell_no)] != 0:
+                                b_l_matrix_data.append([pixel, int(cell_no), b_l_data[0]])
+
+                    if time.time() - last_status_update > 1. and calc_status_callback is not None:
+                        calc_status_callback(float(i) / n_los)
+                        last_status_update = time.time()
+                    progressbar.next()
+            progressbar.finish()
+
+            if calc_status_callback is not None:
+                calc_status_callback(1.)
+
+            b_l_matrix_data = np.asarray(b_l_matrix_data)
+            b_l_sparse_matrix = sparse.csr_matrix((b_l_matrix_data[:, 2], (b_l_matrix_data[:, 0], b_l_matrix_data[:, 1])),
+                                                  shape=(n_los, n_cells))
+
+            self.data = weighting_matrix.multiply(b_l_sparse_matrix)
 
     def set_binning(self, binning):
         """
