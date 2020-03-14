@@ -45,19 +45,23 @@ class CISImage():
         """ Accessing the MAST CIS raw_data. Code written by Scott Silburn. """
         # Get raw raw_data
         self.shot = shot
-        if shot > 28630 and shot < 30472:
+        if 28630 < shot < 30472:
             cam = 'rbc'
         else:
             raise ValueError('There was no CIS diagnostic for this shot!')
+
         # Get the raw_data using pyuda or ipxReader and set the timestamp to the actual frame time stamp.
         try:
-            ipx_data = client.get('NEWIPX::read(filename=/net/fuslsa/data/MAST_Data/{0}/LATEST/rbc0{0}.ipx, frame={1})'.format(shot,frame), '')
+            ipx_data = client.get('NEWIPX::read(filename=/net/fuslsa/data/MAST_Data/{0}/LATEST/rbc0{0}.ipx, '
+                                  'frame={1})'.format(shot, frame), '')
             frame = ipx_data.frames[0]
             self.raw_data = frame.k
             self.time = frame.time
         except ValueError:
             raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
         except pyuda.UDAException:
+            print("Error loading pyUDA. Using ipxReader instead.")
+            time = frame # This assumes the user knows to use the time not the frame number
             ipxreader = ipxReader(shot=shot, camera=cam)
             ipxreader.set_frame_time(time)
             _, self.raw_data, header = ipxreader.read()
