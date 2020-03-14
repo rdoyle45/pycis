@@ -49,23 +49,21 @@ class CISImage():
             cam = 'rbc'
         else:
             raise ValueError('There was no CIS diagnostic for this shot!')
-        # Get the raw_data using ipxReader and set the timestamp to the actual frame time stamp.
-        #ipxreader = ipxReader(shot=shot, camera=cam)
-        #ipxreader.set_frame_time(time)
-        #_, self.raw_data, header = ipxreader.read()
-        
-        #self.raw_data = self.raw_data / 64
-        #self.time = header['time_stamp']
-
+        # Get the raw_data using pyuda or ipxReader and set the timestamp to the actual frame time stamp.
         try:
             ipx_data = client.get('NEWIPX::read(filename=/net/fuslsa/data/MAST_Data/{0}/LATEST/rbc0{0}.ipx, frame={1})'.format(shot,frame), '')
+            frame = ipx_data.frames[0]
+            self.raw_data = frame.k
+            self.time = frame.time
         except ValueError:
             raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
+        except pyuda.UDAException:
+            ipxreader = ipxReader(shot=shot, camera=cam)
+            ipxreader.set_frame_time(time)
+            _, self.raw_data, header = ipxreader.read()
 
-        frame = ipx_data.frames[0]
-        self.raw_data = frame.k
-
-        self.time = frame.time
+            self.raw_data = self.raw_data / 64
+            self.time = header['time_stamp']
 
         # Get calibrations
         self._get_calibrations()
