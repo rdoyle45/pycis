@@ -145,6 +145,12 @@ class FlowGeoMatrix:
             weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis)
             weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)),
                                                  shape=(n_los, n_cells))
+            coo_weight = weighting_matrix.tocoo()
+            np.savez_compressed("{0}/weight_matrix_{1}_{2}.npz".format(os.getcwd(), str(shot), str(frame)),
+                                mat_row_inds=coo_weight.row,
+                                mat_col_inds=coo_weight.col,
+                                mat_data=coo_weight.data,
+                                mat_shape=coo_weight.shape)
 
             # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
             # each interacts with a cell wall
@@ -454,24 +460,26 @@ class FlowGeoMatrix:
                             im_coords=self.image_coords
                             )
 
-    def _load_npz(self, filename):
+    def _load_npz(self, filename, w_matrix=False):
         """
         Load a geometry matrix from a compressed NumPy binary file
         """
         f = np.load(filename)
 
-        self.binning = float(f['binning'])
-        self.pixel_order = str(f['pixel_order'])
-        self.history = f['history'].item()
-        self.pixel_mask = f['pixel_mask']
-        self.image_coords = str(f['im_coords'])
-        self.image_geometry = CoordTransformer()
-        self.image_geometry.set_transform_actions(f['im_transforms'])
-        self.image_geometry.set_pixel_aspect(f['im_px_aspect'], relative_to='Original')
-        self.image_geometry.set_image_shape(*self.binning * np.array(self.pixel_mask.shape[::-1]),
-                                            coords=self.image_coords)
+        if w_matrix:
+            self.binning = float(f['binning'])
+            self.pixel_order = str(f['pixel_order'])
+            self.history = f['history'].item()
+            self.pixel_mask = f['pixel_mask']
+            self.image_coords = str(f['im_coords'])
+            self.image_geometry = CoordTransformer()
+            self.image_geometry.set_transform_actions(f['im_transforms'])
+            self.image_geometry.set_pixel_aspect(f['im_px_aspect'], relative_to='Original')
+            self.image_geometry.set_image_shape(*self.binning * np.array(self.pixel_mask.shape[::-1]),
+                                                coords=self.image_coords)
 
-        self.grid = PoloidalVolumeGrid(f['grid_verts'], f['grid_cells'], f['grid_wall'], src=self.history['grid'])
+            self.grid = PoloidalVolumeGrid(f['grid_verts'], f['grid_cells'], f['grid_wall'], src=self.history['grid'])
+
         self.data = sparse.csr_matrix((f['mat_data'], (f['mat_row_inds'], f['mat_col_inds'])), shape=f['mat_shape'])
 
     def _save_matlab(self, filename):
