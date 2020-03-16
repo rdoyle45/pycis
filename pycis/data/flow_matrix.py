@@ -740,8 +740,8 @@ def _weighting_matrix(data, inv_emis):
             break
 
         denom = 0
-        for i, val in zip(cols, values):
-            denom += val * inv_emis[i]
+        for j, val in zip(cols, values):
+            denom += val * inv_emis[j]
 
         for index, data in zip(cols, values):
             if inv_emis[index] != 0:
