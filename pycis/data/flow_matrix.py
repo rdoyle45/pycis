@@ -92,6 +92,7 @@ class FlowGeoMatrix:
                     self.grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
 
                 self.geom_mat = calcam.gm.GeometryMatrix(self.grid, self.raydata)
+                self.geom_mat.save("{0}/geom_{1}_{2}.npz".format(os.getcwd(), str(shot), str(frame)))
 
             geom_data = self.geom_mat.data
 
