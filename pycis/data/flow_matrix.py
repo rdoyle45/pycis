@@ -467,13 +467,13 @@ class FlowGeoMatrix:
                             im_coords=self.image_coords
                             )
 
-    def _load_npz(self, filename, w_matrix=False):
+    def _load_npz(self, filename, flow_matrix=True):
         """
         Load a geometry matrix from a compressed NumPy binary file
         """
-        f = np.load(filename)
+        f = np.load(filename, allow_pickle=True)
 
-        if w_matrix:
+        if flow_matrix:
             self.binning = float(f['binning'])
             self.pixel_order = str(f['pixel_order'])
             self.history = f['history'].item()
@@ -533,7 +533,7 @@ class FlowGeoMatrix:
         self.image_geometry.set_image_shape(*self.binning * np.array(self.pixel_mask.shape[::-1]), coords=self.image_coords)
 
     @classmethod
-    def fromfile(cls, filename):
+    def fromfile(cls, filename, flow_matrix=True):
         """
         Load a saved geometry matrix from disk.
 
@@ -556,7 +556,7 @@ class FlowGeoMatrix:
                 'Given file name does not include file extension; extension must be specified to determine file type!')
 
         if fmt == 'npz':
-            geommat._load_npz(filename)
+            geommat._load_npz(filename, flow_matrix=flow_matrix)
         elif fmt == 'mat':
             geommat._load_matlab(filename)
         else:
