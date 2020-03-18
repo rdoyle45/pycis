@@ -85,12 +85,11 @@ class FlowGeoMatrix:
                     self.geom_mat = calcam.gm.GeometryMatrix.fromfile(geom_mat)
                     self.grid = copy.copy(self.geom_mat.grid)
             else:
-                if grid:
-                    self.grid = copy.copy(grid)
-                else:
+                if not grid:
                     print('Generating default square grid for MAST.')
-                    self.grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
+                    grid = calcam.gm.squaregrid('MAST', cell_size=1e-2, zmax=-0.6)
 
+                self.grid = copy.copy(grid)
                 self.geom_mat = calcam.gm.GeometryMatrix(self.grid, self.raydata)
                 self.geom_mat.save("{0}/geom_{1}_{2}.npz".format(os.getcwd(), str(shot), str(frame)))
 
@@ -201,6 +200,13 @@ class FlowGeoMatrix:
                                 mat_shape=coo_bl.shape)
 
             self.data = weighting_matrix.multiply(b_l_sparse_matrix)
+
+            # Remove any grid cells + matrix rows which have no sight-line coverage.
+            unused_cells = np.where(np.abs(self.data.sum(axis=0)) == 0)[1]
+            self.grid.remove_cells(unused_cells)
+
+            used_cols = np.where(self.data.sum(axis=0) > 0)[1]
+            self.data = self.data[:, used_cols]
 
     def set_binning(self, binning):
         """
