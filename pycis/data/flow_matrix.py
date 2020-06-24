@@ -205,7 +205,7 @@ class FlowGeoMatrix:
             unused_cells = np.where(np.abs(self.data.sum(axis=0)) == 0)[1]
             self.grid.remove_cells(unused_cells)
 
-            used_cols = np.where(self.data.sum(axis=0) > 0)[1]
+            used_cols = np.where(np.abs(self.data.sum(axis=0)) > 0)[1]
             self.data = self.data[:, used_cols]
 
     def set_binning(self, binning):
