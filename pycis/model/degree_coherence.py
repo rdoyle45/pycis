@@ -88,7 +88,7 @@ def measure_degree_coherence_xr(spectrum, delay, material=None):
     else:
         kappa = 1
 
-    delay_time = delay * kappa / (2 * np.pi * freq_com)
+    delay_time = delay * kappa / (2 * np.pi * freq_com)  # if kappa != 1 this is the GROUP delay_time
     integrand = spectrum_freq * np.exp(-2 * np.pi * 1j * delay_time * spectrum_freq['frequency'])
     # degree_coherence = np.trapz(integrand.values[::-1], freq_axis[::-1])
     degree_coherence = integrand.integrate(dim='frequency')
