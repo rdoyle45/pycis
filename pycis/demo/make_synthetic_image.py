@@ -1,10 +1,7 @@
 import numpy as np
-import matplotlib
-matplotlib.use('MacOSX')
+import xarray as xr
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 import pycis
-import dens_tools
 import time
 
 from scipy.constants import c
@@ -13,66 +10,38 @@ import scipy.signal
 import scipy.ndimage
 
 
-def demo_1():
-    """
-    Conventional CIS instrument
+bit_depth = 12
+sensor_dim = (2000, 2000)
+pix_size = 6.5e-6
+qe = 0.35
+epercount = 0.46  # [e / count]
+cam_noise = 2.5
+cam = pycis.Camera(bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)
 
-    :return:
-    """
+flength = 150e-3
+backlens = pycis.Lens(flength)
 
-    # define camera
-    # pco.edge 5.5 camera
-    bit_depth = 16
-    # sensor_dim = (2560, 2160)
-    sensor_dim = (1000, 1000)
-    pix_size = 6.5e-6
-    qe = 0.35
-    epercount = 0.46  # [e / count]
-    cam_noise = 2.5
-    cam = pycis.Camera(bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)
+pol_1 = pycis.LinearPolariser(0)
+wp_1 = pycis.UniaxialCrystal(np.pi / 4, 20e-3, np.pi / 16)
+pol_2 = pycis.LinearPolariser(0)
+interferometer = [pol_1, wp_1, pol_2]
+inst = pycis.Instrument(cam, backlens, interferometer)
 
-    # define imaging lens
-    flength = 85e-3
-    backlens = pycis.Lens(flength)
+wavelength = np.array([450e-9, ])
+wavelength = xr.DataArray(wavelength, dims=('wavelength', ), coords=(wavelength, ), )
+x, y = inst.calculate_pixel_pos()
 
-    # list interferometer components
-    pol_1 = pycis.LinearPolariser(0)
-    sp_1 = pycis.SavartPlate(np.pi / 4, 4.0e-3)
-    wp_1 = pycis.UniaxialCrystal(np.pi / 4.1, 4.48e-3, 0)
-    pol_2 = pycis.LinearPolariser(0)
+spec = xr.ones_like(x * y * wavelength) * 1e3
+mat = inst.calculate_matrix(spec)
+igram = inst.capture(spec)
 
-    # first component in interferometer list is the first component that the light passes through
-    interferometer = [pol_1, wp_1, sp_1, pol_2]
 
-    # bringing it together into an instrument
+# wl0 = 464.9e-9
+# std = 0.090e-9
+# wl = np.linspace(wl0 - 3 * std, wl0 + 3 * std, 21)
 
-    inst = pycis.Instrument(cam, backlens, interferometer)
-
-    # wl = 466e-9
-    # spec = 1e5
-
-    wl0 = 464.9e-9
-    std = 0.090e-9
-    wl = np.linspace(wl0 - 3 * std, wl0 + 3 * std, 21)
-
-    # generate spectrum
-    spec = 1 / np.sqrt(2 * np.pi * std ** 2) * np.exp(-1 / 2 * ((wl - wl0) / std) ** 2) * 1e5
-
-    # pad speectrum to sensor array dimensions
-    spec = np.tile(spec[:, np.newaxis, np.newaxis], [1, sensor_dim[0], sensor_dim[1]])
-
-    # stokes parameters
-    # a0 = np.zeros_like(spec)
-    # spec = np.array([spec, a0, a0, a0])
-
-    s = time.time()
-    si = pycis.SynthImage(inst, wl, spec)
-    e = time.time()
-    print(e - s, ' seconds')
-
-    si.img_igram()
-    si.img_fft()
-    plt.show()
+# generate spectrum
+# spec = 1 / np.sqrt(2 * np.pi * std ** 2) * np.exp(-1 / 2 * ((wl - wl0) / std) ** 2) * 1e5
 
 
 def demo_2():
@@ -171,6 +140,7 @@ def demo_2():
     #     fig1.colorbar(i, ax=ax)
 
     # plt.show()
+
 
 def demo_pol_or():
     """
@@ -498,10 +468,3 @@ def demo_multi_delay():
     si.img_fft()
     plt.show()
 
-
-if __name__ == '__main__':
-    # demo_testing_demodulation()
-    demo_multi_delay_consistency_check()
-    # demo_2()
-    # demo_pol_or()
-    # demo_multi_delay()

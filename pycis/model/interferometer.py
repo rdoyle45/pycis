@@ -1,6 +1,36 @@
 import numpy as np
+import xarray as xr
 import pycis
 from pycis.tools import is_scalar
+
+"""
+Misc. conventions:
+- Mueller matrices are xr.DataArrays with dimensions that include 'mueller_v' and 'mueller_h' (each with length = 4) 
+- Stokes vectors are xr.DataArrays with dimensions that include 'stokes' (with length = 4)
+
+"""
+
+
+def mueller_prod(mat1, mat2):
+    """
+    Mueller matrix product
+
+    :param mat1: (xr.DataArray) Mueller matrix
+    :param mat2: (xr.DataArray) can be Mueller matrix or Stokes vector
+    :return: either a Mueller matrix or Stokes vector, depending on form of mat2
+
+    """
+
+    if 'mueller_v' in mat2.dims and 'mueller_h' in mat2.dims:
+        mat2_i = mat2.rename({'mueller_h': 'mueller_i', 'mueller_v': 'mueller_h'})
+        return mat1.dot(mat2_i, dims=('mueller_h', ), ).rename({'mueller_i': 'mueller_h'})
+
+    elif 'stokes' in mat2.dims:
+        mat2_i = mat2.rename({'stokes': 'mueller_h'})
+        return mat1.dot(mat2_i, dims=('mueller_h', ), ).rename({'mueller_v': 'stokes'})
+
+    else:
+        raise Exception
 
 
 def calculate_rot_mat(angle):
@@ -13,50 +43,42 @@ def calculate_rot_mat(angle):
     """
 
     angle2 = 2 * angle
-    return np.array([[1, 0, 0, 0],
-                     [0, np.cos(angle2), np.sin(angle2), 0],
-                     [0, -np.sin(angle2), np.cos(angle2), 0],
-                     [0, 0, 0, 1]])
+    rot_mat = np.array([[1, 0, 0, 0],
+                        [0, np.cos(angle2), np.sin(angle2), 0],
+                        [0, -np.sin(angle2), np.cos(angle2), 0],
+                        [0, 0, 0, 1]])
+    return xr.DataArray(rot_mat, dims=('mueller_v', 'mueller_h'), )
 
 
 class InterferometerComponent:
     """
-    abstract base class for CIS interferometer components
+    abstract base class for CI interferometer component
 
     """
 
-    def __init__(self, orientation, clr_aperture=None):
+    def __init__(self, orientation, ):
         """
         :param orientation: orientation angle [ rad ]
 
-        :param clr_aperture: clear aperture of component [ m ]. If None, infinite aperture assumed.
         """
 
         self.orientation = orientation
-        self.clear_aperture = clr_aperture
 
     def orient(self, mat):
         """
-        account for orientation of interferometer component with given vertical Mueller matrix
+        orient component
         
-        :param mat: 4 x 4 Mueller matrix
-
+        :param mat: (xr.DataArray) Mueller matrix
         :return:
 
         """
 
-        # matrix multiplication
-        subscripts = 'ij...,jl...->il...'
-        mat_rot = np.einsum(subscripts, calculate_rot_mat(-self.orientation), mat)
-        return np.einsum(subscripts, mat_rot, calculate_rot_mat(self.orientation))
+        mat_i = mueller_prod(mat, calculate_rot_mat(self.orientation))
+        return mueller_prod(calculate_rot_mat(-self.orientation), mat_i)
 
     def calculate_matrix(self, wl, inc_angle, azim_angle):
-        """
-        abstract method, calculate component's Mueller matrix
 
-        """
-
-        raise NotImplementedError
+        pass
 
 
 class LinearPolariser(InterferometerComponent):
@@ -65,14 +87,14 @@ class LinearPolariser(InterferometerComponent):
 
     """
 
-    def __init__(self, orientation, tx_1=1, tx_2=0, clr_aperture=None):
+    def __init__(self, orientation, tx_1=1, tx_2=0, ):
         """
-        :param orientation: [ rad ] 0 aligns vertical polariser axis to vertical interferometer axis
+        :param orientation: [ rad ] 0 aligns transmission axis to x-axis
         :param tx_1: transmission primary component. [0, 1] - defaults to 1
         :param tx_2: transmission secondary (orthogonal) component. [0, 1] - defaults to 0
 
         """
-        super().__init__(orientation, clr_aperture=clr_aperture)
+        super().__init__(orientation, )
 
         assert 0 <= tx_1 <= 1
         assert 0 <= tx_2 <= 1
@@ -81,18 +103,19 @@ class LinearPolariser(InterferometerComponent):
 
     def calculate_matrix(self, wl, inc_angle, azim_angle):
         """
-        general Mueller matrix for a linear polariser. No dependence on wavelength / ray angles assumed.
+        Mueller matrix for ideal linear polariser
 
+        :param wl: pass
+        :param inc_angle: pass
+        :param azim_angle: pass
         :return:
-
         """
 
-        m = 0.5 * np.array([[self.tx_2 ** 2 + self.tx_1 ** 2, self.tx_2 ** 2 - self.tx_1 ** 2, 0, 0],
-                            [self.tx_2 ** 2 - self.tx_1 ** 2, self.tx_2 ** 2 + self.tx_1 ** 2, 0, 0],
-                            [0, 0, 2 * self.tx_2 * self.tx_1, 0],
-                            [0, 0, 0, 2 * self.tx_2 * self.tx_1]])
-
-        return self.orient(m)
+        mat = 0.5 * np.array([[self.tx_2 ** 2 + self.tx_1 ** 2, self.tx_1 ** 2 - self.tx_2 ** 2, 0, 0],
+                              [self.tx_1 ** 2 - self.tx_2 ** 2, self.tx_2 ** 2 + self.tx_1 ** 2, 0, 0],
+                              [0, 0, 2 * self.tx_2 * self.tx_1, 0],
+                              [0, 0, 0, 2 * self.tx_2 * self.tx_1]])
+        return self.orient(xr.DataArray(mat, dims=('mueller_v', 'mueller_h'), ))
 
 
 class BirefringentComponent(InterferometerComponent):
@@ -101,7 +124,7 @@ class BirefringentComponent(InterferometerComponent):
 
     """
 
-    def __init__(self, orientation, thickness, material='a-BBO', source=None, contrast=1, clr_aperture=None):
+    def __init__(self, orientation, thickness, material='a-BBO', source=None, contrast=1, ):
         """
         :param thickness: [ m ]
         :type thickness: float
@@ -116,7 +139,7 @@ class BirefringentComponent(InterferometerComponent):
         :param contrast: arbitrary contrast degradation factor for crystal, uniform contrast only for now.
         :type contrast: float
         """
-        super().__init__(orientation, clr_aperture=clr_aperture)
+        super().__init__(orientation, )
 
         self.thickness = thickness
         self.material = material
@@ -125,7 +148,7 @@ class BirefringentComponent(InterferometerComponent):
 
     def calculate_matrix(self, wl, inc_angle, azim_angle):
         """
-        general Mueller matrix for a phase retarder
+        general Mueller matrix for a linear retarder
         
         :param wl: [ m ]
         :param inc_angle: [ rad ] 
@@ -135,29 +158,21 @@ class BirefringentComponent(InterferometerComponent):
 
         phase = self.calculate_phase_delay(wl, inc_angle, azim_angle)
 
-        # TODO can i get rid of this using broadcasting?
-
-        a1 = np.ones_like(phase)
-        a0 = np.zeros_like(phase)
-
-        # precalculate trig fns
+        a1 = xr.ones_like(phase)
+        a0 = xr.zeros_like(phase)
         c_cphase = self.contrast * np.cos(phase)
         c_sphase = self.contrast * np.sin(phase)
 
-        m = np.array([[a1, a0, a0, a0],
-                      [a0, a1, a0, a0],
-                      [a0, a0, c_cphase, c_sphase],
-                      [a0, a0, -c_sphase, c_cphase]])
+        mat = [[a1, a0, a0, a0],
+               [a0, a1, a0, a0],
+               [a0, a0, c_cphase, c_sphase],
+               [a0, a0, -c_sphase, c_cphase]]
+        mat = xr.combine_nested(mat, concat_dim=('mueller_v', 'mueller_h', ), )
 
-        return self.orient(m)
+        return self.orient(mat)
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
-        """
-        abstract method
-
-        """
-
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class UniaxialCrystal(BirefringentComponent):
@@ -166,7 +181,7 @@ class UniaxialCrystal(BirefringentComponent):
 
     """
 
-    def __init__(self, orientation, thickness, cut_angle, material='a-BBO', source=None, contrast=1, clr_aperture=None):
+    def __init__(self, orientation, thickness, cut_angle, material='a-BBO', source=None, contrast=1, ):
         """
         
         :param cut_angle: [ rad ] angle between optic axis and crystal front face
@@ -174,7 +189,7 @@ class UniaxialCrystal(BirefringentComponent):
 
         """
 
-        super().__init__(orientation, thickness, material=material, contrast=contrast, clr_aperture=clr_aperture)
+        super().__init__(orientation, thickness, material=material, contrast=contrast, )
         self.cut_angle = cut_angle
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
@@ -210,26 +225,6 @@ class UniaxialCrystal(BirefringentComponent):
         # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
         if n_e is None and n_o is None:
             biref, n_e, n_o = pycis.model.dispersion(wl, self.material, source=self.source)
-        else:
-            assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
-
-        # if wl, theta and omega are arrays, vectorise
-        if not is_scalar(wl) and not is_scalar(inc_angle) and not is_scalar(azim_angle):
-
-            assert inc_angle.shape == azim_angle.shape
-
-            if inc_angle.ndim == 1:
-                # pad 1-D ray angle arrays
-
-                inc_angle = inc_angle[:, np.newaxis]
-                azim_angle = azim_angle[:, np.newaxis]
-
-            # tile wl arrays to image dimensions for vectorisation
-            reps = [1, inc_angle.shape[0], inc_angle.shape[1]]
-
-            wl = np.tile(wl[:, np.newaxis, np.newaxis], reps)
-            n_e = np.tile(n_e[:, np.newaxis, np.newaxis], reps)
-            n_o = np.tile(n_o[:, np.newaxis, np.newaxis], reps)
 
         s_inc_angle = np.sin(inc_angle)
 
@@ -261,8 +256,7 @@ class SavartPlate(BirefringentComponent):
         :type mode: string
 
         """
-        super().__init__(orientation, thickness, material=material, source=source, contrast=contrast,
-                         clr_aperture=clr_aperture)
+        super().__init__(orientation, thickness, material=material, source=source, contrast=contrast, )
         self.mode = mode
 
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):

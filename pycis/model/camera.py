@@ -27,41 +27,26 @@ class Camera(object):
         self.cam_noise = cam_noise
         self.bit_depth = bit_depth
 
-    def capture(self, intensity, clean=False, display=False):
-        """ model sensor signal given photon fluence (photons / pixel / camera timestep).
-        
-        :param intensity: stokes vector
-        :param clean: 
-        :return: camera_signal
+    def capture(self, spec, ):
+        """
+
+        :param spec:
+        :return:
         """
 
         # np.random.seed()
-        np.random.seed()
-
-        # account for quantum efficiency
-        electron_fluence = intensity * self.qe
-
-        if not clean:
-            # add shot noise
-            shot_noise = np.random.poisson(electron_fluence) - electron_fluence
-            electron_fluence += shot_noise
-
-            # add camera noise
-            electron_fluence += np.random.normal(0, self.cam_noise, self.sensor_dim)
-
-        # apply gain
-        signal = electron_fluence / self.epercount
-
-        # digitise at bitrate of sensor
-        signal = np.digitize(signal, np.arange(0, 2 ** self.bit_depth))
-
-        if display:
-            fig, ax = plt.subplots()
-            im = ax.imshow(signal, 'gray')
-            cbar = fig.colorbar(im, ax=ax)
-            plt.show()
-
-        return signal
+        # spec = spec.isel(stokes=0, drop=True)
+        # if len(spec.wavelength) < 2:
+        #
+        # else:
+        #     igram = stokes_vector_out.isel(stokes=0, drop=True).integrate(dim='wavelength')
+        #
+        # electron_fluence = intensity * self.qe
+        # electron_fluence = np.random.poisson(electron_fluence)
+        # electron_fluence += np.random.normal(0, self.cam_noise, self.sensor_dim)
+        # signal = electron_fluence / self.epercount
+        # signal = np.digitize(signal, np.arange(0, 2 ** self.bit_depth))
+        # return signal
 
     def capture_stack(self, photon_fluence, num_stack, display=False):
         """ Quickly capture of a stack of image frames, returning the total signal. """
