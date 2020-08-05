@@ -157,7 +157,7 @@ class Instrument(object):
         spec = mueller_prod(mueller_mat, spec)
 
         image = self.camera.capture(spec)
-        return igram
+        return image
 
     def calculate_ideal_phase_delay(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
                                     output_components=False):

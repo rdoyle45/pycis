@@ -27,26 +27,30 @@ class Camera(object):
         self.cam_noise = cam_noise
         self.bit_depth = bit_depth
 
-    def capture(self, spec, ):
+    def capture(self, spec, display=False):
         """
 
         :param spec:
         :return:
         """
 
-        # np.random.seed()
-        # spec = spec.isel(stokes=0, drop=True)
-        # if len(spec.wavelength) < 2:
-        #
-        # else:
-        #     igram = stokes_vector_out.isel(stokes=0, drop=True).integrate(dim='wavelength')
-        #
-        # electron_fluence = intensity * self.qe
-        # electron_fluence = np.random.poisson(electron_fluence)
-        # electron_fluence += np.random.normal(0, self.cam_noise, self.sensor_dim)
-        # signal = electron_fluence / self.epercount
-        # signal = np.digitize(signal, np.arange(0, 2 ** self.bit_depth))
-        # return signal
+        np.random.seed()
+        spec = spec.isel(stokes=0, drop=True)  #
+        if len(spec.wavelength) >= 2:
+            signal = spec.integrate(dim='wavelength')
+        else:
+            signal = spec
+
+        signal = signal * self.qe
+        signal.values = np.random.poisson(signal.values)
+        signal.values = signal.values + np.random.normal(0, self.cam_noise, signal.values.shape)
+        signal = signal / self.epercount
+        signal.values = np.digitize(signal.values, np.arange(0, 2 ** self.bit_depth))
+
+        if display:
+            pass
+
+        return signal
 
     def capture_stack(self, photon_fluence, num_stack, display=False):
         """ Quickly capture of a stack of image frames, returning the total signal. """
