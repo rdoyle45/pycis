@@ -17,7 +17,7 @@ def mueller_prod(mat1, mat2):
 
     :param mat1: (xr.DataArray) Mueller matrix
     :param mat2: (xr.DataArray) can be Mueller matrix or Stokes vector
-    :return: either a Mueller matrix or Stokes vector, depending on form of mat2
+    :return: either a Mueller matrix or Stokes vector, depending on the dimensions of mat2
 
     """
 
@@ -30,7 +30,7 @@ def mueller_prod(mat1, mat2):
         return mat1.dot(mat2_i, dims=('mueller_h', ), ).rename({'mueller_v': 'stokes'})
 
     else:
-        raise Exception
+        raise Exception('input not understood')
 
 
 def calculate_rot_mat(angle):
@@ -195,10 +195,6 @@ class UniaxialCrystal(BirefringentComponent):
     def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
         """
         calculate phase delay due to uniaxial crystal.
-
-        Vectorised. If inc_angle and azim_angle are arrays, they must have the same dimensions.  
-        source: Francisco E Veiras, Liliana I Perez, and María T Garea. “Phase shift formulas in uniaxial media: an 
-        application to waveplates
         
         Veiras defines optical path difference as OPL_o - OPL_e ie. +ve phase indicates a delayed extraordinary 
         ray
@@ -292,30 +288,9 @@ class SavartPlate(BirefringentComponent):
             # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
             if n_e is None and n_o is None:
                 biref, n_e, n_o = pycis.model.dispersion(wl, self.material, source=self.source)
-            else:
-                assert pycis.tools.safe_len(n_e) == pycis.tools.safe_len(n_o) == pycis.tools.safe_len(wl)
 
             a = 1 / n_e
             b = 1 / n_o
-
-            # if wl, theta and omega are arrays, vectorise
-            if not is_scalar(wl) and not is_scalar(inc_angle) and not is_scalar(azim_angle):
-
-                assert inc_angle.shape == azim_angle.shape
-
-                if inc_angle.ndim == 1:
-                    # pad 1-D ray angle arrays
-
-                    inc_angle = inc_angle[:, np.newaxis]
-                    azim_angle = azim_angle[:, np.newaxis]
-
-                # tile wl arrays to image dimensions for vectorisation
-                reps = [1, inc_angle.shape[0], inc_angle.shape[1]]
-
-                # tile wl arrays to image dimensions for vectorisation
-                wl = np.tile(wl[:, np.newaxis, np.newaxis], reps)
-                a = np.tile(a[:, np.newaxis, np.newaxis], reps)
-                b = np.tile(b[:, np.newaxis, np.newaxis], reps)
 
             # precalculate trig fns
             c_azim_angle = np.cos(azim_angle)

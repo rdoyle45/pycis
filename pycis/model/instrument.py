@@ -2,6 +2,7 @@ import numpy as np
 import xarray as xr
 import os.path
 import scipy.interpolate
+from scipy.constants import c
 import pycis
 from pycis.tools import is_scalar
 from pycis.model import mueller_prod
@@ -13,13 +14,14 @@ class Instrument(object):
 
     """
 
-    def __init__(self, camera, back_lens, interferometer, bandpass_filter=None, interferometer_orientation=0):
+    def __init__(self, camera, optics, interferometer, bandpass_filter=None, interferometer_orientation=0):
         """
         :param camera:
         :type camera pycis.model.Camera
 
-        :param back_lens:
-        :type back_lens: pycis.model.Lens
+        :param optics: the focal lengths of the three lenses used in the standard CI configuration (see e.g. my thesis
+        or Scott Silburn's): [f_1, f_2, f_3] where f_1 is the objective lens.
+        :type optics: list of floats with length 3. Corresponding to
 
         :param interferometer: a list of instances of pycis.model.InterferometerComponent. The first component in
         the list is the first component that the light passes through.
@@ -30,26 +32,23 @@ class Instrument(object):
         """
 
         self.camera = camera
-        self.back_lens = back_lens
+        self.optics = optics
         self.interferometer = interferometer
         self.crystals = self.get_crystals()
         self.polarisers = self.get_polarisers()
         self.interferometer_orientation = interferometer_orientation
 
-        # TODO implement bandpass_filter
+        # TODO properly implement bandpass_filter
         self.bandpass_filter = bandpass_filter
         self.input_checks()
-
         self.x_pos, self.y_pos = self.calculate_pixel_pos()
 
-        # assign instrument 'mode'
-        self.inst_mode = self.check_inst_mode()
-
-        # TODO implement crystal misalignment
+        # assign instrument 'type'
+        self.instrument_type = self.check_instrument_type()
 
     def input_checks(self):
         assert isinstance(self.camera, pycis.model.Camera)
-        assert isinstance(self.back_lens, pycis.model.Lens)
+        assert isinstance(self.optics, list)
         assert all(isinstance(c, pycis.model.InterferometerComponent) for c in self.interferometer)
         if self.bandpass_filter is not None:
             assert isinstance(self.bandpass_filter, pycis.model.BandpassFilter)
@@ -73,22 +72,21 @@ class Instrument(object):
         :param downsample:
         :return: x_pos, y_pos [ m ]
 
-        # TODO rewrite for arbitrary sensor subsections
-
         """
 
-        sensor_dim = np.array(self.camera.sensor_dim)
-        centre_pos = self.camera.pix_size * (sensor_dim - 2) / 2
+        sensor_format = np.array(self.camera.sensor_format)
+        centre_pos = self.camera.pixel_size * (sensor_format - 2) / 2
 
         if crop is None:
-            crop = (0, sensor_dim[0], 0, sensor_dim[1])
+            crop = (0, sensor_format[0], 0, sensor_format[1])
 
-        y_coord = np.arange(crop[0], crop[1])[::downsample]
-        x_coord = np.arange(crop[2], crop[3])[::downsample]
-        y = (y_coord - 0.5) * self.camera.pix_size - centre_pos[0]
-        x = (x_coord - 0.5) * self.camera.pix_size - centre_pos[1]
-        y = xr.DataArray(y, dims=('y', ), coords=(y, ), )
+        x_coord = np.arange(crop[0], crop[1])[::downsample]
+        y_coord = np.arange(crop[2], crop[3])[::downsample]
+        x = (x_coord - 0.5) * self.camera.pixel_size - centre_pos[0]
+        y = (y_coord - 0.5) * self.camera.pixel_size - centre_pos[1]
         x = xr.DataArray(x, dims=('x', ), coords=(x, ), )
+        y = xr.DataArray(y, dims=('y',), coords=(y,), )
+
         return x, y
 
     def calculate_inc_angles(self, x_pos, y_pos):
@@ -101,15 +99,16 @@ class Instrument(object):
 
         """
 
-        return np.arctan2(np.sqrt(x_pos ** 2 + y_pos ** 2), self.back_lens.focal_length)
+        return np.arctan2(np.sqrt(x_pos ** 2 + y_pos ** 2), self.optics[2], )
 
     def calculate_azim_angles(self, x_pos, y_pos, crystal):
         """
         calculate azimuthal angles of rays through crystal (varies with crystal orientation)
 
         :param x_pos: (xr.DataArray) x position(s) on sensor plane [ m ]
-        :param y_pos: (xr.DataArray) y position(s) on sensor [ m ]
+        :param y_pos: (xr.DataArray) y position(s) on sensor plane [ m ]
         :param crystal: (pycis.model.BirefringentComponent)
+
         :return: azimuthal angles [ rad ]
 
         """
@@ -141,26 +140,45 @@ class Instrument(object):
         """
         capture image of scene
 
-        :param spec: (xr.DataArray) input spectrum with dimensions 'wavelength', 'x', 'y' and (optionally) 'stokes'. If
-        no stokes dim then it is assumed that light is unpolarised (i.e. the spec supplied is the S_0 Stokes parameter)
-        :param display: (bool) whether to display
+        :param spec: (xr.DataArray) photon fluence spectrum with units of ph / m [hitting the pixel area during exposure
+         time] and with dimensions 'wavelength', 'x', 'y' and (optionally) 'stokes'. If no stokes dim then it is assumed
+        that light is unpolarised (i.e. the spec supplied is the S_0 Stokes parameter only)
         :param color: (bool) true for color display, else monochrome
         :return:
 
         """
 
-        if 'stokes' not in spec.dims:
-            a0 = xr.zeros_like(spec)
-            spec = xr.combine_nested([spec, a0, a0, a0], concat_dim=('stokes', ))
+        if self.instrument_type == 'two_beam' and 'stokes' not in spec.dims:
+            # analytical calculation to save time
+            total_intensity = spec.integrate(dim='wavelength', )
+            spec_norm = spec / total_intensity
 
-        mueller_mat = self.calculate_matrix(spec)
-        spec = mueller_prod(mueller_mat, spec)
+            spec_norm_freq = spec_norm.rename({'wavelength': 'frequency'})
+            spec_norm_freq['frequency'] = c / spec_norm_freq['frequency']
+            spec_norm_freq = spec_norm_freq * c / spec_norm_freq['frequency'] ** 2
+            freq_com = (spec_norm_freq * spec_norm_freq['frequency']).integrate(dim='frequency') / \
+                       spec_norm_freq.integrate(dim='frequency')
+
+            delay = self.calculate_ideal_phase_delay(c / freq_com)
+            doc = pycis.measure_degree_coherence_xr(spec_norm_freq, delay, material=self.crystals[0].material,
+                                                       freq_com=freq_com)
+
+            spec = total_intensity / 4 * (1 + np.abs(doc) * np.cos(xr.ufuncs.angle(doc)))
+
+
+        elif self.instrument_type == 'general':
+            # full Mueller matrix calculation
+            if 'stokes' not in spec.dims:
+                a0 = xr.zeros_like(spec)
+                spec = xr.combine_nested([spec, a0, a0, a0], concat_dim=('stokes', ))
+
+            mueller_mat = self.calculate_matrix(spec)
+            spec = mueller_prod(mueller_mat, spec)
 
         image = self.camera.capture(spec)
         return image
 
-    def calculate_ideal_phase_delay(self, wl, x_coord=None, y_coord=None, n_e=None, n_o=None, crop=None, downsample=1,
-                                    output_components=False):
+    def calculate_ideal_phase_delay(self, wl, n_e=None, n_o=None, crop=None, downsample=1, ):
         """
         assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
         'two-beam'. kwargs included for fitting purposes.
@@ -173,10 +191,12 @@ class Instrument(object):
         :param downsample:
         :param output_components:
         :return: phase delay [ rad ]
+
+        # TODO rename?
         """
 
         # calculate the angles of each pixel's line of sight through the interferometer
-        x_pos, y_pos = self.calculate_pixel_pos(x_coord=x_coord, y_coord=y_coord, crop=crop, downsample=downsample)
+        x_pos, y_pos = self.calculate_pixel_pos(crop=crop, downsample=downsample)
         inc_angles = self.calculate_inc_angles(x_pos, y_pos)
         azim_angles = self.calculate_azim_angles(x_pos, y_pos, self.crystals[0])
 
@@ -185,15 +205,8 @@ class Instrument(object):
         for crystal in self.crystals:
             phase += crystal.calculate_phase_delay(wl, inc_angles, azim_angles, n_e=n_e, n_o=n_o)
 
-        if not output_components:
-            return phase
+        return phase
 
-        else:
-            # calculate the phase_offset and phase_shape
-            phase_offset = self.calculate_ideal_phase_offset(wl, n_e=n_e, n_o=n_o)
-            phase_shape = phase - phase_offset
-
-            return phase_offset, phase_shape
 
     def calculate_ideal_contrast(self):
 
@@ -212,9 +225,9 @@ class Instrument(object):
 
         return tx
 
-    def check_inst_mode(self):
+    def check_instrument_type(self):
         """
-        instrument mode determines best way to calculate the interference pattern
+        instrument_type determines best way to calculate the interference pattern
 
         in the case of a perfectly aligned coherence imaging diagnostic in a simple 'two-beam' configuration, skip the
         Mueller matrix calculation to the final result.
@@ -241,15 +254,17 @@ class Instrument(object):
 
                 # ...are all crystals alligned?
                 crystal_1_orientation = self.crystals[0].orientation
+                crystal_1_material = self.crystals[0].material
 
-                if all(c.orientation == crystal_1_orientation for c in self.crystals):
+                if all(c.orientation == crystal_1_orientation for c in self.crystals) and \
+                        all(c.material == crystal_1_material for c in self.crystals):
 
                     # ...at 45 degrees to the polarisers?
                     if abs(pol_1_orientation - crystal_1_orientation) == np.pi / 4:
 
                         # ...and is the camera a standard camera?
                         if not isinstance(self.camera, pycis.PolCamera):
-                            return 'two-beam'
+                            return 'two_beam'
 
         return 'general'
 
@@ -266,57 +281,3 @@ class Instrument(object):
             phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
 
         return -phase_offset
-
-    def apply_vignetting(self, photon_fluence):
-        """account for instrument etendue to first order based on Scott's predictive matlab code. """
-
-        # TODO old, clean up / throw away
-
-        etendue = np.load(os.path.join(pycis.paths.instrument_path, 'etendue.npy'))
-        sensor_distance = np.load(os.path.join(pycis.paths.instrument_path, 'sensor_distance.npy'))
-
-        # convert sensor distance to (m)
-        sensor_distance *= 1e-3
-
-        sensor_distance_sym = np.concatenate([-sensor_distance[1:][::-1], sensor_distance])
-
-        # normalise etendue to value at centre
-        norm_etendue = etendue / etendue[0]
-
-        norm_etendue_sym = np.concatenate([norm_etendue[1:][::-1], norm_etendue])
-
-        # calculate how far sensor extends relative to sensor_distance
-        # assume a square sensor for now!
-
-        sensor_width = self.camera.pix_size * self.camera.sensor_dim[1]
-        sensor_half_width = sensor_width / 2
-        sensor_diagonal = np.sqrt(2) * sensor_width
-
-        sensor_half_diagonal = sensor_diagonal / 2
-
-        # linear splines for interpolation / extrapolation
-        f = scipy.interpolate.InterpolatedUnivariateSpline(sensor_distance_sym, norm_etendue_sym, k=1)
-
-        sensor_diagonal_axis = np.linspace(-sensor_half_diagonal, sensor_half_diagonal, self.camera.sensor_dim[1])
-
-        w1d = f(sensor_diagonal_axis)
-
-        # w1d = np.interp(sensor_diagonal_axis, sensor_distance_sym, norm_etendue_sym)
-
-        l = self.camera.sensor_dim[1]
-        m = sensor_half_width
-        xx = np.linspace(-m, m, l)
-
-        [x, y] = np.meshgrid(xx, xx)
-        r = np.sqrt(x ** 2 + y ** 2)
-        w2d_2 = np.zeros([l, l])
-        w2d_2[r <= sensor_half_diagonal] = np.interp(r[r <= sensor_half_diagonal], sensor_diagonal_axis, w1d)
-
-        w2d_2[w2d_2 < 0] = 0
-
-        # w2d_2 = pycis.tools.gauss2d(self.camera.sensor_dim[1], 1200)
-
-        vignetted_photon_fluence = photon_fluence * w2d_2
-        vignetted_photon_fluence[vignetted_photon_fluence < 0] = 0
-
-        return vignetted_photon_fluence
