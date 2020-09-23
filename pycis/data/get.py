@@ -52,8 +52,7 @@ class CISImage():
 
         # Get the raw_data using pyuda or ipxReader and set the timestamp to the actual frame time stamp.
         try:
-            ipx_data = client.get('NEWIPX::read(filename=/net/fuslsa/data/MAST_Data/{0}/LATEST/rbc0{0}.ipx, '
-                                  'frame={1})'.format(shot, frame), '')
+            ipx_data = client.get_images('rbc', shot, frame_number=frame)
             frame = ipx_data.frames[0]
             self.raw_data = frame.k
             self.time = frame.time
