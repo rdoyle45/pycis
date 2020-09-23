@@ -160,8 +160,8 @@ class Instrument(object):
                        spec_norm_freq.integrate(dim='frequency')
 
             delay = self.calculate_ideal_phase_delay(c / freq_com)
-            doc = pycis.measure_degree_coherence_xr(spec_norm_freq, delay, material=self.crystals[0].material,
-                                                       freq_com=freq_com)
+            doc = pycis.calculate_degree_coherence(spec_norm_freq, delay, material=self.crystals[0].material,
+                                                   freq_com=freq_com)
 
             spec = total_intensity / 4 * (1 + np.abs(doc) * np.cos(xr.ufuncs.angle(doc)))
 

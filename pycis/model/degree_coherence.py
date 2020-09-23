@@ -5,65 +5,23 @@ from scipy.constants import c
 import pycis
 
 
-def measure_degree_coherence(spectrum, wl_axis, delay, material=None):
+def calculate_degree_coherence(spectrum, delay, material=None, freq_com=None):
     """
     calculate the degree of (temporal) coherence (DOC) of a given intensity spectrum, at a given interferometer delay.
 
     In general, DOC is a complex quantity. In the absence of dispersion, DOC is the Fourier transform of the
-    (normalised) frequency spectrum. Since the spectrum is real, DOC will be an even function of interferometer delay
-    -- so only positive delays are returned. The presence of instrument dispersion breaks the Fourier pair relationship
-    of the spectrum and DOC.
+    (area-normalised) frequency spectrum. Since the spectrum is real, DOC is an even function of interferometer delay.
 
-    :param spectrum: [ arb. ]
-    :type spectrum: np.ndarray
-
-    :param wl_axis: wavelengths [ m ]
-    :type wl_axis: np.ndarray
-
-    :param delay: interferometer delay [ rad ]
-    :type delay: float
-
-    :param material: if material is specified, dispersion will be accounted for to first order about the weighted mean
-    frequency
-    :type material: str
-
-    :return: degree_coherence
-    """
-
-    assert len(spectrum) == len(wl_axis)
-    freq_axis = c / wl_axis
-    spectrum_freq = spectrum * wl_axis ** 2 / c
-    freq_com = np.trapz(freq_axis * spectrum_freq, freq_axis) / np.trapz(spectrum_freq, freq_axis)  # weighted mean
-    # print(freq_com)
-
-    # account for interferometer dispersion if birefringent material is specified
-    if material is not None:
-        kappa = pycis.dispersion(c / freq_com, material=material, output_derivatives=True)[3]
-    else:
-        kappa = 1
-
-    delay_time = delay * kappa / (2 * np.pi * freq_com)
-    integrand = spectrum_freq * np.exp(-2 * np.pi * 1j * delay_time * freq_axis)
-    degree_coherence = np.trapz(integrand[::-1], freq_axis[::-1])
-
-    return degree_coherence
-
-
-def measure_degree_coherence_xr(spectrum, delay, material=None, freq_com=None):
-    """
-    calculate the degree of (temporal) coherence (DOC) of a given intensity spectrum, at a given interferometer delay.
-
-    In general, DOC is a complex quantity. In the absence of dispersion, DOC is the Fourier transform of the
-    (area-normalised) frequency spectrum. Since the spectrum is real, DOC is an even function of interferometer delay
-    -- so only positive delays are considered.
-
-    The presence of instrument dispersion breaks the Fourier pair
-    relationship of the spectrum and DOC,
+    The presence of instrument dispersion breaks the Fourier transform relationship of the spectrum and the DOC, but
+    the `group delay approximation' is a first-order
 
     :param spectrum: area-normalised spectrum, arbitrary (spectral) units
     :type spectrum: xr.DataArray with dim 'wavelength' in ( m ) or else dim 'frequency' in ( Hz )
 
-    :param delay: interferometer delay [ rad ]. Specifically the delay at the c.o.m. frequency of the spectrum.
+    :param delay: interferometer delay [ rad ]. If delay does not have a 'wavelength' dim or a 'frequency' dim then it
+    is assumed that the delay value(s) correspond to the centre-of-mass (COM) frequency of spectrum and the DOC is
+    calculated for each delay using the group delay approximation. If, however, delay has either a 'wavelength' dim or a
+    'frequency' dim, then the full dispersive integral is evaluated instead.
     :type delay: xr.DataArray
 
     :param material: if material is specified, dispersion will be accounted for to first order about the weighted mean
@@ -90,7 +48,6 @@ def measure_degree_coherence_xr(spectrum, delay, material=None, freq_com=None):
 
     if 'frequency' in delay.dims or 'wavelength' in delay.dims:
         # do the full dispersive calculation
-        print('dispersive')
 
         # if necessary, convert spectrum's wavelength (m) dim + coordinate to frequency (Hz)
         if 'wavelength' in delay.dims:
@@ -101,12 +58,9 @@ def measure_degree_coherence_xr(spectrum, delay, material=None, freq_com=None):
         delay_time = delay / (2 * np.pi * delay.frequency)
         delay_com = delay.interp({'frequency': freq_com, }, ).drop('frequency')
         integrand = spectrum * np.exp(2 * np.pi * 1j * delay_time * delay['frequency'])
-        degree_coherence = integrand.integrate(dim='frequency')
 
     else:
         # assume that the delay values given correspond to the c.o.m. frequency
-        print('GD')
-
         if material is not None:
             kappa_0 = pycis.dispersion(c / freq_com, material=material, output_derivatives=True)[3]
         else:
@@ -115,15 +69,15 @@ def measure_degree_coherence_xr(spectrum, delay, material=None, freq_com=None):
         delay_time = delay / (2 * np.pi * freq_com)
         freq_shift_norm = (spectrum['frequency'] - freq_com) / freq_com
         integrand = spectrum * np.exp(2 * np.pi * 1j * delay_time * freq_com * (1 + kappa_0 * freq_shift_norm))
-        degree_coherence = integrand.integrate(dim='frequency')
+
+    degree_coherence = integrand.integrate(dim='frequency')
 
     return degree_coherence
 
 
-
 def test():
     """
-    numerical / analytical test using a Gaussian lineshape
+    numerical / analytical test of calculate_degree_coherence() using a Gaussian lineshape
 
     :return:
     """
@@ -135,36 +89,44 @@ def test():
     kappa_0 = pycis.dispersion(wl_0, material, output_derivatives=True)[3]
     wl_sigma = 0.05e-9
     n_sigma = 5
-    n_bins = 1000
+    n_bins = 5000
 
+    # generate spectrum in frequency-space
     freq_0 = c / wl_0
     freq_sigma = c / wl_0 ** 2 * wl_sigma
     freq = np.linspace(freq_0 - n_sigma * freq_sigma, freq_0 + n_sigma * freq_sigma, n_bins)
-    spec_freq_arr = 1 / (freq_sigma * np.sqrt(2 * np.pi)) * np.exp(- 1 / 2 * ((freq - freq_0) / freq_sigma) ** 2)
-    # spec_freq = xr.DataArray(spec_freq_arr, dims=())
+    freq = xr.DataArray(freq, dims=('frequency', ), coords=(freq, ), )
+    wl = c / freq.values
+    wl = xr.DataArray(wl, dims=('wavelength', ), coords=(wl, ), )
+
+    spec_freq = 1 / (freq_sigma * np.sqrt(2 * np.pi)) * np.exp(- 1 / 2 * ((freq - freq_0) / freq_sigma) ** 2)
 
     delay_time_analytical = np.linspace(0, n_sigma / 5 * 1 / freq_sigma, n_bins)
     doc_analytical = np.exp(-2 * (np.pi * freq_sigma * delay_time_analytical * kappa_0) ** 2) * np.exp(2 * np.pi * 1j * freq_0 * delay_time_analytical)
 
     # NUMERICAL 1 -- tests group delay approximation
-    spec_wl = spec_freq_arr * freq ** 2 / c
-    spec_wl = xr.DataArray(spec_wl, dims=('wavelength', ), coords=(c / freq, ), )
+    # spec_wl = spec_freq * freq ** 2 / c
+    # spec_wl = spec_wl.rename({'frequency': 'wavelength'})
+    # spec_wl['wavelength'] = wl
+    # spec_wl = spec_wl * c / spectrum['frequency'] ** 2
 
-    lwps = np.array([4.48e-3, 6.35e-3, 9.79e-3, ])
+    lwps = np.array([4.48e-3,
+                     6.35e-3,
+                     9.79e-3, ])
     biref_0 = pycis.dispersion(wl_0, material, )[0]
 
     delay = 2 * np.pi * lwps * np.abs(biref_0) / wl_0  # (rad), arbitrary values
+
     delay_time_numerical = delay / (2 * np.pi * freq_0)
     delay = xr.DataArray(delay, dims=('delay', ), coords=(delay, ))
     s = time.time()
-    doc_numerical_1 = measure_degree_coherence_xr(spec_wl, delay, material=material)
+    doc_numerical_1 = calculate_degree_coherence(spec_freq, delay, material=material)
+    print(doc_numerical_1)
     e = time.time()
     print('numerical_1:', e - s, 'seconds')
 
-
     doc_analytical_fine = np.exp(-2 * (np.pi * freq_sigma * delay_time_numerical * kappa_0) ** 2) * \
                           np.exp(2 * np.pi * 1j * freq_0 * delay_time_numerical)
-
 
     # NUMERICAL 2 -- tests full dispersion integral
     doc_numerical_2 = np.zeros(len(lwps), dtype=complex)
@@ -173,38 +135,39 @@ def test():
         birefs = pycis.dispersion(c / freq, material)[0]
         delays_n2 = 2 * np.pi * np.abs(birefs) * lwp / (c / freq)
         delays_n2 = xr.DataArray(delays_n2, dims=('wavelength', ), coords=(c / freq, ), )
-        doc_numerical_2[i] = complex(measure_degree_coherence_xr(spec_wl, delays_n2, material=material))
+        doc_numerical_2[i] = complex(calculate_degree_coherence(spec_freq, delays_n2, material=material))
+    print(doc_numerical_2)
     e = time.time()
     print('numerical_2:', e - s, 'seconds')
 
-    # PLOT
-    fig = plt.figure(figsize=(10, 5,))
-    axes = [fig.add_subplot(1, 3, i) for i in [1, 2, 3, ]]
-    titles = ['Spectrum', 'Contrast', 'Phase', ]
-    for ax, title in zip(axes, titles):
-        ax.set_title(title)
-
-    ax1, ax2, ax3 = axes
-
-    # spectrum
-    ax1.plot(freq, spec_freq_arr)
-
-    # contrast
-    ax2.plot(delay_time_analytical, np.abs(doc_analytical), label='Analytical\n(Group delay approx.)')
-    ax2.plot(delay_time_numerical, np.abs(doc_numerical_1).values, lw=0, marker = '.', markeredgewidth=0.5,
-             markeredgecolor='k', label='Numerical\n(Group delay approx.)', markersize=8)
-    ax2.plot(delay_time_numerical, np.abs(doc_numerical_2), lw=0, marker='d', markersize=12, fillstyle='none', label='Numerical (full)')
-    leg = ax2.legend(frameon=False, fontsize=7)
-
-    #phase
-    ax3.plot(delay_time_numerical, np.angle(doc_analytical_fine), lw=0, marker='x', markersize=12, label='Analytical\n(Group delay approx.)')
-    ax3.plot(delay_time_numerical, np.angle(doc_numerical_1.values), lw=0, marker='.', markeredgewidth=0.5,
-             markeredgecolor='k', markersize=8, label='Numerical\n(Group delay approx.)')
-    ax3.plot(delay_time_numerical, np.angle(doc_numerical_2), lw=0, marker='d', markersize=12, fillstyle='none',
-             label='Numerical (full)')
-    leg = ax3.legend(frameon=False, fontsize=7)
-
-    plt.show()
+    # # PLOT
+    # fig = plt.figure(figsize=(10, 5,))
+    # axes = [fig.add_subplot(1, 3, i) for i in [1, 2, 3, ]]
+    # titles = ['Spectrum', 'Contrast', 'Phase', ]
+    # for ax, title in zip(axes, titles):
+    #     ax.set_title(title)
+    #
+    # ax1, ax2, ax3 = axes
+    #
+    # # spectrum
+    # ax1.plot(freq, spec_freq_arr)
+    #
+    # # contrast
+    # ax2.plot(delay_time_analytical, np.abs(doc_analytical), label='Analytical\n(Group delay approx.)')
+    # ax2.plot(delay_time_numerical, np.abs(doc_numerical_1).values, lw=0, marker = '.', markeredgewidth=0.5,
+    #          markeredgecolor='k', label='Numerical\n(Group delay approx.)', markersize=8)
+    # ax2.plot(delay_time_numerical, np.abs(doc_numerical_2), lw=0, marker='d', markersize=12, fillstyle='none', label='Numerical (full)')
+    # leg = ax2.legend(frameon=False, fontsize=7)
+    #
+    # #phase
+    # ax3.plot(delay_time_numerical, np.angle(doc_analytical_fine), lw=0, marker='x', markersize=12, label='Analytical\n(Group delay approx.)')
+    # ax3.plot(delay_time_numerical, np.angle(doc_numerical_1.values), lw=0, marker='.', markeredgewidth=0.5,
+    #          markeredgecolor='k', markersize=8, label='Numerical\n(Group delay approx.)')
+    # ax3.plot(delay_time_numerical, np.angle(doc_numerical_2), lw=0, marker='d', markersize=12, fillstyle='none',
+    #          label='Numerical (full)')
+    # leg = ax3.legend(frameon=False, fontsize=7)
+    #
+    # plt.show()
 
 
 # LEGACY CODE #
