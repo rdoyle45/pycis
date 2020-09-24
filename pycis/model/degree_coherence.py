@@ -13,7 +13,8 @@ def calculate_degree_coherence(spectrum, delay, material=None, freq_com=None):
     (area-normalised) frequency spectrum. Since the spectrum is real, DOC is an even function of interferometer delay.
 
     The presence of instrument dispersion breaks the Fourier transform relationship of the spectrum and the DOC, but
-    the `group delay approximation' is a first-order
+    the `group delay approximation' is a first-order approx for dispersion that maintains a Fourier transform
+    relationship between the two.
 
     :param spectrum: area-normalised spectrum, arbitrary (spectral) units
     :type spectrum: xr.DataArray with dim 'wavelength' in ( m ) or else dim 'frequency' in ( Hz )
@@ -131,9 +132,6 @@ def test_plot():
     # PLOT
     fig = plt.figure(figsize=(10, 5,))
     axes = [fig.add_subplot(1, 3, i) for i in [1, 2, 3, ]]
-    titles = ['Spectrum', 'Contrast', 'Phase', ]
-    for ax, title in zip(axes, titles):
-        ax.set_title(title)
 
     # plot spectrum
     spectrum.plot(ax=axes[0])
@@ -150,6 +148,9 @@ def test_plot():
         func(doc_n2).plot(ax=ax, lw=0, marker='d', markersize=12, fillstyle='none', label='Numerical (full)', color='C2')
         leg = ax.legend(fontsize=7)
 
+    titles = ['Spectrum', 'Contrast', 'Phase', ]
+    for ax, title in zip(axes, titles):
+        ax.set_title(title)
     plt.show()
 
 
