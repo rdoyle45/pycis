@@ -5,15 +5,15 @@ from scipy.constants import c
 import pycis
 
 
-def calculate_degree_coherence(spectrum, delay, material=None, freq_com=None):
+def calculate_coherence(spectrum, delay, material=None, freq_com=None):
     """
-    calculate the degree of (temporal) coherence (DOC) of a given intensity spectrum, at a given interferometer delay.
+    calculate the (temporal) coherence of a given intensity spectrum, at a given interferometer delay.
 
-    In general, DOC is a complex quantity. In the absence of dispersion, DOC is the Fourier transform of the
-    (area-normalised) frequency spectrum. Since the spectrum is real, DOC is an even function of interferometer delay.
+    In general, coherence is complex. In the absence of dispersion, coherence is the Fourier transform of the
+    frequency spectrum. Since the spectrum is real, coherence is an even function of interferometer delay.
 
-    The presence of instrument dispersion breaks the Fourier transform relationship of the spectrum and the DOC, but
-    the `group delay approximation' is a first-order approx for dispersion that maintains a Fourier transform
+    The presence of instrument dispersion breaks the Fourier transform relationship of the spectrum and the coherence,
+    but the `group delay approximation' is a first-order approx for dispersion that maintains a Fourier transform
     relationship between the two.
 
     :param spectrum: area-normalised spectrum, arbitrary (spectral) units
@@ -32,7 +32,7 @@ def calculate_degree_coherence(spectrum, delay, material=None, freq_com=None):
     :param freq_com: centre of mass frequency of spectrum, if it has already been calculated
     :type freq_com: xr.DataArray
 
-    :return: degree_coherence
+    :return: coherence
     """
 
     # if necessary, convert spectrum's wavelength (m) dim + coordinate to frequency (Hz)
@@ -68,14 +68,12 @@ def calculate_degree_coherence(spectrum, delay, material=None, freq_com=None):
         freq_shift_norm = (spectrum['frequency'] - freq_com) / freq_com
         integrand = spectrum * np.exp(1j * delay * (1 + kappa_0 * freq_shift_norm))
 
-    degree_coherence = integrand.integrate(dim='frequency')
-
-    return degree_coherence
+    return integrand.integrate(dim='frequency')
 
 
 def test_plot():
     """
-    numerical / analytical test of calculate_degree_coherence() using a modelled Gaussian spectral lineshape
+    numerical / analytical test of calculate_coherence() using a modelled Gaussian spectral lineshape
 
     :return:
     """
@@ -115,7 +113,7 @@ def test_plot():
 
     # NUMERICAL 1 (n1) -- tests group delay approximation
     s = time.time()
-    doc_n1 = calculate_degree_coherence(spectrum, delay_0, material=material)
+    doc_n1 = calculate_coherence(spectrum, delay_0, material=material)
     e = time.time()
     print('numerical_1:', e - s, 'seconds')
 
@@ -125,7 +123,7 @@ def test_plot():
     delay = 2 * np.pi * np.abs(biref) * thickness / (c / freq)
 
     s = time.time()
-    doc_n2 = calculate_degree_coherence(spectrum, delay, material=material)
+    doc_n2 = calculate_coherence(spectrum, delay, material=material)
     e = time.time()
     print('numerical_2:', e - s, 'seconds')
 

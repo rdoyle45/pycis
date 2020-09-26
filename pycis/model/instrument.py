@@ -150,21 +150,23 @@ class Instrument(object):
 
         if self.instrument_type == 'two_beam' and 'stokes' not in spec.dims:
             # analytical calculation to save time
+            print('1')
             total_intensity = spec.integrate(dim='wavelength', )
-            spec_norm = spec / total_intensity
 
-            spec_norm_freq = spec_norm.rename({'wavelength': 'frequency'})
-            spec_norm_freq['frequency'] = c / spec_norm_freq['frequency']
-            spec_norm_freq = spec_norm_freq * c / spec_norm_freq['frequency'] ** 2
-            freq_com = (spec_norm_freq * spec_norm_freq['frequency']).integrate(dim='frequency') / \
-                       spec_norm_freq.integrate(dim='frequency')
-
+            spec_freq = spec.rename({'wavelength': 'frequency'})
+            spec_freq['frequency'] = c / spec_freq['frequency']
+            spec_freq = spec_freq * c / spec_freq['frequency'] ** 2
+            freq_com = (spec_freq * spec_freq['frequency']).integrate(dim='frequency') / total_intensity
             delay = self.calculate_ideal_phase_delay(c / freq_com)
-            doc = pycis.calculate_degree_coherence(spec_norm_freq, delay, material=self.crystals[0].material,
-                                                   freq_com=freq_com)
 
-            spec = total_intensity / 4 * (1 + np.abs(doc) * np.cos(xr.ufuncs.angle(doc)))
+            print('2')
+            coherence = xr.where(total_intensity > 0,
+                                 pycis.calculate_coherence(spec_freq, delay, material=self.crystals[0].material, freq_com=freq_com),
+                                 0)
+            print('3')
+            spec = 1 / 4 * (total_intensity + xr.ufuncs.real(coherence))
 
+            print('4')
 
         elif self.instrument_type == 'general':
             # full Mueller matrix calculation

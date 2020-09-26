@@ -49,10 +49,10 @@ class Camera(object):
         else:
             signal = spec
 
-        # signal = signal * self.qe
+        signal = signal * self.qe
         # signal.values = np.random.poisson(signal.values)
         # signal.values = signal.values + np.random.normal(0, self.cam_noise, signal.values.shape)
-        # signal = signal / self.epercount
+        signal = signal / self.epercount
         # signal.values = np.digitize(signal.values, np.arange(0, 2 ** self.bit_depth))
 
         return signal
