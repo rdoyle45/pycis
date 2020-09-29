@@ -27,7 +27,7 @@ class Camera(object):
         self.cam_noise = cam_noise
         self.bit_depth = bit_depth
 
-    def capture(self, spec, display=False):
+    def capture_image(self, spec, display=False):
         """
 
         capture image of scene
@@ -144,7 +144,7 @@ class PolCamera(Camera):
 
         self.mueller_matrix = mueller_matrix
 
-    def capture(self, intensity, clean=False, display=False):
+    def capture_image(self, intensity, clean=False, display=False):
         """
 
         :param intensity:

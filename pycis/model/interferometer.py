@@ -11,7 +11,7 @@ Misc. conventions:
 """
 
 
-def mueller_prod(mat1, mat2):
+def mueller_product(mat1, mat2):
     """
     Mueller matrix product
 
@@ -33,7 +33,7 @@ def mueller_prod(mat1, mat2):
         raise Exception('input not understood')
 
 
-def calculate_rot_mat(angle):
+def calculate_rot_matrix(angle):
     """
     general Mueller matrix for frame rotation (anti-clockwise from x-axis)
 
@@ -73,12 +73,11 @@ class InterferometerComponent:
 
         """
 
-        mat_i = mueller_prod(mat, calculate_rot_mat(self.orientation))
-        return mueller_prod(calculate_rot_mat(-self.orientation), mat_i)
+        mat_i = mueller_product(mat, calculate_rot_matrix(self.orientation))
+        return mueller_product(calculate_rot_matrix(-self.orientation), mat_i)
 
     def calculate_matrix(self, wl, inc_angle, azim_angle):
-
-        pass
+        raise NotImplementedError
 
 
 class LinearPolariser(InterferometerComponent):
@@ -156,7 +155,7 @@ class BirefringentComponent(InterferometerComponent):
         :return: 
         """
 
-        phase = self.calculate_phase_delay(wl, inc_angle, azim_angle)
+        phase = self.calculate_delay(wl, inc_angle, azim_angle)
 
         a1 = xr.ones_like(phase)
         a0 = xr.zeros_like(phase)
@@ -171,7 +170,7 @@ class BirefringentComponent(InterferometerComponent):
 
         return self.orient(mat)
 
-    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+    def calculate_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
         raise NotImplementedError
 
 
@@ -192,9 +191,9 @@ class UniaxialCrystal(BirefringentComponent):
         super().__init__(orientation, thickness, material=material, contrast=contrast, )
         self.cut_angle = cut_angle
 
-    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+    def calculate_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
         """
-        calculate phase delay due to uniaxial crystal.
+        calculate phase delay (in rad) due to uniaxial crystal.
         
         Veiras defines optical path difference as OPL_o - OPL_e ie. +ve phase indicates a delayed extraordinary 
         ray
@@ -255,9 +254,9 @@ class SavartPlate(BirefringentComponent):
         super().__init__(orientation, thickness, material=material, source=source, contrast=contrast, )
         self.mode = mode
 
-    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+    def calculate_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
         """
-        calculate phase delay due to Savart plate.
+        calculate phase delay (in rad) due to Savart plate.
 
         Vectorised. If inc_angle and azim_angle are arrays, they must have the same dimensions.  
         source: Lei Wu, Chunmin Zhang, and Baochang Zhao. “Analysis of the lateral displacement and optical path difference
@@ -319,8 +318,8 @@ class SavartPlate(BirefringentComponent):
             crystal_1 = UniaxialCrystal(or1, t, cut_angle=-np.pi / 4, material=self.material)
             crystal_2 = UniaxialCrystal(or2, t, cut_angle=np.pi / 4, material=self.material)
 
-            phase = crystal_1.calculate_phase_delay(wl, inc_angle, azim_angle1, n_e=n_e, n_o=n_o) - \
-                    crystal_2.calculate_phase_delay(wl, inc_angle, azim_angle2, n_e=n_e, n_o=n_o)
+            phase = crystal_1.calculate_delay(wl, inc_angle, azim_angle1, n_e=n_e, n_o=n_o) - \
+                    crystal_2.calculate_delay(wl, inc_angle, azim_angle2, n_e=n_e, n_o=n_o)
 
         else:
             raise Exception('invalid SavartPlate.mode')
@@ -344,7 +343,7 @@ class QuarterWaveplate(BirefringentComponent):
 
         super().__init__(orientation, thickness, clr_aperture=clr_aperture)
 
-    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+    def calculate_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
         """
         calculate phase delay due to ideal quarter waveplate
 
@@ -395,7 +394,7 @@ class HalfWaveplate(BirefringentComponent):
 
         super().__init__(orientation, thickness, clr_aperture=clr_aperture)
 
-    def calculate_phase_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
+    def calculate_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
         """
         calculate phase delay due to ideal half waveplate
 
