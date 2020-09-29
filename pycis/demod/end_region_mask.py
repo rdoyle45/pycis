@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
     temp_inst = 34
     lsga = laser_scan_ga.LaserScanGA(temp_inst)
-    image, wl, time = lsga.get_raw_image(15)
+    image, wl, time = lsga.get_raw_img(15)
 
     # img_erm = end_region_mask(image)
     pycis.demod.fourier_demod_2d(image, mask=True, display=True)

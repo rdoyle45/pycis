@@ -2,7 +2,6 @@ import numpy as np
 import scipy.special
 import scipy.stats
 import matplotlib.pyplot as plt
-import pycis
 
 
 def norm_pdf(mean, std, x=None):

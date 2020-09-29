@@ -32,7 +32,7 @@ def display(interferogram, dc, phase, contrast):
     axes = [ax1, ax2, ax3, ax4]
 
     for fn, ax, img in zip(fns, axes, imgs):
-        ax.set_adjustable('box-forced')
+        # ax.set_adjustable('box-forced')
         fn(ax, img)
 
     plt.tight_layout()

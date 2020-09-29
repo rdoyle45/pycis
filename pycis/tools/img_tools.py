@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io
 import scipy.ndimage
-from PIL import Image
+# from PIL import Image
 import pycis
 
 
@@ -391,65 +391,64 @@ def get_phase_roi_mean(path, rot90=0, roi_dim=default_roi_dim, overwrite=False):
 
     return phase_roi_stack_mean
 
-
-def get_phase_pixel_stack_std(path, rot90=0, fmt='tif', img_lim=30, overwrite=False):
-    """ Calculate standard deviation in phase for a single pixel in a series of images (assumes all images in the 
-    given directory are the same dimensions).
-    
-
-        :param path: 
-        :param fmt: 
-        :param roi_dim:
-        :param overwrite: (bool.)
-        :return: phase_roi_mean, phase_roi_std (both in radians)
-        """
-
-    assert os.path.isdir(path)
-
-    phase_pixel_stack_std_path = os.path.join(path, 'phase_pixel_stack_std.npy')
-
-
-    if os.path.isfile(phase_pixel_stack_std_path) and overwrite is False:
-        phase_pixel_stack_std = np.load(phase_pixel_stack_std_path)
-
-    else:
-        flist = get_img_flist(path, fmt=fmt)
-        fnum = len(flist)
-
-        # use all the images available, up to a set limit (img_lim)
-        if fnum > img_lim:
-            fnum_trunc = img_lim
-        else:
-            fnum_trunc = fnum
-
-        # get img dimensions and indices for a central pixel
-        img_h, img_w = np.array(Image.open(flist[0]), dtype=np.float64).shape
-        pix_y = round(img_h / 2)
-        pix_x = round(img_w / 2)
-
-        phase_pixel = []
-
-        for imgpath in flist[:fnum_trunc]:
-            print(imgpath)
-            img = np.array(Image.open(imgpath), dtype=np.float64)
-
-            if rot90 != 0:
-                img = np.rot90(img, k=rot90)
-
-            intensity, phase, contrast = pycis.demod.fourier_demod_2d(img)
-
-            phase_pixel.append(phase[pix_y, pix_x])
-
-        phase_pixel_std = np.std(np.array(phase_pixel))
-
-        # scale to obtain phase std for the stacked pixel.
-        phase_pixel_stack_std = phase_pixel_std * fnum ** - 0.5
-
-        # save
-        np.save(phase_pixel_stack_std_path, phase_pixel_stack_std)
-
-    return phase_pixel_stack_std
-
+#
+# def get_phase_pixel_stack_std(path, rot90=0, fmt='tif', img_lim=30, overwrite=False):
+#     """ Calculate standard deviation in phase for a single pixel in a series of images (assumes all images in the
+#     given directory are the same dimensions).
+#
+#
+#         :param path:
+#         :param fmt:
+#         :param roi_dim:
+#         :param overwrite: (bool.)
+#         :return: phase_roi_mean, phase_roi_std (both in radians)
+#         """
+#
+#     assert os.path.isdir(path)
+#
+#     phase_pixel_stack_std_path = os.path.join(path, 'phase_pixel_stack_std.npy')
+#
+#
+#     if os.path.isfile(phase_pixel_stack_std_path) and overwrite is False:
+#         phase_pixel_stack_std = np.load(phase_pixel_stack_std_path)
+#
+#     else:
+#         flist = get_img_flist(path, fmt=fmt)
+#         fnum = len(flist)
+#
+#         # use all the images available, up to a set limit (img_lim)
+#         if fnum > img_lim:
+#             fnum_trunc = img_lim
+#         else:
+#             fnum_trunc = fnum
+#
+#         # get img dimensions and indices for a central pixel
+#         img_h, img_w = np.array(Image.open(flist[0]), dtype=np.float64).shape
+#         pix_y = round(img_h / 2)
+#         pix_x = round(img_w / 2)
+#
+#         phase_pixel = []
+#
+#         for imgpath in flist[:fnum_trunc]:
+#             print(imgpath)
+#             img = np.array(Image.open(imgpath), dtype=np.float64)
+#
+#             if rot90 != 0:
+#                 img = np.rot90(img, k=rot90)
+#
+#             intensity, phase, contrast = pycis.demod.fourier_demod_2d(img)
+#
+#             phase_pixel.append(phase[pix_y, pix_x])
+#
+#         phase_pixel_std = np.std(np.array(phase_pixel))
+#
+#         # scale to obtain phase std for the stacked pixel.
+#         phase_pixel_stack_std = phase_pixel_std * fnum ** - 0.5
+#
+#         # save
+#         np.save(phase_pixel_stack_std_path, phase_pixel_stack_std)
+#
+#     return phase_pixel_stack_std
 
 def get_contrast_pixel_stack_std(path, fmt='tif', img_lim=30, overwrite=False):
     """ Calculate standard deviation in contrast for a single pixel in a series of images (assumes all images in the 

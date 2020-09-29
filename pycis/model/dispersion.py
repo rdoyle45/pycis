@@ -40,9 +40,12 @@ d = {'kato1986':
      }
 
 # set material default sources
-default_sources = {'a-BBO': 'newlightphotonics',
+default_sources = {'calcite': 'ghosh',
                    'b-BBO': 'eimerl',
-                   'calcite': 'ghosh',
+                   # 'b-BBO': 'kato2010',
+                   # 'a-BBO': 'newlightphotonics',
+                   'a-BBO': 'agoptics',
+                   # 'a-BBO': 'kim',
                    'YVO': 'shi'}
 
 
@@ -88,7 +91,58 @@ def dispersion(wl, material, output_derivatives=False, source=None):
     kappa = 1 - (wl / biref) * biref_deriv1
 
     return biref, n_e, n_o, kappa, biref_deriv1, biref_deriv2, biref_deriv3
-        
+
+
+def dispersion_indices(wl, material, source=None):
+    """
+
+    :param wl:
+    :param material:
+    :param source:
+    :return:
+    """
+
+    if source is None:
+        source = default_sources[material]
+
+    dd = d[source]
+    sellmeier_coefs = dd['sellmeier_coefs']
+    form = dd['sellmeier_eqn_form']
+    sc_e = sellmeier_coefs['e']
+    sc_o = sellmeier_coefs['o']
+
+    wl_mic = wl * 1e6
+    n_e = sellmeier_eqn(wl_mic, sc_e, form=form)
+    n_o = sellmeier_eqn(wl_mic, sc_o, form=form)
+
+    # first symmetric derivative of indices wrt. wavelength
+    wl_dif_1p = wl_mic + d_lambda_micron
+    wl_dif_1m = wl_mic - d_lambda_micron
+    n_e_deriv1 = (sellmeier_eqn(wl_dif_1p, sc_e, form=form) - sellmeier_eqn(wl_dif_1m, sc_e, form=form)) / \
+                 (2 * d_lambda)
+    n_o_deriv1 = (sellmeier_eqn(wl_dif_1p, sc_o, form=form) - sellmeier_eqn(wl_dif_1m, sc_o, form=form)) / \
+                 (2 * d_lambda)
+
+    # second symmetric derivative of indices wrt. wavelength
+    n_e_deriv2 = (sellmeier_eqn(wl_dif_1p, sc_e, form=form) - 2 * n_e + sellmeier_eqn(wl_dif_1m, sc_e, form=form)) / \
+                 (d_lambda ** 2)
+    n_o_deriv2 = (sellmeier_eqn(wl_dif_1p, sc_o, form=form) - 2 * n_o + sellmeier_eqn(wl_dif_1m, sc_o, form=form)) / \
+                 (d_lambda ** 2)
+
+    # third symmetric derivative of indices wrt. wavelength
+    wl_dif_05p = wl_mic + 0.5 * d_lambda_micron
+    wl_dif_05m = wl_mic - 0.5 * d_lambda_micron
+    wl_dif_15p = wl_mic + 1.5 * d_lambda_micron
+    wl_dif_15m = wl_mic - 1.5 * d_lambda_micron
+    n_e_deriv3 = (sellmeier_eqn(wl_dif_15p, sc_e, form=form) - (3 * sellmeier_eqn(wl_dif_05p, sc_e, form=form)) +
+                  (3. * sellmeier_eqn(wl_dif_05m, sc_e, form=form)) - sellmeier_eqn(wl_dif_15m, sc_e, form=form)) / (
+                               d_lambda ** 3)
+    n_o_deriv3 = (sellmeier_eqn(wl_dif_15p, sc_o, form=form) - (3 * sellmeier_eqn(wl_dif_05p, sc_o, form=form)) +
+                  (3. * sellmeier_eqn(wl_dif_05m, sc_o, form=form)) - sellmeier_eqn(wl_dif_15m, sc_o, form=form)) / (
+                         d_lambda ** 3)
+
+    return n_e, n_e_deriv1, n_e_deriv2, n_e_deriv3, n_o, n_o_deriv1, n_o_deriv2, n_o_deriv3,
+
 
 def sellmeier_eqn(wl_mic, sellmeier_coefs, form):
     """

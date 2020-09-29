@@ -8,11 +8,11 @@ class Camera(object):
 
     """
 
-    def __init__(self, bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise):
+    def __init__(self, bit_depth, sensor_format, pixel_size, qe, epercount, cam_noise):
         """
 
         :param bit_depth: 
-        :param sensor_dim: (y, x)
+        :param sensor_format: (x, y, )
         :param pix_size: pixel dimension [ m ].
         :param qe: Quantum efficiency or sensor.
         :param epercount: Conversion gain of sensor.
@@ -20,46 +20,40 @@ class Camera(object):
 
         """
 
-        self.pix_size = pix_size
-        self.sensor_dim = sensor_dim
+        self.pixel_size = pixel_size
+        self.sensor_format = sensor_format
         self.qe = qe
         self.epercount = epercount
         self.cam_noise = cam_noise
         self.bit_depth = bit_depth
 
-    def capture(self, intensity, clean=False, display=False):
-        """ model sensor signal given photon fluence (photons / pixel / camera timestep).
-        
-        :param intensity: stokes vector
-        :param clean: 
-        :return: camera_signal
+    def capture(self, spec, display=False):
         """
 
-        # np.random.seed()
+        capture image of scene
+
+        :param spec: (xr.DataArray) input spectrum with dimensions 'wavelength', 'x', 'y' and (optionally) 'stokes'. If
+        no stokes dim then it is assumed that light is unpolarised (i.e. the spec supplied is the S_0 Stokes parameter)
+        :param display: (bool) whether to display
+        :param color: (bool) true for color display, else monochrome
+        :return:
+        """
+
         np.random.seed()
+        if 'stokes' in spec.dims:
+            spec = spec.isel(stokes=0, drop=True)
 
-        # account for quantum efficiency
-        electron_fluence = intensity * self.qe
+        if 'wavelength' in spec.dims:
+            if len(spec.wavelength) >= 2:
+                signal = spec.integrate(dim='wavelength')
+        else:
+            signal = spec
 
-        if not clean:
-            # add shot noise
-            shot_noise = np.random.poisson(electron_fluence) - electron_fluence
-            electron_fluence += shot_noise
-
-            # add camera noise
-            electron_fluence += np.random.normal(0, self.cam_noise, self.sensor_dim)
-
-        # apply gain
-        signal = electron_fluence / self.epercount
-
-        # digitise at bitrate of sensor
-        signal = np.digitize(signal, np.arange(0, 2 ** self.bit_depth))
-
-        if display:
-            fig, ax = plt.subplots()
-            im = ax.imshow(signal, 'gray')
-            cbar = fig.colorbar(im, ax=ax)
-            plt.show()
+        signal = signal * self.qe
+        # signal.values = np.random.poisson(signal.values)
+        # signal.values = signal.values + np.random.normal(0, self.cam_noise, signal.values.shape)
+        signal = signal / self.epercount
+        # signal.values = np.digitize(signal.values, np.arange(0, 2 ** self.bit_depth))
 
         return signal
 
@@ -100,7 +94,7 @@ class Camera(object):
 class PolCamera(Camera):
     """ Polarisation camera, eg. Photron Chrysta """
 
-    def __init__(self, bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise):
+    def __init__(self, bit_depth, sensor_format, pix_size, qe, epercount, cam_noise):
         """
 
         :param format:
@@ -225,8 +219,8 @@ if __name__ == '__main__':
 
     name = 'photron_SA4'
     bit_depth = 12
-    sensor_dim = [256, 216]
-    pix_size = 20e-6
+    sensor_format = [256, 216]
+    pixel_size = 20e-6
     qe = 0.3
     epercount = 11.6
     cam_noise = 41.2
@@ -247,4 +241,4 @@ if __name__ == '__main__':
     # epercount = 0.46  # [e / count]
     # cam_noise = 0  # [e]
 
-    camera = PolCamera(bit_depth, sensor_dim, pix_size, qe, epercount, cam_noise)
+    camera = PolCamera(bit_depth, sensor_dim, pixel_size, qe, epercount, cam_noise)
