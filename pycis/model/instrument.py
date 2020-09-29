@@ -5,23 +5,27 @@ import scipy.interpolate
 from scipy.constants import c
 import pycis
 from pycis.tools import is_scalar
-from pycis.model import mueller_prod
+from pycis.model import mueller_product
 
 
 class Instrument(object):
     """
-    CI instrument
+    coherence imaging instrument
 
     """
 
     def __init__(self, camera, optics, interferometer, bandpass_filter=None, interferometer_orientation=0):
         """
+        TODO some of the methods of this class take 'spectrum' as an input, but do not use the values of spectrum.
+            Rather, they just use the information from the coordinates. This probably makes the code harder to
+            understand.
+
         :param camera:
         :type camera pycis.model.Camera
 
         :param optics: the focal lengths of the three lenses used in the standard CI configuration (see e.g. my thesis
         or Scott Silburn's): [f_1, f_2, f_3] where f_1 is the objective lens.
-        :type optics: list of floats with length 3. Corresponding to
+        :type optics: list of floats
 
         :param interferometer: a list of instances of pycis.model.InterferometerComponent. The first component in
         the list is the first component that the light passes through.
@@ -41,7 +45,7 @@ class Instrument(object):
         # TODO properly implement bandpass_filter
         self.bandpass_filter = bandpass_filter
         self.input_checks()
-        self.x_pos, self.y_pos = self.calculate_pixel_pos()
+        self.x_pos, self.y_pos = self.calculate_pixel_position()
 
         # assign instrument 'type'
         self.instrument_type = self.check_instrument_type()
@@ -59,88 +63,98 @@ class Instrument(object):
     def get_polarisers(self):
         return [c for c in self.interferometer if isinstance(c, pycis.LinearPolariser)]
 
-    def calculate_pixel_pos(self, crop=None, downsample=1):
+    def calculate_pixel_position(self, x_pixel=None, y_pixel=None, crop=None, downsample=1):
         """
-        Calculate x-y coordinates of the pixels of the camera's sensor -- for ray geometry calculations
-        Converts from pixel coordinates (origin top left) to spatial coordinates (origin centre). If x_coord and
-        y_coord are not specified, entire sensor will be evaluated (with specified cropping and downsampling).
+        Calculate pixel positions (in m) on the camera's sensor plane (the x-y plane).
 
-        Coordinates can be cropped and downsampled. If both crop and downsample are specified, crop is carried out
-        first.
+        The origin of the x-y coordinate system is the centre of the sensor. Pixel positions correspond to the pixel
+        centres. If x_pixel and y_pixel are specified then only returns the position of that pixel. crop and downsample
+        are essentially legacy kwargs from my thesis work.
 
+        :param x_pixel:
+        :param y_pixel:
         :param crop: (y1, y2, x1, x2)
         :param downsample:
-        :return: x_pos, y_pos [ m ]
-
+        :return: x_pos, y_pos, both instances of xr.DataArray
         """
 
         sensor_format = np.array(self.camera.sensor_format)
-        centre_pos = self.camera.pixel_size * (sensor_format - 2) / 2
+        centre_pos = self.camera.pixel_size * sensor_format / 2  # relative to x=0, y=0 pixel
 
         if crop is None:
             crop = (0, sensor_format[0], 0, sensor_format[1])
 
         x_coord = np.arange(crop[0], crop[1])[::downsample]
         y_coord = np.arange(crop[2], crop[3])[::downsample]
-        x = (x_coord - 0.5) * self.camera.pixel_size - centre_pos[0]
-        y = (y_coord - 0.5) * self.camera.pixel_size - centre_pos[1]
+        x = (x_coord + 0.5) * self.camera.pixel_size - centre_pos[0]
+        y = (y_coord + 0.5) * self.camera.pixel_size - centre_pos[1]
         x = xr.DataArray(x, dims=('x', ), coords=(x, ), )
         y = xr.DataArray(y, dims=('y',), coords=(y,), )
 
+        # add pixel numbers as non-dimension coordinates -- just for explicit indexing and plotting
+        x_pixel_coord = xr.DataArray(np.arange(sensor_format[0], ), dims=('x', ), coords=(x, ), )
+        y_pixel_coord = xr.DataArray(np.arange(sensor_format[1], ), dims=('y', ), coords=(y, ), )
+        x = x.assign_coords({'x_pixel': ('x', x_pixel_coord), }, )
+        y = y.assign_coords({'y_pixel': ('y', y_pixel_coord), }, )
+
+        if x_pixel is not None:
+            x = x.isel(x=x_pixel)
+        if y_pixel is not None:
+            y = y.isel(y=y_pixel)
+
         return x, y
 
-    def calculate_inc_angles(self, x_pos, y_pos):
+    def calculate_inc_angles(self, x, y):
         """
         calculate incidence angles of ray(s) through crystal
 
-        :param x_pos: (xr.DataArray) x position(s) on sensor plane [ m ]
-        :param y_pos: (xr.DataArray) y position(s) on sensor [ m ]
+        :param x: (xr.DataArray) x position(s) on sensor plane [ m ]
+        :param y: (xr.DataArray) y position(s) on sensor [ m ]
         :return: incidence angles [ rad ]
 
         """
 
-        return np.arctan2(np.sqrt(x_pos ** 2 + y_pos ** 2), self.optics[2], )
+        return np.arctan2(np.sqrt(x ** 2 + y ** 2), self.optics[2], )
 
-    def calculate_azim_angles(self, x_pos, y_pos, crystal):
+    def calculate_azim_angles(self, x, y, crystal):
         """
         calculate azimuthal angles of rays through crystal (varies with crystal orientation)
 
-        :param x_pos: (xr.DataArray) x position(s) on sensor plane [ m ]
-        :param y_pos: (xr.DataArray) y position(s) on sensor plane [ m ]
+        :param x: (xr.DataArray) x position(s) on sensor plane [ m ]
+        :param y: (xr.DataArray) y position(s) on sensor plane [ m ]
         :param crystal: (pycis.model.BirefringentComponent)
-
         :return: azimuthal angles [ rad ]
 
         """
 
         orientation = crystal.orientation + self.interferometer_orientation
-        return np.arctan2(y_pos, x_pos) + np.pi - orientation
+        return np.arctan2(y, x) + np.pi - orientation
 
-    def calculate_matrix(self, spec):
+    def calculate_matrix(self, spectrum):
         """
-        calculate total Mueller matrix for interferometer
+        calculate the total Mueller matrix for the interferometer
 
-        :param spec: (xr.DataArray) see spec argument for instrument.capture
+        :param spectrum: (xr.DataArray) see spectrum argument for instrument.capture
         :return: Mueller matrix
 
         """
 
-        inc_angle = self.calculate_inc_angles(spec.x, spec.y)
-        instrument_mat = xr.DataArray(np.identity(4), dims=('mueller_v', 'mueller_h'), )
+        inc_angle = self.calculate_inc_angles(spectrum.x, spectrum.y)
+        total_matrix = xr.DataArray(np.identity(4), dims=('mueller_v', 'mueller_h'), )
 
         for component in self.interferometer:
-            azim_angle = self.calculate_azim_angles(spec.x, spec.y, component)
-            component_mat = component.calculate_matrix(spec.wavelength, inc_angle, azim_angle)
-            instrument_mat = mueller_prod(component_mat, instrument_mat)
+            azim_angle = self.calculate_azim_angles(spectrum.x, spectrum.y, component)
+            component_matrix = component.calculate_matrix(spectrum.wavelength, inc_angle, azim_angle)
+            total_matrix = mueller_product(component_matrix, total_matrix)
 
-        rot_mat = pycis.model.calculate_rot_mat(self.interferometer_orientation)
-        return mueller_prod(rot_mat, instrument_mat)
+        rot_matrix = pycis.calculate_rot_matrix(self.interferometer_orientation)
+        return mueller_product(rot_matrix, total_matrix)
 
-    def capture(self, spec, display=False, color=False, ):
+    def capture_image(self, spectrum, ):
         """
         capture image of scene
 
-        :param spec: (xr.DataArray) photon fluence spectrum with units of ph / m [hitting the pixel area during exposure
+        :param spectrum: (xr.DataArray) photon fluence spectrum with units of ph / m [hitting the pixel area during exposure
          time] and with dimensions 'wavelength', 'x', 'y' and (optionally) 'stokes'. If no stokes dim then it is assumed
         that light is unpolarised (i.e. the spec supplied is the S_0 Stokes parameter only)
         :param color: (bool) true for color display, else monochrome
@@ -148,67 +162,57 @@ class Instrument(object):
 
         """
 
-        if self.instrument_type == 'two_beam' and 'stokes' not in spec.dims:
+        if self.instrument_type == 'two_beam' and 'stokes' not in spectrum.dims:
             # analytical calculation to save time
             print('1')
-            total_intensity = spec.integrate(dim='wavelength', )
+            total_intensity = spectrum.integrate(dim='wavelength', )
 
-            spec_freq = spec.rename({'wavelength': 'frequency'})
+            spec_freq = spectrum.rename({'wavelength': 'frequency'})
             spec_freq['frequency'] = c / spec_freq['frequency']
             spec_freq = spec_freq * c / spec_freq['frequency'] ** 2
             freq_com = (spec_freq * spec_freq['frequency']).integrate(dim='frequency') / total_intensity
-            delay = self.calculate_ideal_phase_delay(c / freq_com)
+            delay = self.calculate_ideal_delay(c / freq_com)
 
-            print('2')
             coherence = xr.where(total_intensity > 0,
-                                 pycis.calculate_coherence(spec_freq, delay, material=self.crystals[0].material, freq_com=freq_com),
+                                 pycis.calculate_coherence(spec_freq, delay, material=self.crystals[0].material,
+                                                           freq_com=freq_com),
                                  0)
-            print('3')
-            spec = 1 / 4 * (total_intensity + xr.ufuncs.real(coherence))
-
-            print('4')
+            spectrum = 1 / 4 * (total_intensity + xr.ufuncs.real(coherence))
 
         elif self.instrument_type == 'general':
             # full Mueller matrix calculation
-            if 'stokes' not in spec.dims:
-                a0 = xr.zeros_like(spec)
-                spec = xr.combine_nested([spec, a0, a0, a0], concat_dim=('stokes', ))
+            if 'stokes' not in spectrum.dims:
+                a0 = xr.zeros_like(spectrum)
+                spectrum = xr.combine_nested([spectrum, a0, a0, a0], concat_dim=('stokes',))
 
-            mueller_mat = self.calculate_matrix(spec)
-            spec = mueller_prod(mueller_mat, spec)
+            mueller_mat = self.calculate_matrix(spectrum)
+            spectrum = mueller_product(mueller_mat, spectrum)
 
-        image = self.camera.capture(spec)
+        image = self.camera.capture_image(spectrum)
         return image
 
-    def calculate_ideal_phase_delay(self, wl, n_e=None, n_o=None, crop=None, downsample=1, ):
+    def calculate_ideal_delay(self, wavelength, ):
         """
+        calculate the interferometer phase delay (in rad) at the given wavelength(s)
+
         assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
         'two-beam'. kwargs included for fitting purposes.
-        :param wl:
-        :param x_coord:
-        :param y_coord:
-        :param n_e:
-        :param n_o:
-        :param crop:
-        :param downsample:
-        :param output_components:
-        :return: phase delay [ rad ]
 
-        # TODO rename?
+        TODO This method needs to be more general if its going to be properly useful
+        :param spectrum:
+        :return:
         """
 
         # calculate the angles of each pixel's line of sight through the interferometer
-        x_pos, y_pos = self.calculate_pixel_pos(crop=crop, downsample=downsample)
-        inc_angles = self.calculate_inc_angles(x_pos, y_pos)
-        azim_angles = self.calculate_azim_angles(x_pos, y_pos, self.crystals[0])
+        inc_angles = self.calculate_inc_angles(wavelength.x, wavelength.y)
+        azim_angles = self.calculate_azim_angles(wavelength.x, wavelength.y, self.crystals[0])
 
         # calculate phase delay contribution due to each crystal
         phase = 0
         for crystal in self.crystals:
-            phase += crystal.calculate_phase_delay(wl, inc_angles, azim_angles, n_e=n_e, n_o=n_o)
+            phase += crystal.calculate_delay(wavelength, inc_angles, azim_angles, )
 
         return phase
-
 
     def calculate_ideal_contrast(self):
 
@@ -280,6 +284,6 @@ class Instrument(object):
 
         phase_offset = 0
         for crystal in self.crystals:
-            phase_offset += crystal.calculate_phase_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
+            phase_offset += crystal.calculate_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
 
         return -phase_offset

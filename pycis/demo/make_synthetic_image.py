@@ -8,7 +8,7 @@ import scipy.signal
 import scipy.ndimage
 
 bit_depth = 12
-sensor_format = (1000, 1000)
+sensor_format = (10, 10)
 pixel_size = 6.5e-6
 qe = 0.35
 epercount = 0.46  # [e / count]
@@ -25,7 +25,7 @@ inst = pycis.Instrument(cam, optics, interferometer)
 
 wavelength = np.linspace(460e-9, 460.05e-9, 30)
 wavelength = xr.DataArray(wavelength, dims=('wavelength', ), coords=(wavelength, ), )
-x, y = inst.calculate_pixel_pos()
+x, y = inst.calculate_pixel_position()
 
 spec = xr.ones_like(x * y * wavelength)
 spec /= spec.integrate(dim='wavelength')
@@ -35,7 +35,7 @@ s = time.time()
 total_intensity = spec.integrate(dim='wavelength', )
 spec_norm = spec / total_intensity
 
-igram = inst.capture(spec, )
+# igram = inst.capture(spec, )
 
 # # 1 group delay approx.
 # s_gd = time.time()
@@ -331,7 +331,7 @@ def demo_testing_demodulation():
 
     fig_p = plt.figure()
     ax_p = fig_p.add_subplot(111)
-    imp = ax_p.imshow(pycis.wrap(-inst.calculate_ideal_phase_delay(wl)))
+    imp = ax_p.imshow(pycis.wrap(-inst.calculate_ideal_delay(wl)))
     fig_p.colorbar(imp, ax=ax_p)
 
     ref_ph = np.zeros_like(img, dtype=np.complex)
