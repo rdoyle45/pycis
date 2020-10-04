@@ -1,7 +1,8 @@
 import numpy as np
 import xarray as xr
-import pycis
+from numba import vectorize, f8
 from pycis.tools import is_scalar
+from pycis.model import calculate_dispersion
 
 """
 Misc. conventions:
@@ -194,8 +195,8 @@ class UniaxialCrystal(BirefringentComponent):
     def calculate_delay(self, wl, inc_angle, azim_angle, n_e=None, n_o=None):
         """
         calculate phase delay (in rad) due to uniaxial crystal.
-        
-        Veiras defines optical path difference as OPL_o - OPL_e ie. +ve phase indicates a delayed extraordinary 
+
+        Veiras defines optical path difference as OPL_o - OPL_e ie. +ve phase indicates a delayed extraordinary
         ray
 
         :param wl: wavelength [ m ]
@@ -219,26 +220,10 @@ class UniaxialCrystal(BirefringentComponent):
 
         # if refractive indices have not been manually set, calculate
         if n_e is None and n_o is None:
-            biref, n_e, n_o = pycis.model.calculate_dispersion(wl, self.material, source=self.source)
+            biref, n_e, n_o = calculate_dispersion(wl, self.material, source=self.source)
 
-        s_inc_angle = np.sin(inc_angle)
-        s_inc_angle_2 = s_inc_angle ** 2
-        s_cut_angle_2 = np.sin(self.cut_angle) ** 2
-        c_cut_angle_2 = np.sin(self.cut_angle) ** 2
-
-        term_1 = np.sqrt(n_o ** 2 - s_inc_angle_2)
-
-        term_2 = (n_o ** 2 - n_e ** 2) * \
-                 (np.sin(self.cut_angle) * np.cos(self.cut_angle) * np.cos(azim_angle) * s_inc_angle) / \
-                 (n_e ** 2 * s_cut_angle_2 + n_o ** 2 * c_cut_angle_2)
-
-        term_3 = - n_o * np.sqrt(
-            (n_e ** 2 * (n_e ** 2 * s_cut_angle_2 + n_o ** 2 * c_cut_angle_2)) -
-            ((n_e ** 2 - (n_e ** 2 - n_o ** 2) * c_cut_angle_2 * np.sin(
-                azim_angle) ** 2) * s_inc_angle_2)) / \
-                 (n_e ** 2 * s_cut_angle_2 + n_o ** 2 * c_cut_angle_2)
-
-        return 2 * np.pi * (self.thickness / wl) * (term_1 + term_2 + term_3)
+        args = [wl, inc_angle, azim_angle, n_e, n_o, self.cut_angle, self.thickness, ]
+        return xr.apply_ufunc(_calculate_delay_uniaxial_crystal, *args, dask='allowed', )
 
 
 class SavartPlate(BirefringentComponent):
@@ -289,7 +274,7 @@ class SavartPlate(BirefringentComponent):
 
             # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
             if n_e is None and n_o is None:
-                biref, n_e, n_o = pycis.model.calculate_dispersion(wl, self.material, source=self.source)
+                biref, n_e, n_o = calculate_dispersion(wl, self.material, source=self.source)
 
             a = 1 / n_e
             b = 1 / n_o
@@ -432,7 +417,27 @@ class HalfWaveplate(BirefringentComponent):
         return np.pi * ones_shape
 
 
-# TODO class FieldWidenedSavartPlate(BirefringentComponent):
+@vectorize([f8(f8, f8, f8, f8, f8, f8, f8), ], nopython=True, fastmath=True, cache=True, )
+def _calculate_delay_uniaxial_crystal(wavelength, inc_angle, azim_angle, n_e, n_o, cut_angle, thickness, ):
+    s_inc_angle = np.sin(inc_angle)
+    s_inc_angle_2 = s_inc_angle ** 2
+    s_cut_angle_2 = np.sin(cut_angle) ** 2
+    c_cut_angle_2 = np.sin(cut_angle) ** 2
+
+    term_1 = np.sqrt(n_o ** 2 - s_inc_angle_2)
+
+    term_2 = (n_o ** 2 - n_e ** 2) * \
+             (np.sin(cut_angle) * np.cos(cut_angle) * np.cos(azim_angle) * s_inc_angle) / \
+             (n_e ** 2 * s_cut_angle_2 + n_o ** 2 * c_cut_angle_2)
+
+    term_3 = - n_o * np.sqrt(
+        (n_e ** 2 * (n_e ** 2 * s_cut_angle_2 + n_o ** 2 * c_cut_angle_2)) -
+        ((n_e ** 2 - (n_e ** 2 - n_o ** 2) * c_cut_angle_2 * np.sin(
+            azim_angle) ** 2) * s_inc_angle_2)) / \
+             (n_e ** 2 * s_cut_angle_2 + n_o ** 2 * c_cut_angle_2)
+
+    return 2 * np.pi * (thickness / wavelength) * (term_1 + term_2 + term_3)
+
 
 
 

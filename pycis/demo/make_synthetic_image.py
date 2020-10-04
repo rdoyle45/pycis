@@ -3,9 +3,6 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import pycis
 import time
-from scipy.constants import c
-import scipy.signal
-import scipy.ndimage
 import os
 
 bit_depth = 12
