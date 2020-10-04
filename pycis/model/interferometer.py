@@ -217,23 +217,26 @@ class UniaxialCrystal(BirefringentComponent):
 
         """
 
-        # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
+        # if refractive indices have not been manually set, calculate
         if n_e is None and n_o is None:
-            biref, n_e, n_o = pycis.model.dispersion(wl, self.material, source=self.source)
+            biref, n_e, n_o = pycis.model.calculate_dispersion(wl, self.material, source=self.source)
 
         s_inc_angle = np.sin(inc_angle)
+        s_inc_angle_2 = s_inc_angle ** 2
+        s_cut_angle_2 = np.sin(self.cut_angle) ** 2
+        c_cut_angle_2 = np.sin(self.cut_angle) ** 2
 
-        term_1 = np.sqrt(n_o ** 2 - s_inc_angle ** 2)
+        term_1 = np.sqrt(n_o ** 2 - s_inc_angle_2)
 
         term_2 = (n_o ** 2 - n_e ** 2) * \
                  (np.sin(self.cut_angle) * np.cos(self.cut_angle) * np.cos(azim_angle) * s_inc_angle) / \
-                 (n_e ** 2 * np.sin(self.cut_angle) ** 2 + n_o ** 2 * np.cos(self.cut_angle) ** 2)
+                 (n_e ** 2 * s_cut_angle_2 + n_o ** 2 * c_cut_angle_2)
 
         term_3 = - n_o * np.sqrt(
-            (n_e ** 2 * (n_e ** 2 * np.sin(self.cut_angle) ** 2 + n_o ** 2 * np.cos(self.cut_angle) ** 2)) -
-            ((n_e ** 2 - (n_e ** 2 - n_o ** 2) * np.cos(self.cut_angle) ** 2 * np.sin(
-                azim_angle) ** 2) * s_inc_angle ** 2)) / \
-                 (n_e ** 2 * np.sin(self.cut_angle) ** 2 + n_o ** 2 * np.cos(self.cut_angle) ** 2)
+            (n_e ** 2 * (n_e ** 2 * s_cut_angle_2 + n_o ** 2 * c_cut_angle_2)) -
+            ((n_e ** 2 - (n_e ** 2 - n_o ** 2) * c_cut_angle_2 * np.sin(
+                azim_angle) ** 2) * s_inc_angle_2)) / \
+                 (n_e ** 2 * s_cut_angle_2 + n_o ** 2 * c_cut_angle_2)
 
         return 2 * np.pi * (self.thickness / wl) * (term_1 + term_2 + term_3)
 
@@ -286,7 +289,7 @@ class SavartPlate(BirefringentComponent):
 
             # if refractive indices have not been manually set, calculate them using Sellmeier eqn.
             if n_e is None and n_o is None:
-                biref, n_e, n_o = pycis.model.dispersion(wl, self.material, source=self.source)
+                biref, n_e, n_o = pycis.model.calculate_dispersion(wl, self.material, source=self.source)
 
             a = 1 / n_e
             b = 1 / n_o
@@ -430,7 +433,6 @@ class HalfWaveplate(BirefringentComponent):
 
 
 # TODO class FieldWidenedSavartPlate(BirefringentComponent):
-
 
 
 

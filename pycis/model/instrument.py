@@ -113,7 +113,6 @@ class Instrument(object):
         :return: incidence angles [ rad ]
 
         """
-
         return np.arctan2(np.sqrt(x ** 2 + y ** 2), self.optics[2], )
 
     def calculate_azim_angles(self, x, y, crystal):
@@ -126,7 +125,6 @@ class Instrument(object):
         :return: azimuthal angles [ rad ]
 
         """
-
         orientation = crystal.orientation + self.interferometer_orientation
         return np.arctan2(y, x) + np.pi - orientation
 
@@ -164,20 +162,19 @@ class Instrument(object):
 
         if self.instrument_type == 'two_beam' and 'stokes' not in spectrum.dims:
             # analytical calculation to save time
-            print('1')
             total_intensity = spectrum.integrate(dim='wavelength', )
-
             spec_freq = spectrum.rename({'wavelength': 'frequency'})
             spec_freq['frequency'] = c / spec_freq['frequency']
             spec_freq = spec_freq * c / spec_freq['frequency'] ** 2
             freq_com = (spec_freq * spec_freq['frequency']).integrate(dim='frequency') / total_intensity
+
             delay = self.calculate_ideal_delay(c / freq_com)
 
             coherence = xr.where(total_intensity > 0,
                                  pycis.calculate_coherence(spec_freq, delay, material=self.crystals[0].material,
                                                            freq_com=freq_com),
                                  0)
-            spectrum = 1 / 4 * (total_intensity + xr.ufuncs.real(coherence))
+            spectrum = 1 / 4 * (total_intensity + np.real(coherence))
 
         elif self.instrument_type == 'general':
             # full Mueller matrix calculation
