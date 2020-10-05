@@ -16,7 +16,7 @@ cam = pycis.Camera(bit_depth, sensor_format, pixel_size, qe, epercount, cam_nois
 optics = [17e-3, 105e-3, 150e-3, ]
 
 pol_1 = pycis.LinearPolariser(0)
-wp_1 = pycis.UniaxialCrystal(np.pi / 4, 10e-3, np.pi / 4, )
+wp_1 = pycis.UniaxialCrystal(np.pi / 4, 10e-3, 0, )
 pol_2 = pycis.LinearPolariser(0)
 interferometer = [pol_1, wp_1, pol_2]
 inst = pycis.Instrument(cam, optics, interferometer)
