@@ -53,7 +53,7 @@ def calculate_rot_matrix(angle):
 
 class InterferometerComponent:
     """
-    abstract base class for CI interferometer component
+    base class for CI interferometer component
 
     """
 
@@ -224,6 +224,7 @@ class UniaxialCrystal(BirefringentComponent):
 
         args = [wavelength, inc_angle, azim_angle, n_e, n_o, self.cut_angle, self.thickness, ]
         return xr.apply_ufunc(_calculate_delay_uniaxial_crystal, *args, dask='allowed', )
+
 
 class SavartPlate(BirefringentComponent):
     """

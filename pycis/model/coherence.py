@@ -69,6 +69,7 @@ def calculate_coherence(spectrum, delay, material=None, freq_com=None):
         freq_shift_norm = (spectrum['frequency'] - freq_com) / freq_com
         integrand = spectrum * complexp_ufunc(delay * (1 + kappa_0 * freq_shift_norm))
 
+    integrand = integrand.sortby(integrand.frequency)  # ensure that integration limits are from -ve to +ve frequency
     return integrand.integrate(dim='frequency')
 
 
@@ -108,7 +109,7 @@ def test_plot():
     # generate spectrum in frequency-space
     freq_0 = c / wl_0
     freq_sigma = c / wl_0 ** 2 * wl_sigma
-    freq = np.linspace(freq_0 - n_sigma * freq_sigma, freq_0 + n_sigma * freq_sigma, n_bins)
+    freq = np.linspace(freq_0 - n_sigma * freq_sigma, freq_0 + n_sigma * freq_sigma, n_bins)[::-1]
     freq = xr.DataArray(freq, dims=('frequency', ), coords=(freq, ), attrs={'units': 'Hz'})
     spectrum = 1 / (freq_sigma * np.sqrt(2 * np.pi)) * np.exp(- 1 / 2 * ((freq - freq_0) / freq_sigma) ** 2)
 
