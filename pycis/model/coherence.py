@@ -86,6 +86,8 @@ def test_plot():
     """
     numerical / analytical test of calculate_coherence() using a modelled Gaussian spectral lineshape
 
+    doc = degree of coherence
+
     :return:
     """
     import time
