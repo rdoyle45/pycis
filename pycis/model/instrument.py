@@ -1,6 +1,6 @@
 import numpy as np
 import xarray as xr
-from numba import vectorize, float64
+from numba import vectorize, f8
 from scipy.constants import c
 import pycis
 from pycis.model import mueller_product
@@ -194,18 +194,18 @@ class Instrument(object):
         'two-beam'. kwargs included for fitting purposes.
 
         TODO This method needs to be more general if its going to be properly useful
-        :param spectrum:
+        :param wavelength:
         :return:
         """
 
         # calculate the angles of each pixel's line of sight through the interferometer
-        inc_angles = self.calculate_inc_angle(wavelength.x, wavelength.y)
-        azim_angles = self.calculate_azim_angle(wavelength.x, wavelength.y, self.crystals[0])
+        inc_angle = self.calculate_inc_angle(wavelength.x, wavelength.y)
+        azim_angle = self.calculate_azim_angle(wavelength.x, wavelength.y, self.crystals[0])
 
         # calculate phase delay contribution due to each crystal
         phase = 0
         for crystal in self.crystals:
-            phase += crystal.calculate_delay(wavelength, inc_angles, azim_angles, )
+            phase += crystal.calculate_delay(wavelength, inc_angle, azim_angle, )
 
         return phase
 
@@ -284,12 +284,12 @@ class Instrument(object):
         return -phase_offset
 
 
-@vectorize([float64(float64, float64, float64, ), ], nopython=True, fastmath=True, cache=True, )
+@vectorize([f8(f8, f8, f8, ), ], nopython=True, fastmath=True, cache=True, )
 def _calculate_inc_angles(x, y, f_3):
     return np.arctan2((x ** 2 + y ** 2) ** 0.5, f_3, )
 
 
-@vectorize([float64(float64, float64, float64, float64), ], nopython=True, fastmath=True, cache=True, )
+@vectorize([f8(f8, f8, f8, f8), ], nopython=True, fastmath=True, cache=True, )
 def _calculate_azim_angles(x, y, crystal_orientation, interferometer_orientation, ):
     orientation = crystal_orientation + interferometer_orientation
     return np.arctan2(y, x) + np.pi - orientation
