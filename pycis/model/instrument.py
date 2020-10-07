@@ -193,21 +193,26 @@ class Instrument(object):
         assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
         'two-beam'. kwargs included for fitting purposes.
 
-        TODO This method needs to be more general if its going to be properly useful
-        :param wavelength:
+        :param wavelength: can be scalar or xr.DataArray with dimensions including 'x' and 'y'
         :return:
         """
 
-        # calculate the angles of each pixel's line of sight through the interferometer
-        inc_angle = self.calculate_inc_angle(wavelength.x, wavelength.y)
-        azim_angle = self.calculate_azim_angle(wavelength.x, wavelength.y, self.crystals[0])
+        # calculate the ray angles through the interferometer
+        if hasattr(wavelength, 'dims'):
+            if 'x' in wavelength.dims and 'y' in wavelength.dims:
+                inc_angle = self.calculate_inc_angle(wavelength.x, wavelength.y)
+                azim_angle = self.calculate_azim_angle(wavelength.x, wavelength.y, self.crystals[0])
+        else:
+            x, y, =  self.calculate_pixel_position()
+            inc_angle = self.calculate_inc_angle(x, y, )
+            azim_angle = self.calculate_azim_angle(x, y, self.crystals[0])
 
         # calculate phase delay contribution due to each crystal
-        phase = 0
+        delay = 0
         for crystal in self.crystals:
-            phase += crystal.calculate_delay(wavelength, inc_angle, azim_angle, )
+            delay += crystal.calculate_delay(wavelength, inc_angle, azim_angle, )
 
-        return phase
+        return delay
 
     def calculate_ideal_contrast(self):
 
