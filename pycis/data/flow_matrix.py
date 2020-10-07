@@ -738,6 +738,8 @@ def _weighting_matrix(data, inv_emis):
     weight_colinds = []
     weight_values = []
 
+    denom = data @ inv_emis # Matrix multiply to calculate the denominator of the weighting fraction
+
     # Progress bar indicating how much of the weighting matrix has been completed
     progressbar = Bar('Weighting Matrix', max=data.shape[0], suffix='%(percent)d%%')
 
@@ -752,15 +754,11 @@ def _weighting_matrix(data, inv_emis):
         if cols.shape[0] == 0:
             break
 
-        denom = 0
-        for j, val in zip(cols, values):
-            denom += val * inv_emis[j]
-
         for index, data in zip(cols, values):
             if inv_emis[index] != 0:
                 weight_rowinds.append(i)
                 weight_colinds.append(index)
-                weight_values.append(inv_emis[index] / denom)
+                weight_values.append(inv_emis[index] / denom[i])
 
         progressbar.next()
     progressbar.finish()
