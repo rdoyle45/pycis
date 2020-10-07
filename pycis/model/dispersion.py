@@ -1,5 +1,8 @@
+import numba
+import xarray as xr
+
 d_lambda = 1.e-10
-d_lambda_micron = d_lambda * 1.e6
+d_lambda_mic = d_lambda * 1.e6
 
 # dispersion data
 d = {'kato1986':
@@ -42,59 +45,43 @@ d = {'kato1986':
 # set material default sources
 default_sources = {'calcite': 'ghosh',
                    'b-BBO': 'eimerl',
-                   # 'b-BBO': 'kato2010',
-                   # 'a-BBO': 'newlightphotonics',
                    'a-BBO': 'agoptics',
-                   # 'a-BBO': 'kim',
                    'YVO': 'shi'}
 
 
-def dispersion(wl, material, output_derivatives=False, source=None):
-    """
-    
-    :param wl: wavelength [ m ]
-    :param material: valid: 'a-BBO', 'b-BBO', 'calcite', 'YVO' 
-    :param source: shorthand citation for author
-    :param output_derivatives: If info on birefringence derivatives wrt. wavelength is needed, smash True
-    :return: 
+def calculate_dispersion(wl, material, source=None, ):
     """
 
+    :param wl: wavelength [ m ]
+    :param material: valid: 'a-BBO', 'b-BBO', 'calcite', 'YVO'
+    :param source: shorthand citation for author
+    :return:
+    """
+
+    wl_mic = wl * 1e6
     if source is None:
         source = default_sources[material]
 
-    dd = d[source]
-    sellmeier_coefs = dd['sellmeier_coefs']
-    form = dd['sellmeier_eqn_form']
-    sc_e = sellmeier_coefs['e']
-    sc_o = sellmeier_coefs['o']
-
-    wl_mic = wl * 1e6
-    n_e = sellmeier_eqn(wl_mic, sc_e, form=form)
-    n_o = sellmeier_eqn(wl_mic, sc_o, form=form)
+    if material == 'a-BBO' and source == 'agoptics':
+        # optimised ufuncs
+        n_e = _sellmeier_eqn_abbo_e_ufunc(wl_mic, )
+        n_o = _sellmeier_eqn_abbo_o_ufunc(wl_mic, )
+    else:
+        dd = d[source]
+        sellmeier_coefs = dd['sellmeier_coefs']
+        form = dd['sellmeier_eqn_form']
+        sc_e = sellmeier_coefs['e']
+        sc_o = sellmeier_coefs['o']
+        n_e = _sellmeier_eqn(wl_mic, sc_e, form)
+        n_o = _sellmeier_eqn(wl_mic, sc_o, form)
 
     biref = n_e - n_o
-    
-    if output_derivatives is False:
-        return biref, n_e, n_o
-
-    # first symmetric derivative of birefringence wrt. wavelength
-    biref_deriv1 = (biref_dif(wl_mic, 1, sc_e, sc_o, form) - biref_dif(wl_mic, -1, sc_e, sc_o, form)) / (2 * d_lambda)
-
-    # second symmetric derivative of birefringence wrt. wavelength
-    biref_deriv2 = (biref_dif(wl_mic, 1, sc_e, sc_o, form) - (2 * biref) + biref_dif(wl_mic, -1, sc_e, sc_o, form)) / (d_lambda ** 2)
-
-    # third symmetric derivative of birefringence wrt. wavelength
-    biref_deriv3 = (biref_dif(wl_mic, 1.5, sc_e, sc_o, form) - (3 * biref_dif(wl_mic, 0.5, sc_e, sc_o, form)) + (
-                   3. * biref_dif(wl_mic, -0.5, sc_e, sc_o, form)) - biref_dif(wl_mic, -1.5, sc_e, sc_o, form)) / (d_lambda ** 3)
-
-    # first order dispersion factor kappa:
-    kappa = 1 - (wl / biref) * biref_deriv1
-
-    return biref, n_e, n_o, kappa, biref_deriv1, biref_deriv2, biref_deriv3
+    return biref, n_e, n_o
 
 
-def dispersion_indices(wl, material, source=None):
+def calculate_kappa(wl, material, source=None, ):
     """
+    calculate kappa, the unitless first-order dispersion parameter
 
     :param wl:
     :param material:
@@ -102,55 +89,41 @@ def dispersion_indices(wl, material, source=None):
     :return:
     """
 
+    wl_mic = wl * 1e6
+
     if source is None:
         source = default_sources[material]
 
-    dd = d[source]
-    sellmeier_coefs = dd['sellmeier_coefs']
-    form = dd['sellmeier_eqn_form']
-    sc_e = sellmeier_coefs['e']
-    sc_o = sellmeier_coefs['o']
+    if material == 'a-BBO' and source == 'agoptics':
+        # optimised ufuncs
+        kappa = _calculate_kappa_abbo_ufunc(wl_mic, )
+    else:
+        dd = d[source]
+        sellmeier_coefs = dd['sellmeier_coefs']
+        form = dd['sellmeier_eqn_form']
+        sc_e = sellmeier_coefs['e']
+        sc_o = sellmeier_coefs['o']
 
-    wl_mic = wl * 1e6
-    n_e = sellmeier_eqn(wl_mic, sc_e, form=form)
-    n_o = sellmeier_eqn(wl_mic, sc_o, form=form)
+        wl_p1_mic = wl_mic + d_lambda_mic
+        wl_m1_mic = wl_mic - d_lambda_mic
 
-    # first symmetric derivative of indices wrt. wavelength
-    wl_dif_1p = wl_mic + d_lambda_micron
-    wl_dif_1m = wl_mic - d_lambda_micron
-    n_e_deriv1 = (sellmeier_eqn(wl_dif_1p, sc_e, form=form) - sellmeier_eqn(wl_dif_1m, sc_e, form=form)) / \
-                 (2 * d_lambda)
-    n_o_deriv1 = (sellmeier_eqn(wl_dif_1p, sc_o, form=form) - sellmeier_eqn(wl_dif_1m, sc_o, form=form)) / \
-                 (2 * d_lambda)
+        biref, n_e, n_o = calculate_dispersion(wl, material, source=source, )
+        biref_p1 = _sellmeier_eqn(wl_p1_mic, sc_e, form) - _sellmeier_eqn(wl_p1_mic, sc_o, form)
+        biref_m1 = _sellmeier_eqn(wl_m1_mic, sc_e, form) - _sellmeier_eqn(wl_m1_mic, sc_o, form)
 
-    # second symmetric derivative of indices wrt. wavelength
-    n_e_deriv2 = (sellmeier_eqn(wl_dif_1p, sc_e, form=form) - 2 * n_e + sellmeier_eqn(wl_dif_1m, sc_e, form=form)) / \
-                 (d_lambda ** 2)
-    n_o_deriv2 = (sellmeier_eqn(wl_dif_1p, sc_o, form=form) - 2 * n_o + sellmeier_eqn(wl_dif_1m, sc_o, form=form)) / \
-                 (d_lambda ** 2)
+        biref_deriv = (biref_p1 - biref_m1) / (2 * d_lambda)
+        kappa = 1 - (wl / biref) * biref_deriv
 
-    # third symmetric derivative of indices wrt. wavelength
-    wl_dif_05p = wl_mic + 0.5 * d_lambda_micron
-    wl_dif_05m = wl_mic - 0.5 * d_lambda_micron
-    wl_dif_15p = wl_mic + 1.5 * d_lambda_micron
-    wl_dif_15m = wl_mic - 1.5 * d_lambda_micron
-    n_e_deriv3 = (sellmeier_eqn(wl_dif_15p, sc_e, form=form) - (3 * sellmeier_eqn(wl_dif_05p, sc_e, form=form)) +
-                  (3. * sellmeier_eqn(wl_dif_05m, sc_e, form=form)) - sellmeier_eqn(wl_dif_15m, sc_e, form=form)) / (
-                               d_lambda ** 3)
-    n_o_deriv3 = (sellmeier_eqn(wl_dif_15p, sc_o, form=form) - (3 * sellmeier_eqn(wl_dif_05p, sc_o, form=form)) +
-                  (3. * sellmeier_eqn(wl_dif_05m, sc_o, form=form)) - sellmeier_eqn(wl_dif_15m, sc_o, form=form)) / (
-                         d_lambda ** 3)
-
-    return n_e, n_e_deriv1, n_e_deriv2, n_e_deriv3, n_o, n_o_deriv1, n_o_deriv2, n_o_deriv3,
+    return kappa
 
 
-def sellmeier_eqn(wl_mic, sellmeier_coefs, form):
+def _sellmeier_eqn(wl_mic, sellmeier_coefs, form):
     """
-    
+
     :param wl_mic: wavelength /s [ microns ]
     :param sellmeier_coefs: list of coefficients
-    :param form: 
-    :return: 
+    :param form:
+    :return:
     """
 
     if form == 1:
@@ -159,19 +132,53 @@ def sellmeier_eqn(wl_mic, sellmeier_coefs, form):
         return (sellmeier_coefs[0] + (sellmeier_coefs[1] / ((wl_mic ** 2) + sellmeier_coefs[2])) + (sellmeier_coefs[3] / ((wl_mic ** 2) + sellmeier_coefs[4]))) ** 0.5
 
 
-def biref_dif(wl_mic, dif_coef, sellmeier_coefs_e, sellmeier_coefs_o, form):
-    """ 
-    calculate birefringence at some product of d_lambda distance from wavelength. 
-    """
-
-    wl_dif = wl_mic + (dif_coef * d_lambda_micron)
-    return sellmeier_eqn(wl_dif, sellmeier_coefs_e, form=form) - sellmeier_eqn(wl_dif, sellmeier_coefs_o, form=form)
+"""
+for optimised, parallelised calculations, these numba-vectorized functions with hard-coded Sellmeier coefficients 
+(a-BBO, source=agoptics) are used, wrapped into ufuncs using xarray.
+"""
 
 
+@numba.vectorize([numba.float64(numba.float64), ], nopython=True, fastmath=True, cache=True, )
+def _sellmeier_eqn_abbo_e(wl_mic, ):
+    a = 2.3753
+    b = 0.01224
+    c = -0.01667
+    d = -0.01516
+    return (a + (b / ((wl_mic ** 2) + c)) + d * (wl_mic ** 2)) ** 0.5
 
 
+@numba.vectorize([numba.float64(numba.float64), ], nopython=True, fastmath=True, cache=True, )
+def _sellmeier_eqn_abbo_o(wl_mic, ):
+    a = 2.7471
+    b = 0.01878
+    c = -0.01822
+    d = -0.01354
+    return (a + (b / ((wl_mic ** 2) + c)) + d * (wl_mic ** 2)) ** 0.5
 
 
+@numba.vectorize([numba.float64(numba.float64), ], nopython=True, fastmath=True, cache=True, )
+def _calculate_kappa_abbo(wl_mic, ):
+
+    d_lambda = 1.e-10
+    d_lambda_mic = d_lambda * 1.e6
+    wl_p1_mic = wl_mic + d_lambda_mic
+    wl_m1_mic = wl_mic - d_lambda_mic
+
+    biref_p1 = _sellmeier_eqn_abbo_e(wl_p1_mic) - _sellmeier_eqn_abbo_o(wl_p1_mic)
+    biref_m1 = _sellmeier_eqn_abbo_e(wl_m1_mic) - _sellmeier_eqn_abbo_o(wl_m1_mic)
+    biref = _sellmeier_eqn_abbo_e(wl_mic) - _sellmeier_eqn_abbo_o(wl_mic)
+
+    biref_deriv = (biref_p1 - biref_m1) / (2 * d_lambda_mic)
+    return 1 - (wl_mic / biref) * biref_deriv
 
 
+def _sellmeier_eqn_abbo_e_ufunc(wl_mic, ):
+    return xr.apply_ufunc(_sellmeier_eqn_abbo_e, wl_mic, dask='allowed', )
 
+
+def _sellmeier_eqn_abbo_o_ufunc(wl_mic, ):
+    return xr.apply_ufunc(_sellmeier_eqn_abbo_o, wl_mic, dask='allowed', )
+
+
+def _calculate_kappa_abbo_ufunc(wl_mic, ):
+    return xr.apply_ufunc(_calculate_kappa_abbo, wl_mic, dask='allowed', )

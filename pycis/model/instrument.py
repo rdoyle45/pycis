@@ -1,10 +1,8 @@
 import numpy as np
 import xarray as xr
-import os.path
-import scipy.interpolate
+from numba import vectorize, f8
 from scipy.constants import c
 import pycis
-from pycis.tools import is_scalar
 from pycis.model import mueller_product
 
 
@@ -104,7 +102,7 @@ class Instrument(object):
 
         return x, y
 
-    def calculate_inc_angles(self, x, y):
+    def calculate_inc_angle(self, x, y):
         """
         calculate incidence angles of ray(s) through crystal
 
@@ -113,10 +111,9 @@ class Instrument(object):
         :return: incidence angles [ rad ]
 
         """
+        return xr.apply_ufunc(_calculate_inc_angles, x, y, self.optics[2], dask='allowed')
 
-        return np.arctan2(np.sqrt(x ** 2 + y ** 2), self.optics[2], )
-
-    def calculate_azim_angles(self, x, y, crystal):
+    def calculate_azim_angle(self, x, y, crystal):
         """
         calculate azimuthal angles of rays through crystal (varies with crystal orientation)
 
@@ -126,9 +123,8 @@ class Instrument(object):
         :return: azimuthal angles [ rad ]
 
         """
-
-        orientation = crystal.orientation + self.interferometer_orientation
-        return np.arctan2(y, x) + np.pi - orientation
+        return xr.apply_ufunc(_calculate_azim_angles, x, y, crystal.orientation, self.interferometer_orientation,
+                              dask='allowed, ')
 
     def calculate_matrix(self, spectrum):
         """
@@ -139,11 +135,11 @@ class Instrument(object):
 
         """
 
-        inc_angle = self.calculate_inc_angles(spectrum.x, spectrum.y)
+        inc_angle = self.calculate_inc_angle(spectrum.x, spectrum.y)
         total_matrix = xr.DataArray(np.identity(4), dims=('mueller_v', 'mueller_h'), )
 
         for component in self.interferometer:
-            azim_angle = self.calculate_azim_angles(spectrum.x, spectrum.y, component)
+            azim_angle = self.calculate_azim_angle(spectrum.x, spectrum.y, component)
             component_matrix = component.calculate_matrix(spectrum.wavelength, inc_angle, azim_angle)
             total_matrix = mueller_product(component_matrix, total_matrix)
 
@@ -164,20 +160,19 @@ class Instrument(object):
 
         if self.instrument_type == 'two_beam' and 'stokes' not in spectrum.dims:
             # analytical calculation to save time
-            print('1')
             total_intensity = spectrum.integrate(dim='wavelength', )
-
             spec_freq = spectrum.rename({'wavelength': 'frequency'})
             spec_freq['frequency'] = c / spec_freq['frequency']
             spec_freq = spec_freq * c / spec_freq['frequency'] ** 2
             freq_com = (spec_freq * spec_freq['frequency']).integrate(dim='frequency') / total_intensity
+
             delay = self.calculate_ideal_delay(c / freq_com)
 
             coherence = xr.where(total_intensity > 0,
                                  pycis.calculate_coherence(spec_freq, delay, material=self.crystals[0].material,
                                                            freq_com=freq_com),
                                  0)
-            spectrum = 1 / 4 * (total_intensity + xr.ufuncs.real(coherence))
+            spectrum = 1 / 4 * (total_intensity + np.real(coherence))
 
         elif self.instrument_type == 'general':
             # full Mueller matrix calculation
@@ -198,21 +193,26 @@ class Instrument(object):
         assumes all crystal's phase contributions combine constructively -- method used only when instrument.type =
         'two-beam'. kwargs included for fitting purposes.
 
-        TODO This method needs to be more general if its going to be properly useful
-        :param spectrum:
+        :param wavelength: can be scalar or xr.DataArray with dimensions including 'x' and 'y'
         :return:
         """
 
-        # calculate the angles of each pixel's line of sight through the interferometer
-        inc_angles = self.calculate_inc_angles(wavelength.x, wavelength.y)
-        azim_angles = self.calculate_azim_angles(wavelength.x, wavelength.y, self.crystals[0])
+        # calculate the ray angles through the interferometer
+        if hasattr(wavelength, 'dims'):
+            if 'x' in wavelength.dims and 'y' in wavelength.dims:
+                inc_angle = self.calculate_inc_angle(wavelength.x, wavelength.y)
+                azim_angle = self.calculate_azim_angle(wavelength.x, wavelength.y, self.crystals[0])
+        else:
+            x, y, =  self.calculate_pixel_position()
+            inc_angle = self.calculate_inc_angle(x, y, )
+            azim_angle = self.calculate_azim_angle(x, y, self.crystals[0])
 
         # calculate phase delay contribution due to each crystal
-        phase = 0
+        delay = 0
         for crystal in self.crystals:
-            phase += crystal.calculate_delay(wavelength, inc_angles, azim_angles, )
+            delay += crystal.calculate_delay(wavelength, inc_angle, azim_angle, )
 
-        return phase
+        return delay
 
     def calculate_ideal_contrast(self):
 
@@ -287,3 +287,14 @@ class Instrument(object):
             phase_offset += crystal.calculate_delay(wl, 0., 0., n_e=n_e, n_o=n_o)
 
         return -phase_offset
+
+
+@vectorize([f8(f8, f8, f8, ), ], nopython=True, fastmath=True, cache=True, )
+def _calculate_inc_angles(x, y, f_3):
+    return np.arctan2((x ** 2 + y ** 2) ** 0.5, f_3, )
+
+
+@vectorize([f8(f8, f8, f8, f8), ], nopython=True, fastmath=True, cache=True, )
+def _calculate_azim_angles(x, y, crystal_orientation, interferometer_orientation, ):
+    orientation = crystal_orientation + interferometer_orientation
+    return np.arctan2(y, x) + np.pi - orientation
