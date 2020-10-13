@@ -202,11 +202,11 @@ class FlowGeoMatrix:
             self.data = weighting_matrix.multiply(b_l_sparse_matrix)
 
             # Remove any grid cells + matrix rows which have no sight-line coverage.
-            unused_cells = np.where(np.abs(self.data.sum(axis=0)) == 0)[1]
-            self.grid.remove_cells(unused_cells)
+            #unused_cells = np.where(np.abs(self.data.sum(axis=0)) == 0)[1]
+            #self.grid.remove_cells(unused_cells)
 
-            used_cols = np.where(np.abs(self.data.sum(axis=0)) > 0)[1]
-            self.data = self.data[:, used_cols]
+            #used_cols = np.where(np.abs(self.data.sum(axis=0)) > 0)[1]
+            #self.data = self.data[:, used_cols]
 
     def set_binning(self, binning):
         """
