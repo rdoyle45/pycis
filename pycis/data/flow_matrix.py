@@ -597,11 +597,17 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     if not isinstance(b_field_coords, np.ndarray):
         return None
 
+    #Convert b_field coordinates to RZ for use in function later
     coords_in_RZ, theta = _convert_xy_r(b_field_coords)
 
+    # Using b-field functions to get the b-field at given points
     b_field_rtz = _get_b_field_comp(b_field_funcs, coords_in_RZ)
+    # Convert these b-field values back to xyz coordinate system
     b_field_xyz = _convert_rt_xy(b_field_rtz, theta)
 
+    # As each b_field_xyz segment has the same l_k_vector these are just once
+    # So b_field_xyz will be seg_factor times larger than l_k_vectors and therefore when
+    # iterating later it is important to know where to take the b_field_xyz values from
     seg_factor = int(len(b_field_xyz)/len(l_k_vectors))
     b_dot_l = np.ndarray(shape=(len(l_k_vectors), 1))
 
@@ -609,13 +615,16 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
         total_seg_val = 0
         for j in range(seg_factor):
 
+            # Every seg_factor (i.e. 10) b_field_xyz values are associated with one l_k_vectors
+            # value (l_k_vectors[i]), index ensures the right 10 values are being read
             index = seg_factor*i + j
-            b_l = np.dot(b_field_xyz[index], l_k_vectors[i])
+            b_l = np.dot(b_field_xyz[index], l_k_vectors[i]) # Dot product of B-field and line vector
 
             total_seg_val += b_l
 
         b_dot_l[i] = total_seg_val
-    
+
+    #  Array for the cell numbers related to each b_dot_l value
     cell_no = np.zeros(positions.size-1)    
     in_cell = set()
 
@@ -673,6 +682,7 @@ def _get_b_field_coords(pos, ray_start, ray_end):
         # Vector describing those parts
         seg_vector = seg_end - seg_start
 
+        # Division by 10 to decrease the magnitude of the vector as the segment is only a tenth the size
         l_k.append(seg_vector*0.1)
 
         for j in range(10):
