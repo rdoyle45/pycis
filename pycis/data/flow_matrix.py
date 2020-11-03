@@ -603,7 +603,7 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     # Using b-field functions to get the b-field at given points
     b_field_rtz = _get_b_field_comp(b_field_funcs, coords_in_RZ)
     # Convert these b-field values back to xyz coordinate system
-    b_field_xyz = _convert_rt_xy(b_field_rtz, theta)
+    b_field_xyz = _convert_rt_xy(b_field_rtz, theta, coords_in_RZ)
 
     # As each b_field_xyz segment has the same l_k_vector these are just once
     # So b_field_xyz will be seg_factor times larger than l_k_vectors and therefore when
@@ -731,14 +731,14 @@ def _get_b_field_comp(b_funcs, coords):
     return b_field_comp
 
 
-def _convert_rt_xy(comps, theta):
+def _convert_rt_xy(comps, theta, coords):
 
     b_field_xyz = np.ndarray(shape=comps.shape)
 
-    for i, (b_field, theta) in enumerate(zip(comps, theta)):
+    for i, (b_field, theta, rz_coords) in enumerate(zip(comps, theta, coords)):
 
         c, s = np.cos(theta), np.sin(theta)
-        rot_mat = np.array(((c, -s, 0), (s, c, 0), (0, 0, 1)))  # Rotation Matrix
+        rot_mat = np.array(((c, -rz_coords[0]*s, 0), (s, rz_coords[0]*c, 0), (0, 0, 1)))  # Rotation Matrix
 
         b_field_xyz[i] = np.matmul(rot_mat, b_field.transpose()).transpose()
 
