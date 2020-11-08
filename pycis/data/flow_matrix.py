@@ -193,6 +193,8 @@ class FlowGeoMatrix:
                 calc_status_callback(1.)
 
             b_l_matrix_data = np.asarray(b_l_matrix_data)
+            print(b_l_matrix_data)
+            print(b_l_matrix_data.shape)
             b_l_sparse_matrix = sparse.csr_matrix((b_l_matrix_data[:, 2], (b_l_matrix_data[:, 0], b_l_matrix_data[:, 1])),
                                                   shape=(n_los, n_cells))
             coo_bl = b_l_sparse_matrix.tocoo()
