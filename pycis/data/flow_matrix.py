@@ -673,11 +673,11 @@ def _get_b_field_coords(pos, ray_start, ray_end):
     for i in range(n_segs):
 
         #  Start and end points of the the parts of each sight line that lie in each cell
-        #seg_start = ray_start + relative_position[i] * ray_vector
-        #seg_end = ray_start + relative_position[i + 1] * ray_vector
+        seg_start = ray_start + relative_position[i] * ray_vector
+        seg_end = ray_start + relative_position[i + 1] * ray_vector
 
-        seg_start = ray_start + pos[i] * ray_vector
-        seg_end = ray_start + pos[i + 1] * ray_vector
+        #seg_start = ray_start + pos[i] * ray_vector
+        #seg_end = ray_start + pos[i + 1] * ray_vector
 
         # Vector describing those parts
         seg_vector = seg_end - seg_start
