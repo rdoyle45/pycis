@@ -44,7 +44,7 @@ class FlowGeoMatrix:
         grid (calcam.gm.PoloidalVolumeGrid)
                                 : PoloidalVolumeGrid object to use to generate geom_mat if geom_mat = None
 
-        inv_emis (tuple)		: Tuple containing inverted emissivity as a matrix, x
+        inv_emis (file)		: Tuple containing inverted emissivity as a matrix, x
                                     and Array of length n_iterations indicating convergence
                                     behaviour. Calculated by solving y = Ax + b.
 
@@ -125,7 +125,9 @@ class FlowGeoMatrix:
                             misc.get_formatted_time())}
 
             # Solve y = Ax + b for x, the inverted emissivity matrix
-            if inv_emis is None:
+            if inv_emis:
+                self.inv_emis = np.load(inv_emis)
+            else:
                 emis_vector, self.time = self._data_vector()
                 self.inv_emis = sart.solve(geom_data, emis_vector)[0]
 
