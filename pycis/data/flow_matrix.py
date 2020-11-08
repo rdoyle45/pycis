@@ -655,11 +655,11 @@ def _get_b_field_coords(pos, ray_start, ray_end):
     ray_vector = ray_end - ray_start  # Vector pointing along the sightline
     ray_length = np.sqrt(np.sum(ray_vector**2))
 
-    #relative_position = pos/ray_length
-    #if len(relative_position):
-    #    n_segs = len(relative_position) - 1
-    if len(pos):
-        n_segs = len(pos) - 1
+    relative_position = pos/ray_length
+    if len(relative_position):
+        n_segs = len(relative_position) - 1
+    #if len(pos):
+     #   n_segs = len(pos) - 1
     else:
         return None, None
 
