@@ -127,6 +127,7 @@ class FlowGeoMatrix:
             # Solve y = Ax + b for x, the inverted emissivity matrix
             if inv_emis:
                 self.inv_emis = np.load(inv_emis)
+                self.time = frame
             else:
                 emis_vector, self.time = self._data_vector()
                 self.inv_emis = sart.solve(geom_data, emis_vector)[0]
