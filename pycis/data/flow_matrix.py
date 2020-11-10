@@ -173,7 +173,7 @@ class FlowGeoMatrix:
                 calc_status_callback(0.)
                 for (i, data), pixel in zip(enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid,
                                                                            b_field_funcs), rays, 10)), inds):
-
+                    print(i, data, pixel)
                     if data is not None:
                         b_l = data[0]
                         cells = data[1]
