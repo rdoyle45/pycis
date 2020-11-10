@@ -193,8 +193,6 @@ class FlowGeoMatrix:
                 calc_status_callback(1.)
 
             b_l_matrix_data = np.asarray(b_l_matrix_data)
-            print(b_l_matrix_data)
-            print(b_l_matrix_data.shape)
             b_l_sparse_matrix = sparse.csr_matrix((b_l_matrix_data[:, 2], (b_l_matrix_data[:, 0], b_l_matrix_data[:, 1])),
                                                   shape=(n_los, n_cells))
             coo_bl = b_l_sparse_matrix.tocoo()
@@ -593,8 +591,6 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     ray_start_coords = np.array(rays[:3])
     ray_end_coords = np.array(rays[3:])
 
-    print(ray_start_coords, ray_end_coords)
-
     # Calculate the positions and cells that a sight line intersects
     positions, intersected_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
 
@@ -659,8 +655,6 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
 
 
 def _get_b_field_coords(pos, ray_start, ray_end):
-
-    print(pos)
 
     ray_vector = ray_end - ray_start  # Vector pointing along the sightline
     ray_length = np.sqrt(np.sum(ray_vector**2))
