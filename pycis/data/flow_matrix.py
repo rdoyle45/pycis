@@ -593,6 +593,8 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     ray_start_coords = np.array(rays[:3])
     ray_end_coords = np.array(rays[3:])
 
+    print(ray_start_coords, ray_end_coords)
+
     # Calculate the positions and cells that a sight line intersects
     positions, intersected_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
 
@@ -602,6 +604,7 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     if not isinstance(b_field_coords, np.ndarray):
         return None
 
+    print("Got to here 1")
     #Convert b_field coordinates to RZ for use in function later
     coords_in_RZ, theta = _convert_xy_r(b_field_coords)
 
@@ -656,6 +659,8 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
 
 
 def _get_b_field_coords(pos, ray_start, ray_end):
+
+    print(pos)
 
     ray_vector = ray_end - ray_start  # Vector pointing along the sightline
     ray_length = np.sqrt(np.sum(ray_vector**2))
