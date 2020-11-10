@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sps
 
-def solve(A,b,iterations=50,lam_start=1.0):
+def solve(A,b,iterations=50,lam_start=1.0, flow=False):
     '''
     Slightly modified (code tidying, but functionally identical)
     version of James Harrison's SART sparse matrix solver. 
@@ -46,7 +46,8 @@ def solve(A,b,iterations=50,lam_start=1.0):
         #newsol = sol+tmp2*lamda
         newsol = sol+tmp2.multiply(lamda)
         # Eliminate negative values
-        newsol = newsol.multiply(newsol > 0.0)
+        if not flow:
+            newsol = newsol.multiply(newsol > 0.0)
         newsol.eliminate_zeros()
         # Calculate how quickly the code is converging
         conv[i] = (sol.multiply(sol).sum()-newsol.multiply(newsol).sum())/sol.multiply(sol).sum()
