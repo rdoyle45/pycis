@@ -1,61 +1,121 @@
 import numpy as np
 import scipy.sparse as sps
 
-def solve(A,b,iterations=50,lam_start=1.0, flow=False):
-    '''
-    Slightly modified (code tidying, but functionally identical)
-    version of James Harrison's SART sparse matrix solver. 
-    Algorithm based on Scott Silburn's MATLAB code.
+def solve(A, b, non_neg=True, max_iter=2000, tol=1e-2, lam=None, verbose=True):
+    """
+    Scott Silburn's Simultaneous Algebraic Reconstruction Technique (SART) solver.
+    Ported from MATLAB PhD code by James Harrison & Scott Silburn
 
-    Solves A*x = b with non-negativity constraint, using
-    a fixed number of iterations.
+    Iteratively solves a linear equations A*x = b
+
+    Written for tomographic reconstruction of camera data
 
     Parameters:
 
-        A (scipy sparse matrix) : Matrix 
+        A (scipy sparse matrix)  : Matrix
 
-        b (scipy sparse matrix) : Data vector
+        b (scipy sparse matrix)  : Data vector
 
-        iterations (int): Number of iterations
+        non_neg (bool)           : Whether to enforce non-negativity on the solution
 
-        lam_start (float) : Initial value of relaxation parameter lambda
+        max_iter (int)           : Maximum allowed number of iterations
+
+        tol (float)              : Difference in fractional error between consecutive iterations where the \
+                                   result is considered converged and the solver stops.
+
+        lam (float)              : Starting value for lambda parameter ("strength" of each iteration). \
+                                   This will be sanity checked by the solver anyway.
+
+        verbose (bool)           : Whether to print status messages
 
     Returns:
 
-        Numpy matrix containing x
+        Numpy matrix containing solution vector x
 
-        Array of length n_iterations indicating convergence behaviour
-    '''
-    shap = A.shape
-    lam = lam_start
-    colsum = (A.transpose()).dot(sps.csc_matrix(np.ones(shap[0])).transpose())
-    lamda = colsum
-    #lamda = lamda.multiply(colsum != 0)
-    np.reciprocal(lamda.data,out=lamda.data)
-    np.multiply(lamda.data,lam,out=lamda.data)
-    
-    # Initialise output
-    sol = sps.csc_matrix(np.zeros((shap[1],1))+np.exp(-1))
-    # Create an array to monitor the convergence
-    conv = np.zeros(iterations)
-    
-    for i in range(iterations):
-        # Calculate sol_new = sol+lambda*(x'*(b-Ax))
-        tmp = b.transpose()-A.dot(sol)
-        tmp2 = A.transpose().dot(tmp)
-        #newsol = sol+tmp2*lamda
-        newsol = sol+tmp2.multiply(lamda)
-        # Eliminate negative values
-        if not flow:
-            newsol = newsol.multiply(newsol > 0.0)
-        newsol.eliminate_zeros()
-        # Calculate how quickly the code is converging
-        conv[i] = (sol.multiply(sol).sum()-newsol.multiply(newsol).sum())/sol.multiply(sol).sum()
-        # Set the new solution to be the old solution and repeat
-        sol = newsol
-        # Clear up memory leaks
-        tmp = None
-        tmp2 = None
-      
-    sol = None	  
-    return newsol.todense(), conv
+        Array with as many elements as the number of iterations containing the relative error
+        at each iteration. Can be used to see how the convergence goes.
+    """
+
+    equations, unknowns = A.shape
+
+    if verbose:
+        print('SART Solver: solving system of {:d} equations with {:d} unknowns.'.format(equations, unknowns))
+
+    # Initialise output matrix
+    x = sps.csc_matrix(np.ones((unknowns, 1)) * np.exp(-1))
+
+    # Check if we're given lambda or want to optimise it automatically
+    if lam is None:
+        optimise_lam = True
+        lam = 1.
+    else:
+        optimise_lam = False
+        if verbose:
+            print('Using given lambda = {:.1e}'.format(lam))
+
+    # Lambda is weighted by the structure of the geometry matrix
+    colsum = np.abs(np.array(A.T * np.ones((equations, 1))))
+    lamda = np.ones(colsum.shape) * lam / colsum
+    lamda[colsum == 0] = 0
+    lamda = sps.csc_matrix(lamda)
+
+    if optimise_lam:
+        # Run 2 iterations and see if the norm of the difference between successive
+        # iterations is going up or down. Decrease lambda until it goes down.
+        if verbose:
+            print('Finding maximum starting lambda value...')
+        while True:
+            deltas = [0, 0]
+            for i in range(3):
+                x1 = x + lamda.multiply(A.T * (b.T - A * x))
+                if i > 0:
+                    deltas[i - 1] = sps.linalg.norm(x1 - x) / sps.linalg.norm(x)
+                x = x1
+
+            if deltas[1] > deltas[0]:
+                lamda = np.divide(lamda, 1.1)
+                lam = lam / 1.1
+                x[:] = np.exp(-1)
+            else:
+                break
+        if verbose:
+            print('   Using lambda = {:.1e}'.format(lam))
+
+    # List to store the running errror
+    err = []
+    x[:] = np.exp(-1)
+
+    iteration_number = 1
+    converged = False
+
+    print('Starting iterations...')
+    while iteration_number <= max_iter:
+
+        # Calculate updated solution
+        x1 = x + lamda.multiply(A.T * (b.T - A * x))
+
+        # Non-negativity constraint, if required
+        if non_neg:
+            x[x < 0] = 0
+            x.eliminate_zeros()
+
+        # Current relative error
+        err.append(sps.linalg.norm(b.T - A * x1) / sps.linalg.norm(x))
+
+        # Update the current solution
+        x = x1
+
+        # Check if we are converged enough
+        if iteration_number >= 2:
+            if np.abs(err[-1] - err[-2]) < tol:
+                if verbose:
+                    print('   Reached convergence criterion after {:d} iterations.'.format(iteration_number))
+                converged = True
+                break
+
+        iteration_number += 1
+
+    if not converged and verbose:
+        print('   Stopped at {:d} iteration limit without reaching convergence criterion.'.format(max_iter))
+
+    return x.todense(), np.array(err)
