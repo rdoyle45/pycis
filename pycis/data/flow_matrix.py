@@ -130,7 +130,7 @@ class FlowGeoMatrix:
                 self.time = frame
             else:
                 emis_vector, self.time = self._data_vector()
-                self.inv_emis = sart.solve(geom_data, emis_vector)[0]
+                self.inv_emis = sart.solve(geom_data, emis_vector, tol=1e-4, max_iter=5000)[0]
 
             b_field_funcs = get_Bfield(self.shot, self.time)  # Functions to calculate B-field components at a given point
 
