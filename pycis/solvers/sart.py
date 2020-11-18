@@ -96,8 +96,8 @@ def solve(A, b, non_neg=True, max_iter=2000, tol=1e-2, lam=None, verbose=True):
 
         # Non-negativity constraint, if required
         if non_neg:
-            x[x < 0] = 0
-            x.eliminate_zeros()
+            x1[x1 < 0] = 0
+            x1.eliminate_zeros()
 
         # Current relative error
         err.append(sps.linalg.norm(b.T - A * x1) / sps.linalg.norm(x))
