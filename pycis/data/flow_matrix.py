@@ -173,14 +173,11 @@ class FlowGeoMatrix:
                 calc_status_callback(0.)
                 for (i, data), pixel in zip(enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid,
                                                                            b_field_funcs), rays, 10)), inds):
-                    print(i, data, pixel)
                     if data is not None:
                         b_l = data[0]
                         cells = data[1]
                         for cell_no, b_l_data in zip(cells, b_l):
-                            print(weighting_matrix[pixel, int(cell_no)])
                             if weighting_matrix[pixel, int(cell_no)] != 0:
-                                print('yes')
                                 b_l_matrix_data.append([pixel, int(cell_no), b_l_data[0]])
 
                     if time.time() - last_status_update > 1. and calc_status_callback is not None:
@@ -600,7 +597,6 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     if not isinstance(b_field_coords, np.ndarray):
         return None
 
-    print("Got to here 1")
     #Convert b_field coordinates to RZ for use in function later
     coords_in_RZ, theta = _convert_xy_r(b_field_coords)
 
