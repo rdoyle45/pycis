@@ -66,7 +66,7 @@ class FlowGeoMatrix:
     """
 
     def __init__(self, shot, frame, raydata=None, geom_mat=None, grid=None, raw_emis=None, inv_emis=None, pixel_order='C',
-                 calc_status_callback=misc.LoopProgPrinter().update):
+                 calc_status_callback=misc.LoopProgPrinter().update, verbose=False):
 
         if shot is not None:
             self.shot = shot
@@ -147,7 +147,7 @@ class FlowGeoMatrix:
             inds = list(range(n_los))
             random.shuffle(inds)
 
-            weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis)
+            weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis, verbose)
             weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)),
                                                  shape=(n_los, n_cells))
             coo_weight = weighting_matrix.tocoo()
@@ -159,7 +159,7 @@ class FlowGeoMatrix:
 
             # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
             # each interacts with a cell wall
-            if calc_status_callback is not None:
+            if calc_status_callback is not None and verbose:
                 calc_status_callback('Calculating sight-line cell interactions using {:d} '
                                      'CPUs...'.format(config.n_cpus))
 
@@ -168,11 +168,13 @@ class FlowGeoMatrix:
             rays = np.hstack((ray_start_coords[inds, :], ray_end_coords[inds, :]))  # Combine coords for imap
             b_l_matrix_data = []
 
-            # Progress bar indicating how much of the weighting matrix has been completed
-            progressbar = Bar('Weighting Matrix', max=len(inds), suffix='%(percent)d%%')
+            if verbose:
+                # Progress bar indicating how much of the weighting matrix has been completed
+                progressbar = Bar('B_l Matrix', max=len(inds), suffix='%(percent)d%%')
 
             with multiprocessing.Pool(config.n_cpus) as cpupool:
-                calc_status_callback(0.)
+                if verbose:
+                    calc_status_callback(0.)
                 for (i, data), pixel in zip(enumerate(cpupool.imap(partial(calculate_geom_mat_elements, self.grid,
                                                                            b_field_funcs), rays, 10)), inds):
                     if data is not None:
@@ -182,14 +184,17 @@ class FlowGeoMatrix:
                             if weighting_matrix[pixel, int(cell_no)] != 0:
                                 b_l_matrix_data.append([pixel, int(cell_no), b_l_data[0]])
 
-                    if time.time() - last_status_update > 1. and calc_status_callback is not None:
-                        calc_status_callback(float(i) / n_los)
-                        last_status_update = time.time()
-                    progressbar.next()
-            progressbar.finish()
+                    if verbose:
+                        if time.time() - last_status_update > 1. and calc_status_callback is not None:
+                            calc_status_callback(float(i) / n_los)
+                            last_status_update = time.time()
+                        progressbar.next()
 
-            if calc_status_callback is not None:
-                calc_status_callback(1.)
+            if verbose:
+                progressbar.finish()
+
+                if calc_status_callback is not None:
+                    calc_status_callback(1.)
 
             b_l_matrix_data = np.asarray(b_l_matrix_data)
             b_l_sparse_matrix = sparse.csr_matrix((b_l_matrix_data[:, 2], (b_l_matrix_data[:, 0], b_l_matrix_data[:, 1])),
@@ -752,7 +757,7 @@ def _convert_rt_xy(comps, theta, coords):
     return b_field_xyz
 
 
-def _weighting_matrix(data, inv_emis):
+def _weighting_matrix(data, inv_emis, verbose):
 
     print("Calculating Weighting Matrix...")
     # # Generate the weighting matrix data
@@ -762,8 +767,9 @@ def _weighting_matrix(data, inv_emis):
 
     denom = data @ inv_emis # Matrix multiply to calculate the denominator of the weighting fraction
 
-    # Progress bar indicating how much of the weighting matrix has been completed
-    progressbar = Bar('Weighting Matrix', max=data.shape[0], suffix='%(percent)d%%')
+    if verbose:
+        # Progress bar indicating how much of the weighting matrix has been completed
+        progressbar = Bar('Weighting Matrix', max=data.shape[0], suffix='%(percent)d%%')
 
     # Loop over each row, extracting the non-zero columns and calculating the weighting value at
     # that row and cell value
@@ -781,9 +787,10 @@ def _weighting_matrix(data, inv_emis):
                 weight_rowinds.append(i)
                 weight_colinds.append(index)
                 weight_values.append(inv_emis[index] / denom[i])
-
-        progressbar.next()
-    progressbar.finish()
+        if verbose:
+            progressbar.next()
+    if verbose:
+        progressbar.finish()
 
     # Reshape array and combine to a sparse matrix
     weight_rowinds = np.asarray(weight_rowinds).reshape(-1, )
