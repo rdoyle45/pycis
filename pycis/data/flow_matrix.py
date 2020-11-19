@@ -44,9 +44,10 @@ class FlowGeoMatrix:
         grid (calcam.gm.PoloidalVolumeGrid)
                                 : PoloidalVolumeGrid object to use to generate geom_mat if geom_mat = None
 
-        inv_emis (file)		: Tuple containing inverted emissivity as a matrix, x
-                                    and Array of length n_iterations indicating convergence
-                                    behaviour. Calculated by solving y = Ax + b.
+        raw_emis (file)     : File containing I0, v_los and time data as output from CISImage.save().
+
+        inv_emis (file)		: File containing inverted emissivity as a numpy array
+                              Calculated by solving y = Ax + b.
 
         pixel_order (str)		: What pixel order to use when flattening the 2D image
                                     array in to the 1D data vector. Default 'C' goes
@@ -64,7 +65,7 @@ class FlowGeoMatrix:
                                     status updates are issued.
     """
 
-    def __init__(self, shot, frame, raydata=None, geom_mat=None, grid=None, inv_emis=None, pixel_order='C',
+    def __init__(self, shot, frame, raydata=None, geom_mat=None, grid=None, raw_emis=None, inv_emis=None, pixel_order='C',
                  calc_status_callback=misc.LoopProgPrinter().update):
 
         if shot is not None:
@@ -129,7 +130,8 @@ class FlowGeoMatrix:
                 self.inv_emis = np.load(inv_emis)
                 self.time = frame
             else:
-                emis_vector, self.time = self._data_vector()
+
+                emis_vector, self.time = self._data_vector(raw_emis=raw_emis)
                 self.inv_emis = sart.solve(geom_data, emis_vector, tol=1e-4, max_iter=5000)[0]
 
             b_field_funcs = get_Bfield(self.shot, self.time)  # Functions to calculate B-field components at a given point
@@ -571,12 +573,17 @@ class FlowGeoMatrix:
 
         return geommat
 
-    def _data_vector(self):
+    def _data_vector(self, raw_emis):
 
-        # Load in CIS intensity data
-        cis_image = CISImage(self.shot, self.frame)
-        cis_data = cis_image.I0
-        cis_time = cis_image.time
+        if raw_emis is None:
+            # Load in CIS intensity data
+            cis_image = CISImage(self.shot, self.frame)
+            cis_data = cis_image.I0
+            cis_time = cis_image.time
+        else:
+            cis_image = np.load(raw_emis)
+            cis_data = cis_image['I0']
+            cis_time = cis_image['time']
 
         emis_vector = self.geom_mat.format_image(cis_data)  # Construct data vector for CIS data
 

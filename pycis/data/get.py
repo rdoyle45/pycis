@@ -1,8 +1,6 @@
 import sys
 sys.path.append('/home/rdoyle/CIS')
 
-from pyIpx.movieReader import ipxReader
-import calcam
 import pycis
 from scipy.io import loadmat
 import os
@@ -50,7 +48,7 @@ class CISImage():
         else:
             raise ValueError('There was no CIS diagnostic for this shot!')
 
-        # Get the raw_data using pyuda or ipxReader and set the timestamp to the actual frame time stamp.
+        # Get the raw_data using pyuda.
         try:
             ipx_data = client.get_images('rbc', shot, frame_number=frame)
             frame = ipx_data.frames[0]
@@ -58,15 +56,6 @@ class CISImage():
             self.time = frame.time
         except ValueError:
             raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
-        except pyuda.UDAException:
-            print("Error loading pyUDA. Using ipxReader instead.")
-            time = frame # This assumes the user knows to use the time not the frame number
-            ipxreader = ipxReader(shot=shot, camera=cam)
-            ipxreader.set_frame_time(time)
-            _, self.raw_data, header = ipxreader.read()
-
-            self.raw_data = self.raw_data / 64
-            self.time = header['time_stamp']
 
         # Get calibrations
         self._get_calibrations()
@@ -81,6 +70,13 @@ class CISImage():
             self._apply_geom_calib()
         else:
             print('WARNING: No calcam calib for this shot! No radial sight-line calib applied.')
+
+    def save(self, filename):
+
+        # Save I0, v_los and time data for use on other non-CCFE connected systems
+        np.savez(filename, I0=self.I0, v_los=self.v_los, time=self.time)
+
+        return
 
     # Fancy plotting!
     # type can be 'flow', 'I0', 'raw' or 'I0_flow'
