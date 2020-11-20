@@ -92,6 +92,7 @@ class FlowGeoMatrix:
 
                 self.grid = copy.copy(grid)
                 self.geom_mat = calcam.gm.GeometryMatrix(self.grid, self.raydata)
+                self.grid = self.geom_mat.grid  # Redefine grid as cells will have been removed for lack of data
                 self.geom_mat.save("{0}/geom_{1}_{2}.npz".format(os.getcwd(), str(shot), str(frame)))
 
             geom_data = self.geom_mat.data
