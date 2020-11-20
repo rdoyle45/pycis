@@ -63,10 +63,15 @@ class FlowGeoMatrix:
                                     the progress of the calculation. By default, status
                                     updates are printed to stdout.  If set to None, no
                                     status updates are issued.
+
+        verbose (Boolean) : Print outputs as the program runs
+
+        trim (Boolean)  : Trim unused grid cells from the matrix
+
     """
 
     def __init__(self, shot, frame, raydata=None, geom_mat=None, grid=None, raw_emis=None, inv_emis=None, pixel_order='C',
-                 calc_status_callback=misc.LoopProgPrinter().update, verbose=False):
+                 calc_status_callback=misc.LoopProgPrinter().update, verbose=False, trim=False):
 
         if shot is not None:
             self.shot = shot
@@ -209,12 +214,13 @@ class FlowGeoMatrix:
 
             self.data = weighting_matrix.multiply(b_l_sparse_matrix)
 
-            # Remove any grid cells + matrix rows which have no sight-line coverage.
-            #unused_cells = np.where(np.abs(self.data.sum(axis=0)) == 0)[1]
-            #self.grid.remove_cells(unused_cells)
+            if trim:
+                # Remove any grid cells + matrix rows which have no sight-line coverage.
+                unused_cells = np.where(np.abs(self.data.sum(axis=0)) == 0)[1]
+                self.grid.remove_cells(unused_cells)
 
-            #used_cols = np.where(np.abs(self.data.sum(axis=0)) > 0)[1]
-            #self.data = self.data[:, used_cols]
+                used_cols = np.where(np.abs(self.data.sum(axis=0)) > 0)[1]
+                self.data = self.data[:, used_cols]
 
     def set_binning(self, binning):
         """
