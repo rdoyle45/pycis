@@ -90,6 +90,7 @@ class FlowGeoMatrix:
                 if isinstance(geom_mat, str):
                     self.geom_mat = calcam.gm.GeometryMatrix.fromfile(geom_mat)
                     self.grid = copy.copy(self.geom_mat.grid)
+                    pixel_mask = self.geom_mat.pixel_mask
             else:
                 if not grid:
                     print('Generating default square grid for MAST.')
@@ -221,6 +222,8 @@ class FlowGeoMatrix:
 
                 used_cols = np.where(np.abs(self.data.sum(axis=0)) > 0)[1]
                 self.data = self.data[:, used_cols]
+
+            self.set_included_pixels(pixel_mask=pixel_mask)
 
     def set_binning(self, binning):
         """
@@ -484,7 +487,8 @@ class FlowGeoMatrix:
                             im_transforms=self.image_geometry.transform_actions,
                             im_px_aspect=self.image_geometry.pixel_aspectratio,
                             im_shape=self.pixel_mask.shape[::-1],
-                            im_coords=self.image_coords
+                            im_coords=self.image_coords,
+                            inv_emis=self.inv_emis
                             )
 
     def _load_npz(self, filename, flow_matrix=True):
