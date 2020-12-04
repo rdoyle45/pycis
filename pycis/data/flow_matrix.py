@@ -44,7 +44,7 @@ class FlowGeoMatrix:
         grid (calcam.gm.PoloidalVolumeGrid)
                                 : PoloidalVolumeGrid object to use to generate geom_mat if geom_mat = None
 
-        raw_emis (file)     : File containing I0, v_los and time data as output from CISImage.save().
+        raw_cis (file)     : File containing I0, v_los and time data as output from CISImage.save().
 
         inv_emis (file)		: File containing inverted emissivity as a numpy array
                               Calculated by solving y = Ax + b.
@@ -70,7 +70,7 @@ class FlowGeoMatrix:
 
     """
 
-    def __init__(self, shot, frame, raydata=None, geom_mat=None, grid=None, raw_emis=None, inv_emis=None, pixel_order='C',
+    def __init__(self, shot, frame, raydata=None, geom_mat=None, grid=None, raw_cis=None, inv_emis=None, pixel_order='C',
                  calc_status_callback=misc.LoopProgPrinter().update, verbose=False, trim=False):
 
         if shot is not None:
@@ -138,7 +138,7 @@ class FlowGeoMatrix:
                 self.time = frame
             else:
 
-                emis_vector, self.time = self._data_vector(raw_emis=raw_emis)
+                emis_vector, self.time = self._data_vector(raw_emis=raw_cis)
                 self.inv_emis = sart.solve(geom_data, emis_vector, tol=1e-4, max_iter=5000)[0]
 
             b_field_funcs = get_Bfield(self.shot, self.time)  # Functions to calculate B-field components at a given point
