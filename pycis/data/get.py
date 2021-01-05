@@ -21,7 +21,7 @@ cal_lut_file = cal_dir + '/LUT.xlsx'
 
 try:
     # Load the ol' custom flow colour map
-    cmd = np.loadtxt('../../src/CIS/flow_cmap.txt')
+    cmd = np.loadtxt('../../src/flow_cmap.txt')
     flow = matplotlib.colors.LinearSegmentedColormap.from_list('flow', cmd, N=128)
 except:
     flow=0
