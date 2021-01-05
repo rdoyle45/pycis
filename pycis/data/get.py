@@ -1,5 +1,5 @@
-import sys
-sys.path.append('/home/rdoyle/CIS')
+#import sys
+#sys.path.append('/home/rdoyle/CIS')
 
 import pycis
 from scipy.io import loadmat
@@ -16,12 +16,12 @@ import pyuda
 client = pyuda.Client()
 
 # Where the MAST calibrations are stored.
-cal_lut_file = '/home/rdoyle/ssilburn/CIS_MATLAB_calibrations/LUT.xlsx'
-cal_dir = '/home/rdoyle/ssilburn/CIS_MATLAB_calibrations'
+cal_dir = '../../src/CIS_MATLAB_calibrations'
+cal_lut_file = cal_dir + '/LUT.xlsx'
 
 try:
     # Load the ol' custom flow colour map
-    cmd = np.loadtxt('/home/rdoyle/ssilburn/CIS/flow_cmap.txt')
+    cmd = np.loadtxt('../../src/CIS/flow_cmap.txt')
     flow = matplotlib.colors.LinearSegmentedColormap.from_list('flow', cmd, N=128)
 except:
     flow=0
