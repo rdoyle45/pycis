@@ -134,7 +134,7 @@ class FlowGeoMatrix:
 
             # Solve y = Ax + b for x, the inverted emissivity matrix
             if inv_emis:
-                self.inv_emis = np.load(inv_emis, allow_pickle=True)['i0']
+                self.inv_emis = np.load(inv_emis, allow_pickle=True)['data']
                 self.time = frame
             else:
 
@@ -223,7 +223,7 @@ class FlowGeoMatrix:
                 used_cols = np.where(np.abs(self.data.sum(axis=0)) > 0)[1]
                 self.data = self.data[:, used_cols]
 
-            self.set_included_pixels(pixel_mask=pixel_mask)
+                self.set_included_pixels(pixel_mask=pixel_mask)
 
     def set_binning(self, binning):
         """

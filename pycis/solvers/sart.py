@@ -119,3 +119,21 @@ def solve(A, b, non_neg=True, max_iter=2000, tol=1e-2, lam=None, verbose=True):
         print('   Stopped at {:d} iteration limit without reaching convergence criterion.'.format(max_iter))
 
     return x.todense(), np.array(err)
+
+
+def save(filename, data, time):
+
+    """
+    Save solved profile in a format readable by PyCIS later.
+
+    Parameters:
+
+        filename (string)        : Desired save filename
+
+        data (numpy.ndarray)     : sart.solve() Output
+
+    """
+
+    np.savez(filename, data=data[0], err=data[1], time=time)
+
+    return
