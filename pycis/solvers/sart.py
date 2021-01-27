@@ -45,7 +45,7 @@ def solve(A, b, non_neg=True, max_iter=2000, tol=1e-2, lam=None, verbose=True):
     x = sps.csc_matrix(np.ones((unknowns, 1)) * np.exp(-1))
 
     # Check if we're given lambda or want to optimise it automatically
-    if lam is None:
+    if not lam:
         optimise_lam = True
         lam = 1.
     else:
