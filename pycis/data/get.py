@@ -175,7 +175,7 @@ class CISImage():
                 ax.imshow(cmapped)
                 ax.format_coord = self._format_coord_data
                 if show_sep:
-                    ax.plot_raw(xsep, ysep), 'w:'
+                    ax.plot_raw(xsep, ysep)
             else:
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
@@ -188,7 +188,7 @@ class CISImage():
                 plt.ylabel('Y Pixel')
                 ax.format_coord = self._format_coord_data
                 if show_sep:
-                    ax.plot_raw(xsep, ysep), 'w:'
+                    ax.plot_raw(xsep, ysep)
                 plt.show()
         else:
             raise ValueError('Unknown type of plot "{:s}"; can be "flow", "I0", "raw" or "I0_flow"'.format(type))
