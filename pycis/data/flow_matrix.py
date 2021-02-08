@@ -618,9 +618,9 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
     # Calculate the positions and cells that a sight line intersects
     positions, intersected_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
 
-    if len(intersected_cells) == 0:
+    if positions.shape[0] <= 1:
         return None
-
+       
     b_field_coords, l_k_vectors = _get_b_field_coords(positions, ray_start_coords, ray_end_coords)
 
     # Ray may not interact with any cells, in which case no data is to be output
@@ -686,6 +686,7 @@ def _get_b_field_coords(pos, ray_start, ray_end):
     ray_length = np.sqrt(np.sum(ray_vector**2))
 
     relative_position = pos/ray_length
+
     if len(relative_position):
         n_segs = len(relative_position) - 1
     #if len(pos):
