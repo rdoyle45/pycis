@@ -605,7 +605,71 @@ class FlowGeoMatrix:
 
         return emis_vector, cis_time
 
-   # def plot_1D(self):
+    # Plot velocities along defined flux surface in 1D
+    def flow_1D(self, psiN, gfile, flow_profile, plot=False):
+
+        """
+        Extract flow velocities for specific points along a line of constant \
+        Normalised Flux (psiN)
+
+        Parameters:
+
+            psiN (int)            : Normalised Flux value - this determines what data points \
+                                    are considered.
+
+            gfile (str)           : geqdsk file containing magnetic equilibrium data
+
+            flow_profile (str)    : File containing SART solved flow profile data
+
+        Returns:
+
+            numpy.ndarray : Nx3 array containing the flow velocity, and R,Z coords of the point \
+                            that velocity is from, where N is the number of usable points \
+                            within the defined grid
+
+        """
+
+        eq = equilibrium(gfile=gfile)  # Load in geqdsk file containing equilibrium data
+        flow_data = np.load(flow_profile)  # Load in SART solved flow profile
+
+        # R,Z coordinates along a given flux surface
+        flux_surface_coords = np.stack((eq.get_fluxsurface(psiN)[0], eq.get_fluxsurface(psiN)[1]), axis=-1)
+
+        grid_bounds_min = self.grid.vertices.min(axis=0)
+        grid_bounds_max = self.grid.vertices.max(axis=0)
+
+        # Trim useless coords
+        usable_coords = []
+        for coords in flux_surface_coords:
+            if grid_bounds_min[0] <= coords[0] <= grid_bounds_max[0] and \
+                    grid_bounds_min[1] <= coords[1] <= grid_bounds_max[1]:
+                usable_coords.append(coords)
+        usable_coords = np.asarray(usable_coords)
+
+        surface_data = np.zeros((usable_coords.shape[0],3))  # Array to hold velocity and coord data
+
+        for i, point in enumerate(usable_coords):
+            for j, cell in enumerate(self.grid.cells):
+
+                R = point[0]
+                Z = point[1]
+
+                # Cell Boundaries
+                cell_rmin = self.grid.vertices[cell[0]][0]
+                cell_rmax = self.grid.vertices[cell[1]][0]
+                cell_zmin = self.grid.vertices[cell[0]][1]
+                cell_zmax = self.grid.vertices[cell[3]][1]
+
+                # Check if coordinate falls within the cell boundaries
+                if cell_rmin <= R <= cell_rmax and cell_zmin <= Z <= cell_zmax:
+                    surface_data[i] = [flow_data['data'][j], R, Z]
+                    break
+                else:
+                    surface_data[i] = [np.nan, R, Z]
+
+        return surface_data
+
+
 
 
 
