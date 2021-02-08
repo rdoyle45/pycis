@@ -605,6 +605,10 @@ class FlowGeoMatrix:
 
         return emis_vector, cis_time
 
+   # def plot_1D(self):
+
+
+
 
 def calculate_geom_mat_elements(grid, b_field_funcs, rays):
 
@@ -613,6 +617,9 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
 
     # Calculate the positions and cells that a sight line intersects
     positions, intersected_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
+
+    if len(intersected_cells) == 0:
+        return None
 
     b_field_coords, l_k_vectors = _get_b_field_coords(positions, ray_start_coords, ray_end_coords)
 
