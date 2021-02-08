@@ -670,10 +670,6 @@ class FlowGeoMatrix:
         return surface_data
 
 
-
-
-
-
 def calculate_geom_mat_elements(grid, b_field_funcs, rays):
 
     ray_start_coords = np.array(rays[:3])
