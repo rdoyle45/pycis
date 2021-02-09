@@ -859,7 +859,7 @@ def _weighting_matrix(data, inv_emis, verbose):
         values = row_data[2]
 
         if cols.shape[0] == 0:
-            break
+            continue
 
         for index, data in zip(cols, values):
             if inv_emis[index] != 0:
