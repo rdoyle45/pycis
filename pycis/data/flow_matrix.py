@@ -135,7 +135,7 @@ class FlowGeoMatrix:
             # Solve y = Ax + b for x, the inverted emissivity matrix
             if inv_emis:
                 self.inv_emis = np.load(inv_emis, allow_pickle=True)['data']
-                self.time = frame
+                self.time = self.inv_emis['time']
             else:
 
                 emis_vector, self.time = self._data_vector(raw_emis=raw_cis)
@@ -688,12 +688,12 @@ def calculate_geom_mat_elements(grid, b_field_funcs, rays):
         return None
 
     #Convert b_field coordinates to RZ for use in function later
-    coords_in_RZ, theta = _convert_xy_r(b_field_coords)
+    coords_in_RZ, theta = convert_xy_r(b_field_coords)
 
     # Using b-field functions to get the b-field at given points
-    b_field_rtz = _get_b_field_comp(b_field_funcs, coords_in_RZ)
+    b_field_rtz = get_b_field_comp(b_field_funcs, coords_in_RZ)
     # Convert these b-field values back to xyz coordinate system
-    b_field_xyz = _convert_rt_xy(b_field_rtz, theta, coords_in_RZ)
+    b_field_xyz = convert_rt_xy(b_field_rtz, theta, coords_in_RZ)
 
     # As each b_field_xyz segment has the same l_k_vector these are just once
     # So b_field_xyz will be seg_factor times larger than l_k_vectors and therefore when
@@ -785,7 +785,7 @@ def _get_b_field_coords(pos, ray_start, ray_end):
     return b_field_coords, l_k_vectors
 
 
-def _convert_xy_r(coords):
+def convert_xy_r(coords):
 
     b_field_theta = []
     b_field_coords = coords.reshape(-1, 3, order='C')
@@ -804,7 +804,7 @@ def _convert_xy_r(coords):
     return b_field_RZ, b_field_theta
 
 
-def _get_b_field_comp(b_funcs, coords):
+def get_b_field_comp(b_funcs, coords):
 
     # Functions to calculate the
     bt = b_funcs[0]
@@ -822,7 +822,7 @@ def _get_b_field_comp(b_funcs, coords):
     return b_field_comp
 
 
-def _convert_rt_xy(comps, theta, coords):
+def convert_rt_xy(comps, theta, coords):
 
     b_field_xyz = np.ndarray(shape=comps.shape)
 
