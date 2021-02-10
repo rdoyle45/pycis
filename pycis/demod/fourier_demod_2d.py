@@ -59,45 +59,45 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     window_carrier = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
     window_dc = 1 - copy.deepcopy(window_carrier)
 
-    if bumps is not None:
-        wx = np.arange(window_carrier.shape[1])
-        wy = np.arange(window_carrier.shape[0])
-        wxx, wyy = np.meshgrid(wx, wy)
-        for bump in bumps:
-            b = 1 - np.exp(-1/2 * (((wxx - bump[1]) / 18) ** 2 + ((wyy - bump[0]) / 10) ** 2))
-            window_carrier *= b
-            window_dc *= b
+    # if bumps is not None:
+    #     wx = np.arange(window_carrier.shape[1])
+    #     wy = np.arange(window_carrier.shape[0])
+    #     wxx, wyy = np.meshgrid(wx, wy)
+    #     for bump in bumps:
+    #         b = 1 - np.exp(-1/2 * (((wxx - bump[1]) / 18) ** 2 + ((wyy - bump[0]) / 10) ** 2))
+    #         window_carrier *= b
+    #         window_dc *= b
+    #
+    # if notch_take is not None:
+    #     # cut a vertical notch out in Fourier domain to remove artefacts
+    #
+    #     notch_window_width = 9
+    #     pre_zeros = [0] * int(notch_take - notch_window_width / 2)
+    #     mid_zeros = [0] * (img.shape[1] - 2 * notch_window_width - 2 * len(pre_zeros))
+    #     notch_take = scipy.signal.tukey(notch_window_width, alpha=0.8)
+    #
+    #     notch_window = np.concatenate([pre_zeros, notch_take, mid_zeros, notch_take, pre_zeros])
+    #
+    #     window_carrier *= (1 - notch_window)
 
-    if notch_take is not None:
-        # cut a vertical notch out in Fourier domain to remove artefacts
-
-        notch_window_width = 9
-        pre_zeros = [0] * int(notch_take - notch_window_width / 2)
-        mid_zeros = [0] * (img.shape[1] - 2 * notch_window_width - 2 * len(pre_zeros))
-        notch_take = scipy.signal.tukey(notch_window_width, alpha=0.8)
-
-        notch_window = np.concatenate([pre_zeros, notch_take, mid_zeros, notch_take, pre_zeros])
-
-        window_carrier *= (1 - notch_window)
-
-    if notch_add is not None:
-        # cut a vertical notch out in Fourier domain to remove artefacts
-
-        notch_window_width = 6
-        pre_zeros = [0] * int(notch_add - notch_window_width / 2)
-        mid_zeros = [0] * (img.shape[1] - 2 * notch_window_width - 2 * len(pre_zeros))
-        notch_add = scipy.signal.tukey(notch_window_width, alpha=0.8)
-
-        notch_window = np.concatenate([pre_zeros, notch_add, mid_zeros, notch_add, pre_zeros])
-
-        notch_window = np.tile(notch_window, reps=[window_carrier.shape[0], 1])
-
-        window_carrier += notch_window
-        window_carrier[window_carrier > 1] = 1
-
-        window_1d_na = pycis.demod.window(fft_length, nfringes, width_factor=2.3, fn='tukey', alpha=0.3)
-        window_2d_na = np.transpose(np.tile(window_1d_na, (fft_img.shape[1], 1)))
-        window_carrier *= window_2d_na
+    # if notch_add is not None:
+    #     # cut a vertical notch out in Fourier domain to remove artefacts
+    #
+    #     notch_window_width = 6
+    #     pre_zeros = [0] * int(notch_add - notch_window_width / 2)
+    #     mid_zeros = [0] * (img.shape[1] - 2 * notch_window_width - 2 * len(pre_zeros))
+    #     notch_add = scipy.signal.tukey(notch_window_width, alpha=0.8)
+    #
+    #     notch_window = np.concatenate([pre_zeros, notch_add, mid_zeros, notch_add, pre_zeros])
+    #
+    #     notch_window = np.tile(notch_window, reps=[window_carrier.shape[0], 1])
+    #
+    #     window_carrier += notch_window
+    #     window_carrier[window_carrier > 1] = 1
+    #
+    #     window_1d_na = pycis.demod.window(fft_length, nfringes, width_factor=2.3, fn='tukey', alpha=0.3)
+    #     window_2d_na = np.transpose(np.tile(window_1d_na, (fft_img.shape[1], 1)))
+    #     window_carrier *= window_2d_na
 
     if mask:
         # end region masking
