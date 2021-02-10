@@ -11,6 +11,7 @@ from scipy.interpolate import interp2d, griddata, interp1d
 import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib.colors
+import flow_matrix as fl
 
 import pyuda
 client = pyuda.Client()
@@ -318,6 +319,37 @@ class CISImage():
                 self.cal_dict['tangency_R'][row, col], self.cal_dict['tangency_Z'][row, col])
         else:
             return ''
+
+    def _apply_offset_correction(self, raydata, grid):
+
+        ray_start_coords = raydata.ray_start_coords.reshape(-1, 3)
+        ray_end_coords = raydata.ray_end_coords.reshape(-1, 3)
+        b_field_funcs = get_Bfield(self.shot, self.time)
+
+        pixels = []
+
+        for i, (ray_start, ray_end) in enumerate(zip(ray_start_coords, ray_end_coords)):
+
+            ray_vector = ray_end - ray_start
+            ray_length = np.sqrt(np.sum(ray_vector**2))
+
+            positions, intersected_cells = grid.get_cell_intersections(ray_start_coords, ray_end_coords)
+
+            relative_positions = positions/ray_length
+
+            for pos in relative_positions:
+                point_coords = ray_start + pos * ray_vector
+
+                point_RZ, point_theta = fl.convert_xy_r(point_coords)
+                b_field = fl.get_b_field_comp(b_field_funcs, point_RZ)
+
+                b_field_xyz = fl.convert_rt_xy(b_field, point_theta, point_RZ)
+
+                dot_product = np.dot(point_coords, b_field_xyz)
+
+                if dot_product <= 0.05:
+                    pixels.append(i)
+                    break
 
     # Make print() do something useful
     def __str__(self):
