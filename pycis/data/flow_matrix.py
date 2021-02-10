@@ -135,7 +135,7 @@ class FlowGeoMatrix:
             # Solve y = Ax + b for x, the inverted emissivity matrix
             if inv_emis:
                 self.inv_emis = np.load(inv_emis, allow_pickle=True)['data']
-                self.time = self.inv_emis['time']
+                self.time = np.load(inv_emis, allow_pickle=True)['time']
             else:
 
                 emis_vector, self.time = self._data_vector(raw_emis=raw_cis)
