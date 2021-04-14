@@ -33,7 +33,6 @@ def _arrow3D(ax, x, y, z, dx, dy, dz, *args, **kwargs):
 
     arrow = Arrow3D(x, y, z, dx, dy, dz, *args, **kwargs)
     ax.add_artist(arrow)
-    setattr(Axes3D, 'arrow3D', _arrow3D)
 
 
 def data_for_cylinder_along_z(center_x,center_y,radius,height_z):
@@ -108,6 +107,8 @@ def check_Bfield_coords(rays, shot, time, plot=False):
         b_field_cart[i] = np.matmul(rot_mat, b_field_comp.T).T
 
     if plot:
+
+        setattr(Axes3D, 'arrow3D', _arrow3D)
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
