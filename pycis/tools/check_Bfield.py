@@ -59,6 +59,8 @@ def check_Bfield_coords(rays, shot, time, plot=False):
 
         time (float)                    :   Time of the frame being studied
 
+        plot (bool)                     :   Plot B-field vectors
+
     """
 
     raydata = calcam.RayData(rays)  # Load raydata for shot
