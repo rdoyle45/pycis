@@ -66,7 +66,7 @@ def check_Bfield_coords(rays, shot, time, plot=False):
 
     bt, br, bz = data.get.get_Bfield(shot, time)  # Get B-field data functions from pyEquilibrium
 
-    test_set = random.sample(range(0, raydata.x.size), 10)  # 10 random integers corresponding to 10 test sightlines
+    test_set = random.sample(range(0, raydata.x.size), 20)  # 10 random integers corresponding to 10 test sightlines
 
     # Load test sightlines from raydata
     ray_start_coords = raydata.ray_start_coords.reshape(-1, 3)[test_set]
