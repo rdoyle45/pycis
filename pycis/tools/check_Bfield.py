@@ -132,6 +132,7 @@ def check_Bfield_coords(rays, shot, time, plot=False):
         ax.set_ylabel('y')
         ax.set_zlabel('z')
         fig.tight_layout()
+        plt.show()
 
 
 
