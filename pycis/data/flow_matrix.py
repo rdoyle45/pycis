@@ -816,7 +816,7 @@ def get_b_field_comp(b_funcs, coords):
     for i, row in enumerate(coords):
 
         b_field_comp[i][0] = br(row[0], row[1])
-        b_field_comp[i][1] = -bt(row[0], row[1])
+        b_field_comp[i][1] = bt(row[0], row[1])
         b_field_comp[i][2] = bz(row[0], row[1])
 
     return b_field_comp
