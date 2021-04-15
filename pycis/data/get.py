@@ -205,8 +205,8 @@ class CISImage():
         self.deltaphi = self.phi - self.cal_dict['phi0']
         while self.deltaphi.max() > np.pi:
             self.deltaphi[self.deltaphi > np.pi] = self.deltaphi[self.deltaphi > np.pi] - 2 * np.pi
-        while self.deltaphi.min() < np.pi:
-            self.deltaphi[self.deltaphi < np.pi] = self.deltaphi[self.deltaphi < np.pi] + 2 * np.pi
+        while self.deltaphi.min() < -np.pi:
+            self.deltaphi[self.deltaphi < -np.pi] = self.deltaphi[self.deltaphi < -np.pi] + 2 * np.pi
 
         # Calibrate contrast (note: probably a load of rubbish; MAST contrast calibrations were not good).
         self.contrast = self.xi / self.cal_dict['xi0']
