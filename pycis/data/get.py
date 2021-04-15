@@ -11,6 +11,7 @@ from scipy.interpolate import interp2d, griddata, interp1d
 import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib.colors
+from scipy import constants as con
 
 import pyuda
 client = pyuda.Client()
@@ -212,7 +213,7 @@ class CISImage():
         self.contrast = self.xi / self.cal_dict['xi0']
 
         # Convert demodulated phase to a flow!
-        self.v_los = (3e8 * self.deltaphi / (2 * np.pi * self.cal_dict['N']))
+        self.v_los = (con.c * self.deltaphi / (2 * np.pi * self.cal_dict['N']))
 
         # Apply intensity flat field
         # self.I0 = self.I0 / self.cal_dict['flatfield']
