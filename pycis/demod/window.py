@@ -3,7 +3,7 @@ import scipy.signal
 
 # dictionary containing the window functions available, add your own.
 fns = {'hanning': scipy.signal.hanning,
-      'blackmanharris': scipy.signal.blackmanharris,
+      'blackmanharris': scipy.signal.windows.blackmanharris,
       'tukey': scipy.signal.windows.tukey}
 
 

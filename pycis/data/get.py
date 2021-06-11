@@ -11,7 +11,7 @@ from scipy.interpolate import interp2d, griddata, interp1d
 import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib.colors
-import flow_matrix as fl
+from scipy import constants as con
 
 import pyuda
 client = pyuda.Client()
@@ -206,14 +206,14 @@ class CISImage():
         self.deltaphi = self.phi - self.cal_dict['phi0']
         while self.deltaphi.max() > np.pi:
             self.deltaphi[self.deltaphi > np.pi] = self.deltaphi[self.deltaphi > np.pi] - 2 * np.pi
-        while self.deltaphi.min() < np.pi:
-            self.deltaphi[self.deltaphi < np.pi] = self.deltaphi[self.deltaphi < np.pi] + 2 * np.pi
+        while self.deltaphi.min() < -np.pi:
+            self.deltaphi[self.deltaphi < -np.pi] = self.deltaphi[self.deltaphi < -np.pi] + 2 * np.pi
 
         # Calibrate contrast (note: probably a load of rubbish; MAST contrast calibrations were not good).
         self.contrast = self.xi / self.cal_dict['xi0']
 
         # Convert demodulated phase to a flow!
-        self.v_los = (3e8 * self.deltaphi / (2 * np.pi * self.cal_dict['N']))
+        self.v_los = (con.c * self.deltaphi / (2 * np.pi * self.cal_dict['N']))
 
         # Apply intensity flat field
         # self.I0 = self.I0 / self.cal_dict['flatfield']
@@ -340,10 +340,10 @@ class CISImage():
             for pos in relative_positions:
                 point_coords = ray_start + pos * ray_vector
 
-                point_RZ, point_theta = fl.convert_xy_r(point_coords)
-                b_field = fl.get_b_field_comp(b_field_funcs, point_RZ)
+                point_RZ, point_theta = pycis.data.flow_matrix.convert_xy_r(point_coords)
+                b_field = pycis.data.flow_matrix.get_b_field_comp(b_field_funcs, point_RZ)
 
-                b_field_xyz = fl.convert_rt_xy(b_field, point_theta, point_RZ)
+                b_field_xyz = pycis.data.flow_matrix.convert_rt_xy(b_field, point_theta, point_RZ)
 
                 dot_product = np.dot(point_coords, b_field_xyz)
 
