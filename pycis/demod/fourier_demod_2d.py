@@ -51,7 +51,7 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
 
     # estimate carrier (fringe) frequency, if not supplied
     if nfringes is None:
-        nfringes = np.unravel_index(fft_img[15:][:].argmax(), fft_img.shape)[0] + 15
+        nfringes = np.unravel_index(fft_img[15:][:].argmax(), fft_img.shape)[0] + 30
 
     # generate window function
     fft_length = fft_img.shape[0]
