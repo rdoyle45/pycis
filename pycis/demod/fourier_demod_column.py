@@ -48,7 +48,7 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
             nfringes = nfringes.squeeze() + nfringes_min  # remove single-dimensional entries from the shape of array
 
     # generate window function
-    fft_length = int(col_length / 2)
+    fft_length = int(col_length / 2) + 1
     window = pycis.demod.window(fft_length, nfringes)
 
     # isolate DC
