@@ -54,7 +54,6 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
          #   nfringes = nfringes.squeeze() + nfringes_min  # remove single-dimensional entries from the shape of array
 
     # generate window function
-    #fft_length = int(col_length / 2) + 1
     fft_length = fft_col.size
     window = pycis.demod.window(fft_length, nfringes)
 
