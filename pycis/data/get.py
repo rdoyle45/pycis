@@ -73,7 +73,7 @@ class CISImage():
         # Do the demodulation
 
         self._demodulate(despeckle=despeckle, apodise=apodise, nfringes=nfringes, angle=angle)
-        return
+
         # Assuming we have sight-line info, set the flow offset by looking at (geometrically) radial sight lines.
         # Not the most rigorous way of doing it but not too bad for now.
         if self.cal_dict['tangency_R'] is not None:
@@ -96,13 +96,13 @@ class CISImage():
         if show_sep:
             xsep = []
             ysep = []
-            eq = equilibrium.equilibrium(device='MAST', shot=self.shot, time=self.time)
+            eq = equilibrium(device='MAST', shot=29541, time=0.313)
             Rsep, Zsep = eq.get_fluxsurface(1.)
-            xpoint_x = np.argmin(np.abs(self.cal_dict['tangency_R'][0, :]))
-            Rtan = self.cal_dict['tangency_R'].copy()
+            xpoint_x = np.argmin(np.abs(caldict['tangency_R'][0, :]))
+            Rtan = caldict['tangency_R'].copy()
             Rtan[:, xpoint_x:] = 0
             for i in range(Rsep.size):
-                dist = np.sqrt((Rtan - Rsep[i]) ** 2 + (self.cal_dict['tangency_Z'] - Zsep[i]) ** 2)
+                dist = np.sqrt((Rtan - Rsep[i]) ** 2 + (caldict['tangency_Z'] - Zsep[i]) ** 2)
                 if dist.min() < 2e-3:
                     mpos = np.argmin(dist)
                     xsep.append(np.unravel_index(mpos, dist.shape)[1])
@@ -111,10 +111,10 @@ class CISImage():
                     xsep.append(np.nan)
                     ysep.append(np.nan)
 
-            Rtan = self.cal_dict['tangency_R'].copy()
+            Rtan = caldict['tangency_R'].copy()
             Rtan[:, :xpoint_x] = 0
             for i in range(Rsep.size):
-                dist = np.sqrt((Rtan - Rsep[i]) ** 2 + (self.cal_dict['tangency_Z'] - Zsep[i]) ** 2)
+                dist = np.sqrt((Rtan - Rsep[i]) ** 2 + (caldict['tangency_Z'] - Zsep[i]) ** 2)
                 if dist.min() < 2e-3:
                     mpos = np.argmin(dist)
                     xsep.append(np.unravel_index(mpos, dist.shape)[1])
@@ -212,7 +212,7 @@ class CISImage():
                                                           #tilt_angle=0)  # self.fringe_tilt)
 
         self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
-        return
+
         phi0_rot = scipy.ndimage.rotate(self.cal_dict['phi0'], angle)
         xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
 

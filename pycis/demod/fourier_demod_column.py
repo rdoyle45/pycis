@@ -22,16 +22,13 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
     """
 
     col = col.astype(np.float64)
-    #col_indices = np.nonzero(col < 55555)[0]
-    
-    #col_short = col[col_indices]
 
     col_length = np.size(col)
     pixels = np.linspace(1, col_length, col_length)
 
     # locate carrier (fringe) frequency
-    col_short = scipy.signal.medfilt(col, 5) 
-    fft_col = np.fft.rfft(col_short)
+    col_filt = scipy.signal.medfilt(col, 5)
+    fft_col = np.fft.rfft(col_filt)
 
     if nfringes is None:
         #nfringes_min, nfringes_max = (40, 160) # Range of carrier frequencies within which to search
@@ -41,7 +38,7 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
          #   dc = 2 * col
           #  phase = 0 * col
            # contrast = 0 * col
-            
+
             #S_apodised = dc * (1 + (contrast * np.cos(phase)))
             #S = S_apodised
 
@@ -61,20 +58,17 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
     fft_dc = np.multiply(fft_col, 1 - window)
     dc = np.fft.irfft(fft_dc, n=col_length)
     dc_smooth = scipy.ndimage.gaussian_filter(dc, 10)
-    
-    #fft_carrier = fft_col - fft_dc
-    #carrier = np.fft.irfft(fft_carrier)
-    
+
     Ilim = 3
-    
-    col_in = np.copy(col_short)
-    
-    col_in[dc > Ilim] = 2*col_in[dc>Ilim]/dc[dc>Ilim] - 1
-    col_in[dc <= Ilim] = 0 
-    S_apodised = np.copy(col_short)
+
+    col_in = np.copy(col_filt)
+
+    col_in[dc > Ilim] = 2*col_in[dc > Ilim]/dc[dc > Ilim] - 1
+    col_in[dc <= Ilim] = 0
+    S_apodised = np.copy(col_filt)
 
     if apodise:
-        # locate sharp edges: 
+        # locate sharp edges:
         grad = np.ones_like(dc, dtype=np.float32)
         grad = abs(np.gradient(dc)) / dc
 
@@ -82,55 +76,29 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
 
         thres_normalised = (max_grad - min(grad)) / (max(grad) - min(grad))
         locs = pycis.tools.indexes(grad, thres=thres_normalised, min_dist=window_width)
- 
-        #locs, _ = scipy.signal.find_peaks(grad, threshold=max_grad, distance=window_width)
 
         window_apod = 1 - np.hanning(window_width*2)
 
-        locs = locs[locs>=20]
+        locs = locs[locs >= 20]
 
         if np.size(locs) != 0:
             for i in range(0,np.size(locs)):
-                if locs[i] > window_width and locs[i] < np.size(col) - window_width:
+                if window_width < locs[i] < np.size(col) - window_width:
                     S_apodised[locs[i] - window_width: locs[i] + window_width] = S_apodised[locs[i] - window_width: locs[i] + window_width]*window_apod
                     col_in[locs[i] - window_width: locs[i] + window_width] = col_in[locs[i] - window_width: locs[i] + window_width]*window_apod
                 elif locs[i] < window_width:
-                     S_apodised[locs[i]:locs[i] + window_width] = S_apodised[locs[i]:locs[i] + window_width] * window_apod[window_width : (2*window_width) + 1]
-                     col_in[locs[i]:locs[i] + window_width] = col_in[locs[i]:locs[i] + window_width] * window_apod[window_width : (2*window_width) + 1]        
+                    S_apodised[locs[i]:locs[i] + window_width] = S_apodised[locs[i]:locs[i] + window_width] * window_apod[window_width : (2*window_width) + 1]
+                    col_in[locs[i]:locs[i] + window_width] = col_in[locs[i]:locs[i] + window_width] * window_apod[window_width : (2*window_width) + 1]
 
         col_in *= scipy.signal.windows.tukey(col_in.shape[0], alpha=0.1)
-        #S_apodised = np.copy(col_in)
-        #carrier_apodised *= scipy.signal.windows.tukey(carrier_apodised.shape[0], alpha=0.1)
-        #S_apodised *= scipy.signal.windows.tukey(S_apodised.shape[0], alpha=0.1)
-
-        #analytic_signal_apodised = scipy.signal.hilbert(carrier_apodised)
-        #analytic_signal = scipy.signal.hilbert(carrier)
-        #phase = np.angle(analytic_signal_apodised)
-        #phase_not_apodised = np.angle(analytic_signal)
-        #contrast = np.divide(abs(analytic_signal), dc_smooth)
 
     fft_carrier = np.fft.rfft(col_in)
     fft_carrier = np.multiply(fft_carrier,window)
-    carrier = np.fft.irfft(fft_carrier, n=col_length)    
+    carrier = np.fft.irfft(fft_carrier, n=col_length)
 
     analytic_signal_apodised = scipy.signal.hilbert(carrier)
     phase = np.angle(analytic_signal_apodised)
     contrast = np.divide(abs(analytic_signal_apodised), dc_smooth)
-
-  # else:
-        #S_apodised = np.copy(col)
-        #analytic_signal_1 = scipy.signal.hilbert(carrier)
-
-
-        # plt.figure()
-        # plt.plot(pixels, np.real(analytic_signal_1))
-        # plt.plot(pixels, np.imag(analytic_signal_1))
-        #
-        # plt.show()
-
-
-        #phase = np.angle(analytic_signal_1)
-        #contrast = np.divide(abs(analytic_signal_1), dc)
 
     # contrast[contrast > 1.] = 1.
     # contrast[contrast < 0.] = 0.
@@ -188,8 +156,6 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
         plt.xlabel('y pix', size=9)
         plt.ylabel('[dimensionless]', size=9)
         plt.xlim(0, np.size(pixels) + 1)
-
-
 
         plt.subplot(2, 2, 3)
         plt.plot(contrast, label='zeta')
