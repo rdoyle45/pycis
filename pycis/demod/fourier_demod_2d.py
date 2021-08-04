@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import time, copy
 import pycis
 import scipy
-from skimage.filters import window
 
 def fourier_demod_2d(img, despeckle=False, mask=True, uncertainty_out=False, camera=None, nfringes=None,
                      notch_take=None, notch_add=None, display=False, width_factor=1., alpha=0.5, bumps=None):
