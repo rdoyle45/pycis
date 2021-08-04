@@ -7,7 +7,7 @@ fns = {'hanning': scipy.signal.hanning,
       'tukey': scipy.signal.windows.tukey}
 
 #test
-def window(rfft_length, nfringes, window_width=None, fn='tukey', width_factor=1., alpha=0.5):
+def window(rfft_length, nfringes, window_width=None, fn='tukey', width_factor=1., alpha=0.1):
     """ Generate a filters window for isolating the carrier (fringe) frequency. 
     
     :param rfft_length: length of the real FFT to be filtered
