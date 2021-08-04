@@ -58,6 +58,11 @@ class CISImage():
             self.time = frame.time
         except ValueError:
             raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
+        except ServerException:
+            from PIL import Image
+            im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/1.tif')
+            self.raw_data = np.array(im) 
+            self.time = 0.313
 
         # Get calibrations
         self._get_calibrations()

@@ -70,7 +70,7 @@ def fourier_demod_1d(img, nfringes=None, column_range=None, despeckle=False, til
         print('-- fd_image_1d: creating display images...')
 
         pycis.demod.display(img, dc, phase, contrast)
-         display_fig.masking(plasma_frame, mask_frame, devim_frame, tolim_frame)
+        display_fig.masking(plasma_frame, mask_frame, devim_frame, tolim_frame)
         plt.show()
 
     return dc, phase, contrast, np.asarray(S_apodised)
