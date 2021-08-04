@@ -17,13 +17,15 @@ import scipy
 import pyuda
 client = pyuda.Client()
 
+cwd = os.path.dirname(__file__)
+
 # Where the MAST calibrations are stored.
-cal_dir = '../../src/CIS_MATLAB_calibrations'
+cal_dir = cwd + '/../../src/CIS_MATLAB_calibrations'
 cal_lut_file = cal_dir + '/LUT.xlsx'
 
 try:
     # Load the ol' custom flow colour map
-    cmd = np.loadtxt('../../src/flow_cmap.txt')
+    cmd = np.loadtxt(cwd + '/../../src/flow_cmap.txt')
     flow = matplotlib.colors.LinearSegmentedColormap.from_list('flow', cmd, N=128)
 except:
     flow=0
@@ -41,7 +43,7 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, frame, despeckle=False, apodise=False, nfringes=None, angle=None):
+    def __init__(self, shot, frame, despeckle=False, apodise=False, nfringes=None, angle=None, f=1):
         """ Accessing the MAST CIS raw_data. Code written by Scott Silburn. """
         # Get raw raw_data
         self.shot = shot
@@ -56,13 +58,14 @@ class CISImage():
             frame = ipx_data.frames[0]
             self.raw_data = frame.k
             self.time = frame.time
-        except ValueError:
-            raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
-        except ServerException:
-            from PIL import Image
-            im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/1.tif')
-            self.raw_data = np.array(im) 
-            self.time = 0.313
+        except Exception as error:
+            if error == ValueError:
+                raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
+            else:
+                from PIL import Image
+                im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/' + str(f) + '.tif')
+                self.raw_data = np.array(im) 
+                self.time = 0.313
 
         # Get calibrations
         self._get_calibrations()
@@ -70,7 +73,7 @@ class CISImage():
         # Do the demodulation
 
         self._demodulate(despeckle=despeckle, apodise=apodise, nfringes=nfringes, angle=angle)
-
+        return
         # Assuming we have sight-line info, set the flow offset by looking at (geometrically) radial sight lines.
         # Not the most rigorous way of doing it but not too bad for now.
         if self.cal_dict['tangency_R'] is not None:
@@ -209,7 +212,7 @@ class CISImage():
                                                           #tilt_angle=0)  # self.fringe_tilt)
 
         self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
-
+        return
         phi0_rot = scipy.ndimage.rotate(self.cal_dict['phi0'], angle)
         xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
 
