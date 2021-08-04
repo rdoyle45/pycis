@@ -50,7 +50,7 @@ def fourier_demod_1d(img, nfringes=None, column_range=None, despeckle=False, til
     if display:
         print('-- demodulating...')
 
-    pool = mp.Pool(processes=1)
+    pool = mp.Pool(processes=mp.cpu_count()-2)
     fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, nfringes=nfringes, apodise=apodise), list(pp_img[:, column_range[0]:column_range[1]].T))
     dc, phase, contrast, S_apodised = zip(*fd_column_results)
     pool.close()
