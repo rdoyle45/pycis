@@ -12,17 +12,18 @@ import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib.colors
 from scipy import constants as con
+import scipy
 
 import pyuda
 client = pyuda.Client()
 
 # Where the MAST calibrations are stored.
-cal_dir = '../../src/CIS_MATLAB_calibrations'
+cal_dir = '/home/rdoyle/ssilburn/CIS_MATLAB_calibrations'
 cal_lut_file = cal_dir + '/LUT.xlsx'
 
 try:
     # Load the ol' custom flow colour map
-    cmd = np.loadtxt('../../src/flow_cmap.txt')
+    cmd = np.loadtxt('/home/rdoyle/ssilburn/CIS/flow_cmap.txt')
     flow = matplotlib.colors.LinearSegmentedColormap.from_list('flow', cmd, N=128)
 except:
     flow=0
@@ -40,7 +41,7 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, frame):
+    def __init__(self, shot, frame, despeckle=False, apodise=False, nfringes=None, angle=None):
         """ Accessing the MAST CIS raw_data. Code written by Scott Silburn. """
         # Get raw raw_data
         self.shot = shot
@@ -63,7 +64,7 @@ class CISImage():
 
         # Do the demodulation
 
-        self._demodulate()
+        self._demodulate(despeckle=despeckle, apodise=apodise, nfringes=nfringes, angle=angle)
 
         # Assuming we have sight-line info, set the flow offset by looking at (geometrically) radial sight lines.
         # Not the most rigorous way of doing it but not too bad for now.
@@ -194,23 +195,34 @@ class CISImage():
         else:
             raise ValueError('Unknown type of plot "{:s}"; can be "flow", "I0", "raw" or "I0_flow"'.format(type))
 
-    def _demodulate(self):
+    def _demodulate(self, despeckle=False, apodise=False, nfringes=None, angle=None):
+        
+        raw_y_dim, raw_x_dim = np.shape(self.raw_data)
 
         # Do the demodulation!
-        self.I0, self.phi, self.xi = pycis.demod.fourier_demod_2d(self.raw_data, despeckle=True)
+        #self.I0, self.phi, self.xi = pycis.demod.fourier_demod_2d(self.raw_data, despeckle=True, nfringes=nfringes)
                                                           #tilt_angle=0)  # self.fringe_tilt)
 
-        #self.I0, self.phi, self.xi = pycis.demod.fourier_demod_2d(self.raw_data, despeckle=True, tilt_angle=self.fringe_tilt)
+        self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
+
+        phi0_rot = scipy.ndimage.rotate(self.cal_dict['phi0'], angle)
+        xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
 
         # Subtract calib phase and wrap in to [-pi,pi]
-        self.deltaphi = self.phi - self.cal_dict['phi0']
-        while self.deltaphi.max() > np.pi:
-            self.deltaphi[self.deltaphi > np.pi] = self.deltaphi[self.deltaphi > np.pi] - 2 * np.pi
-        while self.deltaphi.min() < -np.pi:
-            self.deltaphi[self.deltaphi < -np.pi] = self.deltaphi[self.deltaphi < -np.pi] + 2 * np.pi
+        deltaphi = self.phi - phi0_rot
+        while deltaphi.max() > np.pi:
+            deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi
+        while deltaphi.min() < -np.pi:
+            deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
 
         # Calibrate contrast (note: probably a load of rubbish; MAST contrast calibrations were not good).
-        self.contrast = self.xi / self.cal_dict['xi0']
+        contrast = self.xi / xi0_rot
+
+        deltaphi = scipy.ndimage.rotate(deltaphi, -angle)
+        contrast = scipy.ndimage.rotate(contrast, -angle)
+
+        self.deltaphi = pycis.tools.get_roi(deltaphi, roi_dim=[raw_x_dim, raw_y_dim])
+        self.contrast = pycis.tools.get_roi(contrast, roi_dim=[raw_x_dim, raw_y_dim])
 
         # Convert demodulated phase to a flow!
         self.v_los = (con.c * self.deltaphi / (2 * np.pi * self.cal_dict['N']))

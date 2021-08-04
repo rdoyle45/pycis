@@ -3,9 +3,10 @@ import scipy.signal
 import matplotlib.pyplot as plt
 import time, copy
 import pycis
+import scipy
+from skimage.filters import window
 
-
-def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, camera=None, nfringes=None,
+def fourier_demod_2d(img, despeckle=False, mask=True, uncertainty_out=False, camera=None, nfringes=None,
                      notch_take=None, notch_add=None, display=False, width_factor=1., alpha=0.5, bumps=None):
     """ 
     2D Fourier demodulation of a coherence imaging interferogram image, extracting the DC, phase and contrast.
@@ -41,13 +42,16 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     # TODO cleanup
     start_time = time.time()
     pp_img = np.copy(img)
-
+    #pp_img = scipy.ndimage.rotate(img, -22.5) 
     # pre-processing (pp): remove neutron speckles
     if despeckle:
         pp_img = pycis.demod.despeckle(pp_img)
 
     # since the input image is real, its FT is Hermitian -- all info contained in +ve frequencies -- use rfft2()
     fft_img = np.fft.rfft2(pp_img, axes=(1, 0))
+
+    #plt.imshow(abs(fft_img))
+    #plt.show()
 
     # estimate carrier (fringe) frequency, if not supplied
     if nfringes is None:
@@ -57,7 +61,15 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
     fft_length = fft_img.shape[0]
     window_1d = pycis.demod.window(fft_length, nfringes, width_factor=width_factor, fn='tukey', alpha=alpha)
     window_carrier = np.transpose(np.tile(window_1d, (fft_img.shape[1], 1)))
+    #window_1d = pycis.demod.window(1338, nfringes, width_factor=width_factor, fn='tukey', alpha=alpha)
+    #window_carrier = np.transpose(np.tile(window_1d, (1338, 1)))
+    #window_carrier = scipy.ndimage.rotate(window_carrier, 22.5)
+    #window_carrier = pycis.tools.get_roi(window_carrier, roi_dim=(1024,1024))    
+
     window_dc = 1 - copy.deepcopy(window_carrier)
+
+#    window_carrier = window('blackmanharris', fft_img.shape)
+ #   window_dc = 1 - copy.deepcopy(window_carrier)
 
     # if bumps is not None:
     #     wx = np.arange(window_carrier.shape[1])
@@ -140,6 +152,16 @@ def fourier_demod_2d(img, despeckle=False, mask=False, uncertainty_out=False, ca
         analytic_signal = scipy.signal.hilbert(carrier, axis=-2)
         phase = np.angle(analytic_signal)
         contrast = np.abs(analytic_signal) / dc
+
+        # Rotate Image back
+        #phase = scipy.ndimage.rotate(phase, 22.5)
+        #phase = pycis.tools.get_roi(phase, roi_dim=[1024,1024])
+        
+        #dc = scipy.ndimage.rotate(dc, 22.5)
+        #dc = pycis.tools.get_roi(dc, roi_dim=[1024,1024])
+
+        #contrast = scipy.ndimage.rotate(contrast, 22.5)
+        #contrast = pycis.tools.get_roi(contrast, roi_dim=[1024,1024])
 
     # uncertainty calculation
     if uncertainty_out:
