@@ -20,7 +20,6 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
     
     :return: A tuple containing the DC component (intensity), phase and contrast.
     """
-
     col = col.astype(np.float64)
 
     col_length = np.size(col)
@@ -52,31 +51,31 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
 
     # generate window function
     fft_length = fft_col.size
-    window = pycis.demod.window(fft_length, nfringes)
+    window = pycis.demod.window(fft_length, nfringes, width_factor=0.8)
 
     # isolate DC
     fft_dc = np.multiply(fft_col, 1 - window)
-    dc = np.fft.irfft(fft_dc, n=col_length)
+    dc = np.fft.irfft(fft_dc)
     dc_smooth = scipy.ndimage.gaussian_filter(dc, 10)
 
     Ilim = 3
 
     col_in = np.copy(col_filt)
 
-    col_in[dc > Ilim] = 2*col_in[dc > Ilim]/dc[dc > Ilim] - 1
+    col_in[dc > Ilim] = col_in[dc > Ilim]/dc[dc > Ilim]
     col_in[dc <= Ilim] = 0
-    S_apodised = np.copy(col_filt)
+    S_apodised = col/dc - 1
 
     if apodise:
         # locate sharp edges:
         grad = np.ones_like(dc, dtype=np.float32)
         grad = abs(np.gradient(dc)) / dc
 
-        max_grad, window_width = (0.05, 40)
+        max_grad, window_width = (0.2, 40)
 
         thres_normalised = (max_grad - min(grad)) / (max(grad) - min(grad))
         locs = pycis.tools.indexes(grad, thres=thres_normalised, min_dist=window_width)
-
+        
         window_apod = 1 - np.hanning(window_width*2)
 
         locs = locs[locs >= 20]
@@ -91,7 +90,7 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
                     col_in[locs[i]:locs[i] + window_width] = col_in[locs[i]:locs[i] + window_width] * window_apod[window_width : (2*window_width) + 1]
 
         col_in *= scipy.signal.windows.tukey(col_in.shape[0], alpha=0.1)
-
+   #     S_apodised = grad
     fft_carrier = np.fft.rfft(col_in)
     fft_carrier = np.multiply(fft_carrier,window)
     carrier = np.fft.irfft(fft_carrier, n=col_length)
@@ -174,5 +173,5 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
 
         plt.tight_layout()
         plt.show()
-
+     
     return dc, phase, contrast, S_apodised

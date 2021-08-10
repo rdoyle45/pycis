@@ -214,7 +214,7 @@ class CISImage():
         self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
 
         phi0_rot = scipy.ndimage.rotate(self.cal_dict['phi0'], angle)
-        xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
+        #xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
 
         # Subtract calib phase and wrap in to [-pi,pi]
         deltaphi = self.phi - phi0_rot
@@ -224,19 +224,19 @@ class CISImage():
             deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
 
         # Calibrate contrast (note: probably a load of rubbish; MAST contrast calibrations were not good).
-        contrast = self.xi / xi0_rot
+        #contrast = self.xi / xi0_rot
 
         deltaphi = scipy.ndimage.rotate(deltaphi, -angle)
-        contrast = scipy.ndimage.rotate(contrast, -angle)
+        #contrast = scipy.ndimage.rotate(contrast, -angle)
 
         self.deltaphi = pycis.tools.get_roi(deltaphi, roi_dim=[raw_x_dim, raw_y_dim])
-        self.contrast = pycis.tools.get_roi(contrast, roi_dim=[raw_x_dim, raw_y_dim])
+        #self.contrast = pycis.tools.get_roi(contrast, roi_dim=[raw_x_dim, raw_y_dim])
 
         # Convert demodulated phase to a flow!
         self.v_los = (con.c * self.deltaphi / (2 * np.pi * self.cal_dict['N']))
 
         # Apply intensity flat field
-        # self.I0 = self.I0 / self.cal_dict['flatfield']
+        self.I0 = self.I0 / self.cal_dict['flatfield']
 
     # Apply viewing geometry based calib offset correction.
     def _apply_geom_calib(self):
@@ -283,7 +283,7 @@ class CISImage():
         caldict['phi0'] = matfile_data['calibration'][0][0][0].copy()
         caldict['xi0'] = matfile_data['calibration'][0][0][1].copy()
         caldict['N'] = matfile_data['calibration'][0][0][4][0][0]
-        # caldict['flatfield'] = matfile_data['calib'][0][0][9].copy()
+        caldict['flatfield'] = matfile_data['calibration'][0][0][10].copy()
 
         del matfile_data
 
