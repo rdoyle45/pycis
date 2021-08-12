@@ -24,7 +24,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
     col_length = np.size(col)
     pixels = np.linspace(1, col_length, col_length)
-    print(filtval)
+
     # locate carrier (fringe) frequency
     col_filt = scipy.signal.medfilt(col, filtval)
     fft_col = np.fft.rfft(col_filt)
@@ -68,6 +68,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         # locate sharp edges:
         grad = np.ones_like(dc, dtype=np.float32)
         grad = abs(np.gradient(dc)) / dc
+
+        window_width = int(window_width)
 
         thres_normalised = (max_grad - min(grad)) / (max(grad) - min(grad))
         locs = pycis.tools.indexes(grad, thres=thres_normalised, min_dist=window_width)
