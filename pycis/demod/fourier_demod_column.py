@@ -24,7 +24,7 @@ def fourier_demod_column(col, max_grad, window_width, Ilim, wtype, wfactor, filt
 
     col_length = np.size(col)
     pixels = np.linspace(1, col_length, col_length)
-
+    print(filtval)
     # locate carrier (fringe) frequency
     col_filt = scipy.signal.medfilt(col, filtval)
     fft_col = np.fft.rfft(col_filt)
