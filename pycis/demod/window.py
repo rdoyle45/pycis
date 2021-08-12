@@ -6,7 +6,6 @@ fns = {'hanning': scipy.signal.hanning,
       'blackmanharris': scipy.signal.windows.blackmanharris,
       'tukey': scipy.signal.windows.tukey}
 
-#test
 def window(rfft_length, nfringes, window_width=None, fn='blackmanharris', width_factor=0.5, alpha=0.5):
     """ Generate a filters window for isolating the carrier (fringe) frequency. 
     
