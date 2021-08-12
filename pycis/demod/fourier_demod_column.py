@@ -6,7 +6,7 @@ import scipy.signal
 import scipy.ndimage
 
 
-def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
+def fourier_demod_column(col, max_grad, window_width, Ilim, wtype, wfactor, filtval, nfringes=None, apodise=False, display=False):
     """ 1-D Fourier demodulation of single CIS interferogram raw_data column, extracting the DC component (intensity), phase and contrast.
     
     :param col: CIS interferogram column to be demodulated.
@@ -26,7 +26,7 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
     pixels = np.linspace(1, col_length, col_length)
 
     # locate carrier (fringe) frequency
-    col_filt = scipy.signal.medfilt(col, 5)
+    col_filt = scipy.signal.medfilt(col, filtval)
     fft_col = np.fft.rfft(col_filt)
 
     if nfringes is None:
@@ -51,14 +51,12 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
 
     # generate window function
     fft_length = fft_col.size
-    window = pycis.demod.window(fft_length, nfringes, width_factor=1)
+    window = pycis.demod.window(fft_length, nfringes, width_factor=wfactor, fn=wtype)
 
     # isolate DC
     fft_dc = np.multiply(fft_col, 1 - window)
     dc = np.fft.irfft(fft_dc)
     dc_smooth = scipy.ndimage.gaussian_filter(dc, 10)
-
-    Ilim = 3
 
     col_in = np.copy(col_filt)
 
@@ -70,8 +68,6 @@ def fourier_demod_column(col, nfringes=None, apodise=False, display=False):
         # locate sharp edges:
         grad = np.ones_like(dc, dtype=np.float32)
         grad = abs(np.gradient(dc)) / dc
-
-        max_grad, window_width = (0.2, 40)
 
         thres_normalised = (max_grad - min(grad)) / (max(grad) - min(grad))
         locs = pycis.tools.indexes(grad, thres=thres_normalised, min_dist=window_width)

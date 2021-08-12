@@ -5,7 +5,7 @@ from pycis.tools.find_nearest import find_nearest
 from pycis.tools.find_peaks import indexes
 
 
-def despeckle(image, display=False):
+def despeckle(image, dval, display=False):
     """ Remove random 'speckles' in a raw image caused by neutrons. 
     
     Function uses a median filters to get rid of single pixels and a 1st derivative threshold test to remove larger 
@@ -20,7 +20,7 @@ def despeckle(image, display=False):
     """
 
     # apply median filters (smooths while preserving edges)
-    image_out = scipy.signal.medfilt(image, 5)
+    image_out = scipy.signal.medfilt(image, dval)
 
     # loop over image rows
     # y_dim, x_dim = image_out.shape

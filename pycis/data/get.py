@@ -43,7 +43,7 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, frame, despeckle=False, apodise=False, nfringes=None, angle=None, f=1):
+    def __init__(self, shot, frame, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=False, apodise=False, nfringes=None, angle=None, f=1):
         """ Accessing the MAST CIS raw_data. Code written by Scott Silburn. """
         # Get raw raw_data
         self.shot = shot
@@ -73,7 +73,7 @@ class CISImage():
 
         # Do the demodulation
 
-        self._demodulate(despeckle=despeckle, apodise=apodise, nfringes=nfringes, angle=angle)
+        self._demodulate(grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=despeckle, apodise=apodise, nfringes=nfringes, angle=angle)
 
         # Assuming we have sight-line info, set the flow offset by looking at (geometrically) radial sight lines.
         # Not the most rigorous way of doing it but not too bad for now.
@@ -204,7 +204,7 @@ class CISImage():
         else:
             raise ValueError('Unknown type of plot "{:s}"; can be "flow", "I0", "raw" or "I0_flow"'.format(type))
 
-    def _demodulate(self, despeckle=False, apodise=False, nfringes=None, angle=None):
+    def _demodulate(self, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=False, apodise=False, nfringes=None, angle=None):
         
         raw_y_dim, raw_x_dim = np.shape(self.raw_data)
 
@@ -212,7 +212,7 @@ class CISImage():
         #self.I0, self.phi, self.xi = pycis.demod.fourier_demod_2d(self.raw_data, despeckle=True, nfringes=nfringes)
                                                           #tilt_angle=0)  # self.fringe_tilt)
 
-        self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
+        self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
 
         phi0_rot = scipy.ndimage.rotate(self.cal_dict['phi0'], angle)
         #xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
