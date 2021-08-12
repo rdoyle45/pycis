@@ -47,7 +47,7 @@ class CISImage():
         """ Accessing the MAST CIS raw_data. Code written by Scott Silburn. """
         # Get raw raw_data
         self.shot = shot
-        if 28630 < shot < 30472:
+        if 28630 < shot < 30472 or 0 < shot < 20:
             cam = 'rbc'
         else:
             raise ValueError('There was no CIS diagnostic for this shot!')
@@ -62,10 +62,11 @@ class CISImage():
             if error == ValueError:
                 raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
             else:
-                from PIL import Image
-                im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/' + str(f) + '.tif')
-                self.raw_data = np.array(im) 
-                self.time = 0.313
+ #               from PIL import Image
+  #              im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/' + str(f) + '.tif')
+#                self.raw_data = np.array(im) 
+                self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/Clean/image_clean.npy')
+                self.time = 0.31
 
         # Get calibrations
         self._get_calibrations()
