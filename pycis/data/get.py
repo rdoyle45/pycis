@@ -212,7 +212,8 @@ class CISImage():
         #self.I0, self.phi, self.xi = pycis.demod.fourier_demod_2d(self.raw_data, despeckle=True, nfringes=nfringes)
                                                           #tilt_angle=0)  # self.fringe_tilt)
 
-        self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
+        #self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
+        self.I0, self.phi = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
 
         phi0_rot = scipy.ndimage.rotate(self.cal_dict['phi0'], angle)
         #xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
