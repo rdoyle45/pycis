@@ -55,14 +55,14 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
     # isolate DC
     fft_dc = np.multiply(fft_col, 1 - window)
-    dc = np.fft.irfft(fft_dc)
-    dc_smooth = scipy.ndimage.gaussian_filter(dc, 10)
+    dc = 2*np.fft.irfft(fft_dc)
+    dc_smooth = scipy.ndimage.gaussian_filter(dc, fft_length/nfringes)
 
     col_in = np.copy(col_filt)
 
     col_in[dc > Ilim] = col_in[dc > Ilim]/dc[dc > Ilim]
     col_in[dc <= Ilim] = 0
-    #S_apodised = col/dc - 1
+    #S_apodised = 2*col/dc - 1
 
     if apodise:
         # locate sharp edges:
