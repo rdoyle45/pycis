@@ -56,7 +56,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     # isolate DC
     fft_dc = np.multiply(fft_col, 1 - window)
     dc = 2*np.fft.irfft(fft_dc)
-    dc = scipy.ndimage.gaussian_filter(dc, fft_length/nfringes)
+    dc_smooth = scipy.ndimage.gaussian_filter(dc, fft_length/nfringes)
 
     col_in = np.copy(col_filt)
 
