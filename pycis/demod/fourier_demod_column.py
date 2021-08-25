@@ -60,7 +60,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
     col_in = np.copy(col_filt)
 
-    col_in[dc > Ilim] = col_in[dc > Ilim]/dc[dc > Ilim]
+    col_in[dc > Ilim] = 2*col_in[dc > Ilim]/dc[dc > Ilim] - 1
     col_in[dc <= Ilim] = 0
     #S_apodised = 2*col/dc - 1
 
