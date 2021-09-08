@@ -54,7 +54,7 @@ def fourier_demod_1d(img,grad, width, ilim, wtype, wfactor, dval, filtval, nfrin
     ideal_nf = np.load('/gss_efgw_work/work/g2rdoyl/CIS/25028/nf_from_29541_extrinsic_image.npy')
 
     pool = mp.Pool(processes=mp.cpu_count()-2)
-    fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype, wfactor, filtval, nfringes=nfringes, apodise=apodise), itertools.product(pp_img[:, column_range[0]:column_range[1]].T, ideal_nf))
+    fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype, wfactor, filtval, nfringes=nfringes, apodise=apodise), zip(pp_img.T, ideal_nf))
     #dc, phase, contrast, S_apodised = zip(*fd_column_results)
     dc, phase = zip(*fd_column_results)
     pool.close()
