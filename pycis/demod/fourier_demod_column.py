@@ -70,7 +70,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     if apodise:
         # locate sharp edges:
         grad = np.ones_like(dc, dtype=np.float32)
-        grad = abs(np.gradient(dc)) / dc
+        grad = abs(np.gradient(dc_smooth)) / dc_smooth
 
         window_width = int(window_width)
 
