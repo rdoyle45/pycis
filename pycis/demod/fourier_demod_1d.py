@@ -56,12 +56,12 @@ def fourier_demod_1d(img,grad, width, ilim, wtype, wfactor, dval, filtval, nfrin
     pool = mp.Pool(processes=mp.cpu_count()-2)
     fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype, wfactor, filtval, nfringes=nfringes, apodise=apodise), zip(pp_img.T, ideal_nf))
     #dc, phase, contrast, S_apodised = zip(*fd_column_results)
-    dc, phase = zip(*fd_column_results)
+    dc, phase, contrast = zip(*fd_column_results)
     pool.close()
     
     dc = np.array(dc).T
     phase = np.array(phase).T
-   # contrast = np.array(contrast).T
+    contrast = np.array(contrast).T
    # S_apodised = np.array(S_apodised).T
         
     if tilt_angle != 0:
@@ -78,4 +78,4 @@ def fourier_demod_1d(img,grad, width, ilim, wtype, wfactor, dval, filtval, nfrin
         display_fig.masking(plasma_frame, mask_frame, devim_frame, tolim_frame)
         plt.show()
 
-    return dc, phase#, contrast, S_apodised
+    return dc, phase, contrast#, S_apodised

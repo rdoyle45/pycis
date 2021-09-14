@@ -213,10 +213,10 @@ class CISImage():
                                                           #tilt_angle=0)  # self.fringe_tilt)
 
         #self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
-        self.I0, self.phi = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
+        self.I0, self.phi, self.xi = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
 
         phi0_rot = scipy.ndimage.rotate(self.cal_dict['phi0'], angle)
-        #xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
+        xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
 
         # Subtract calib phase and wrap in to [-pi,pi]
         deltaphi = self.phi - phi0_rot
@@ -226,13 +226,13 @@ class CISImage():
             deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
 
         # Calibrate contrast (note: probably a load of rubbish; MAST contrast calibrations were not good).
-        #contrast = self.xi / xi0_rot
+        contrast = self.xi / xi0_rot
 
         deltaphi = scipy.ndimage.rotate(deltaphi, -angle)
-        #contrast = scipy.ndimage.rotate(contrast, -angle)
+        contrast = scipy.ndimage.rotate(contrast, -angle)
 
         self.deltaphi = pycis.tools.get_roi(deltaphi, roi_dim=[raw_x_dim, raw_y_dim])
-        #self.contrast = pycis.tools.get_roi(contrast, roi_dim=[raw_x_dim, raw_y_dim])
+        self.contrast = pycis.tools.get_roi(contrast, roi_dim=[raw_x_dim, raw_y_dim])
 
         # Convert demodulated phase to a flow!
         self.v_los = (con.c * self.deltaphi / (2 * np.pi * self.cal_dict['N']))

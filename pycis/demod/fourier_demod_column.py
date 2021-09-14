@@ -96,9 +96,9 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     fft_carrier = np.multiply(fft_carrier,window)
     carrier = np.fft.irfft(fft_carrier, n=col_length)
 
-    analytic_signal_apodised = scipy.signal.hilbert(carrier)
-    phase = np.angle(analytic_signal_apodised)
-    #contrast = np.divide(abs(analytic_signal_apodised), dc_smooth)
+    analytic_signal = scipy.signal.hilbert(carrier)
+    phase = np.angle(analytic_signal)
+    contrast = np.divide(abs(analytic_signal), dc_smooth)
 
     # contrast[contrast > 1.] = 1.
     # contrast[contrast < 0.] = 0.
@@ -175,4 +175,4 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         plt.tight_layout()
         plt.show()
      
-    return dc, phase#, contrast, S_apodised
+    return dc, phase, contrast#, S_apodised
