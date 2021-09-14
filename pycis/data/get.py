@@ -85,7 +85,7 @@ class CISImage():
     def save(self, filename):
 
         # Save I0, v_los and time data for use on other non-CCFE connected systems
-        np.savez(filename, I0=self.I0, v_los=self.v_los, contrast=self.xi, time=self.time)
+        np.savez(filename, I0=self.I0, v_los=self.v_los, contrast=self.contrast, time=self.time)
 
         return
 
