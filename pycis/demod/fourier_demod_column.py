@@ -93,7 +93,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         col_in *= scipy.signal.windows.tukey(col_in.shape[0], alpha=0.1)
    #     S_apodised = grad
     fft_carrier = np.fft.rfft(col_in)
-    fft_carrier = np.multiply(fft_carrier,window)
+    fft_carrier = np.multiply(fft_carrier,2*window)
     carrier = np.fft.irfft(fft_carrier, n=col_length)
 
     analytic_signal = scipy.signal.hilbert(carrier)
