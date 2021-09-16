@@ -29,13 +29,13 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     pixels = np.linspace(1, col_length, col_length)
 
     # locate carrier (fringe) frequency
-    col_filt = scipy.signal.medfilt(col, filtval)
-    fft_col = np.fft.rfft(col_filt)
+    #col_filt = scipy.signal.medfilt(col, filtval)
+    #fft_col = np.fft.rfft(col_filt)
 
-    if nfringes is None:
+  #  if nfringes is None:
         #nfringes_min, nfringes_max = (40, 160) # Range of carrier frequencies within which to search
         #nfringes = pycis.tools.indexes(abs(fft_col[nfringes_min:nfringes_max]), thres=0.7, min_dist=40)
-        nfringes = abs(fft_col[100:]).argmax() + 100
+   #     nfringes = abs(fft_col[100:]).argmax() + 100
         #if np.size(nfringes) != 1:
          #   dc = 2 * col
           #  phase = 0 * col
@@ -53,15 +53,34 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
          #   nfringes = nfringes.squeeze() + nfringes_min  # remove single-dimensional entries from the shape of array
 
     # generate window function
-    fft_length = fft_col.size
-    window = pycis.demod.window(fft_length, nfringes, width_factor=wfactor, fn=wtype)
+#    fft_length = fft_col.size
+ #   window = pycis.demod.window(fft_length, nfringes, width_factor=wfactor, fn=wtype)
 
     # isolate DC
-    fft_dc = np.multiply(fft_col, 1 - window)
-    dc = 2*np.fft.irfft(fft_dc)
-    dc_smooth = scipy.ndimage.gaussian_filter(dc, fft_length/nfringes)
+  #  fft_dc = np.multiply(fft_col, 1 - window)
+   # dc = 2*np.fft.irfft(fft_dc)
+    #dc_smooth = scipy.ndimage.gaussian_filter(dc, fft_length/nfringes)
 
-    col_in = np.copy(col_filt)
+    ###### TEST SCOTTS CODE #######
+    w = round(col_length/nfringes)
+    bandwidth = 0.8
+    N = round(bandwidth*nfringes)
+
+    wdw = np.ones(col_length,1)
+
+    lp = nfringes
+    up = col_length - nfringes
+
+    wdw[lp-(N-1)/2:lp + (N-1)/2] = 1 - scipy.signal.hanning(N)
+    wdw[up - (N-1)/2:up + (N-1)/2] = 1 - np.flipud(scipy.signal.hanning(N))
+
+    fft_col = np.fft.fft(col)
+    fft_dc = fft_col*wdw
+
+    dc = 2*np.fft.ifft(fft_dc)
+    dc = scipy.signal.medfilt(dc, w)
+
+    col_in = np.copy(col)
 
     col_in[dc > Ilim] = 2*col_in[dc > Ilim]/dc[dc > Ilim] - 1
     col_in[dc <= Ilim] = 0
