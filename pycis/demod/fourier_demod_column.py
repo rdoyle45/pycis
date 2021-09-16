@@ -64,6 +64,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     ###### TEST SCOTTS CODE #######
     print(nfringes)
     w = round(col_length/nfringes)
+    if w % 2 == 0:
+        w += 1
     bandwidth = 0.8
     N = int(round(bandwidth*nfringes))
     if N % 2 != 0:
