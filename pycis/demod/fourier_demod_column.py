@@ -21,7 +21,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     :return: A tuple containing the DC component (intensity), phase and contrast.
     """
 
-    nfringes = col[1]
+    nfringes = col[1][0]
     col = col[0]
     col = col.astype(np.float64)
 
@@ -62,8 +62,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     #dc_smooth = scipy.ndimage.gaussian_filter(dc, fft_length/nfringes)
 
     ###### TEST SCOTTS CODE #######
-    print(type(col_length))
-    print(nfringes)
     w = round(col_length/nfringes)
     bandwidth = 0.8
     N = round(bandwidth*nfringes)
