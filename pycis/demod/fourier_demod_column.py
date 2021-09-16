@@ -83,8 +83,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     fft_dc = fft_col*wdw
 
     dc = 2*np.fft.ifft(fft_dc)
-    dc = scipy.signal.medfilt(dc, w)
-
+    dc = scipy.ndimage.filters.median_filter(dc, w)
+    dc_smooth = dc
     col_in = np.copy(col)
 
     col_in[dc > Ilim] = 2*col_in[dc > Ilim]/dc[dc > Ilim] - 1
