@@ -221,7 +221,8 @@ class CISImage():
         # Subtract calib phase and wrap in to [-pi,pi]
         deltaphi = self.phi - phi0_rot
         ####### TEST DIFFERENT WAYS OF WRAPPING ########
-        #deltaphi = (deltaphi + np.pi) % (2 * np.pi) - np.pi
+        # 1. deltaphi = (deltaphi + np.pi) % (2 * np.pi) - np.pi
+
 
         #while deltaphi.max() > np.pi:
         #    deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi

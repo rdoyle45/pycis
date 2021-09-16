@@ -65,7 +65,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     w = round(col_length/nfringes)
     if w % 2 == 0:
         w += 1
-    bandwidth = 0.8
+    bandwidth = 1
     N = int(round(bandwidth*nfringes))
     if N % 2 != 0:
         N = N-1
@@ -77,7 +77,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     lp = nfringes+1
     up = col_length - nfringes-1
 
-    wdw[lp-int(N/2):lp + int(N/2)] = 1- scipy.signal.windows.blackmanharris(N)
+    wdw[lp-int(N/2):lp + int(N/2)] = 1 - scipy.signal.windows.blackmanharris(N)
     wdw[up - int(N/2):up + int(N/2)] = 1 - np.flipud(scipy.signal.windows.blackmanharris(N))
 
     fft_col = np.fft.fft(col)
