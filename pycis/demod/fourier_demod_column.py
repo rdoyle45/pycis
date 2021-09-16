@@ -62,7 +62,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     #dc_smooth = scipy.ndimage.gaussian_filter(dc, fft_length/nfringes)
 
     ###### TEST SCOTTS CODE #######
-    print(nfringes)
     w = round(col_length/nfringes)
     if w % 2 == 0:
         w += 1
@@ -83,6 +82,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     fft_dc = fft_col*wdw
 
     dc = 2*np.fft.ifft(fft_dc)
+    print(dc)
     dc = scipy.ndimage.filters.median_filter(dc, w)
     dc_smooth = dc
     col_in = np.copy(col)
