@@ -74,7 +74,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     lp = nfringes+1
     up = col_length - nfringes-1
 
-    wdw[lp-int(N/2):lp + int(N/2)] = scipy.signal.hanning(N) -1
+    wdw[lp-int(N/2):lp + int(N/2)] = scipy.signal.hanning(N).reshape((N,1)) -1
     wdw[up - int(N/2):up + int(N/2)] = 1 - np.flipud(scipy.signal.hanning(N))
 
     fft_col = np.fft.fft(col)
