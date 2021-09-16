@@ -70,13 +70,13 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     if N % 2 != 0:
         N = N-1
 
-    wdw = np.ones((col_length,1))
+    wdw = np.ones((col_length))
 
     lp = nfringes+1
     up = col_length - nfringes-1
 
-    wdw[lp-int(N/2):lp + int(N/2)] = 1- scipy.signal.hanning(N).reshape((N,1))
-    wdw[up - int(N/2):up + int(N/2)] = 1 - np.flipud(scipy.signal.hanning(N)).reshape(N,1)
+    wdw[lp-int(N/2):lp + int(N/2)] = 1- scipy.signal.hanning(N)
+    wdw[up - int(N/2):up + int(N/2)] = 1 - np.flipud(scipy.signal.hanning(N))
 
     fft_col = np.fft.fft(col)
     fft_dc = fft_col*wdw.T
