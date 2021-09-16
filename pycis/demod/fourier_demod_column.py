@@ -21,7 +21,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     :return: A tuple containing the DC component (intensity), phase and contrast.
     """
 
-    nfringes = col[1][0]
+    nfringes = int(col[1][0])
     col = col[0]
     col = col.astype(np.float64)
 
