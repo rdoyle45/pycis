@@ -66,14 +66,16 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     w = round(col_length/nfringes)
     bandwidth = 0.8
     N = int(round(bandwidth*nfringes))
+    if N % 2 != 0:
+        N = N-1
 
     wdw = np.ones((col_length,1))
 
     lp = nfringes+1
     up = col_length - nfringes-1
 
-    wdw[lp-(N-1)/2:lp + (N-1)/2] = 1 - scipy.signal.hanning(N)
-    wdw[up - (N-1)/2:up + (N-1)/2] = 1 - np.flipud(scipy.signal.hanning(N))
+    wdw[lp-N/2:lp + N/2] = 1 - scipy.signal.hanning(N)
+    wdw[up - N/2:up + N/2] = 1 - np.flipud(scipy.signal.hanning(N))
 
     fft_col = np.fft.fft(col)
     fft_dc = fft_col*wdw
