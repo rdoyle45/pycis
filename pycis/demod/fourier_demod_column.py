@@ -66,7 +66,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     bandwidth = 0.8
     N = round(bandwidth*nfringes)
 
-    wdw = np.ones(col_length,1)
+    wdw = np.ones((col_length,1))
 
     lp = nfringes
     up = col_length - nfringes
