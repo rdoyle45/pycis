@@ -54,7 +54,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
     # generate window function
 #    fft_length = fft_col.size
-    window = pycis.demod.window(int(col.size/2)+1, nfringes, width_factor=wfactor, fn=wtype)
+    #window = pycis.demod.window(fft_length, nfringes, width_factor=wfactor, fn=wtype)
 
     # isolate DC
   #  fft_dc = np.multiply(fft_col, 1 - window)
@@ -69,6 +69,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     N = int(round(bandwidth*nfringes))
     if N % 2 != 0:
         N = N-1
+
+    halfwidth = int(N/2)
 
     wdw = np.ones((col_length))
 
@@ -101,7 +103,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         thres_normalised = (max_grad - min(grad)) / (max(grad) - min(grad))
         locs = pycis.tools.indexes(grad, thres=thres_normalised, min_dist=window_width)
         
-        window_apod = 1 - np.hanning(window_width*2)
+        window_apod = 1 - scipy.signal.windows.hann(window_width*2)
 
         locs = locs[locs >= 20]
 
@@ -116,9 +118,18 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
         col_in *= scipy.signal.windows.tukey(col_in.shape[0], alpha=0.1)
    #     S_apodised = grad
-    fft_carrier = np.fft.rfft(col_in)
-    fft_carrier = np.multiply(fft_carrier,2*window)
-    carrier = np.fft.irfft(fft_carrier, n=col_length)
+    #fft_carrier = np.fft.rfft(col_in)
+    #fft_carrier = np.multiply(fft_carrier,2*window)
+    #carrier = np.fft.irfft(fft_carrier, n=col_length)
+
+    ###### TEST SCOTTS CODE #####
+    fft_carrier = np.fft.fft(col_in)
+
+    wdw_carrier = np.zeros((col_length))
+    wdw_carrier[nfringes-halfwidth:nfringes+halfwidth] = 2*scipy.signal.windows.blackmanharris(N)
+
+    fft_carrier = fft_carrier*wdw_carrier.T
+    carrier = np.fft.ifft(fft_carrier).real.T
 
     analytic_signal = scipy.signal.hilbert(carrier)
     phase = np.angle(analytic_signal)
