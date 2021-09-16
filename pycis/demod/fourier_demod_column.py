@@ -62,6 +62,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     #dc_smooth = scipy.ndimage.gaussian_filter(dc, fft_length/nfringes)
 
     ###### TEST SCOTTS CODE #######
+    print(nfringes)
     w = round(col_length/nfringes)
     bandwidth = 0.8
     N = int(round(bandwidth*nfringes))
