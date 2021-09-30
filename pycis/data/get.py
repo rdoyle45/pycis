@@ -67,7 +67,7 @@ class CISImage():
 #                self.raw_data = np.array(im) 
                 #self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/Clean/image_clean.npy')
                 self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/29541/29541_data_new.npz')
-                self.time = 0.31
+                self.time = 0.313
 
         # Get calibrations
         self._get_calibrations()
