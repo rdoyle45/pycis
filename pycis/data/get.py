@@ -65,7 +65,8 @@ class CISImage():
  #               from PIL import Image
   #              im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/' + str(f) + '.tif')
 #                self.raw_data = np.array(im) 
-                self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/Clean/image_clean.npy')
+                #self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/Clean/image_clean.npy')
+                self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/29541/29541_data_new.npz')
                 self.time = 0.31
 
         # Get calibrations
