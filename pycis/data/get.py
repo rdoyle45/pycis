@@ -242,7 +242,7 @@ class CISImage():
         self.v_los = (con.c * self.deltaphi / (2 * np.pi * self.cal_dict['N']))
 
         # Apply intensity flat field
-       # self.I0 = self.I0 / self.cal_dict['flatfield']
+        self.I0 = self.I0 / self.cal_dict['flatfield']
 
     # Apply viewing geometry based calib offset correction.
     def _apply_geom_calib(self):
