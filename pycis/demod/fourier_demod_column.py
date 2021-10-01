@@ -77,8 +77,14 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     lp = nfringes+1
     up = col_length - nfringes-1
 
-    wdw[lp-int(N/2):lp + int(N/2)] = 1 - scipy.signal.windows.blackmanharris(N)
-    wdw[up - int(N/2):up + int(N/2)] = 1 - np.flipud(scipy.signal.windows.blackmanharris(N))
+    fns = {'hanning': scipy.signal.hanning,
+           'blackmanharris': scipy.signal.windows.blackmanharris,
+           'tukey': scipy.signal.windows.tukey}
+
+    fn = fns[wtype]
+
+    wdw[lp-int(N/2):lp + int(N/2)] = 1 - fn(N)
+    wdw[up - int(N/2):up + int(N/2)] = 1 - np.flipud(fn(N))
 
     fft_col = np.fft.fft(col)
     fft_dc = fft_col*wdw.T
