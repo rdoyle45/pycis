@@ -66,13 +66,13 @@ class CISImage():
   #              im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/' + str(f) + '.tif')
 #                self.raw_data = np.array(im)
                 print(dirs)
-                if dirs == 'Clean_ideal':
+                if dirs == 'Clean_ideal/':
                     self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/Clean/image_clean.npy')
-                elif dirs == '1024_ideal':
+                elif dirs == '1024_ideal/':
                     self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/1024/image_maxsig_1024.npy')
-                elif dirs == '256_ideal':
+                elif dirs == '256_ideal/':
                     self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/256/image_maxsig_256.npy')
-                elif dirs == '128_ideal':
+                elif dirs == '128_ideal/':
                     self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/128/image_maxsig_128.npy')
 
     #self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/29541/208/29541_data_new.npz')['raw']
