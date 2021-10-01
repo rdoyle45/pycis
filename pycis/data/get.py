@@ -65,7 +65,7 @@ class CISImage():
  #               from PIL import Image
   #              im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/' + str(f) + '.tif')
 #                self.raw_data = np.array(im)
-                print(dirs)
+                print(dirs == 'Clean_ideal/')
                 if dirs == 'Clean_ideal/':
                     self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/Clean/image_clean.npy')
                 elif dirs == '1024_ideal/':
