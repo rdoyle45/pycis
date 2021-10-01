@@ -43,7 +43,7 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, frame, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=False, apodise=False, nfringes=None, angle=None, f=1):
+    def __init__(self, shot, frame, grad, width, ilim, wtype, wfactor, dval, filtval, dirs, despeckle=False, apodise=False, nfringes=None, angle=None, f=1):
         """ Accessing the MAST CIS raw_data. Code written by Scott Silburn. """
         # Get raw raw_data
         self.shot = shot
@@ -64,9 +64,18 @@ class CISImage():
             else:
  #               from PIL import Image
   #              im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/' + str(f) + '.tif')
-#                self.raw_data = np.array(im) 
-                self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/256/image_maxsig_256.npy')
-                #self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/29541/208/29541_data_new.npz')['raw']
+#                self.raw_data = np.array(im)
+
+                if dirs == 'Clean_ideal':
+                    self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/Clean/image_clean.npy')
+                elif dirs == '1024_ideal':
+                    self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/1024/image_maxsig_1024.npy')
+                elif dirs == '256_ideal':
+                    self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/256/image_maxsig_256.npy')
+                elif dirs == '128_ideal':
+                    self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/128/image_maxsig_128.npy')
+
+    #self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/29541/208/29541_data_new.npz')['raw']
                 self.time = 0.313
 
         # Get calibrations
@@ -206,7 +215,7 @@ class CISImage():
             raise ValueError('Unknown type of plot "{:s}"; can be "flow", "I0", "raw" or "I0_flow"'.format(type))
 
     def _demodulate(self, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=False, apodise=False, nfringes=None, angle=None):
-        
+
         raw_y_dim, raw_x_dim = np.shape(self.raw_data)
 
         # Do the demodulation!
@@ -274,7 +283,7 @@ class CISImage():
 
         if cal_ref_shot is None:
             raise ValueError('No calib found for this pulse!')
-        
+
         # Load the MATLAB calib raw_data!
         matfile_path = os.path.join(cal_dir, '{:s}.mat'.format(calib_log['matlab_file'][cal_ref_shot]))
         matfile_data = loadmat(matfile_path)
