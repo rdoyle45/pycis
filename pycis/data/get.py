@@ -235,6 +235,7 @@ class CISImage():
 
 
         while deltaphi.max() > np.pi:
+            print(deltaphi.max())
             deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi
         while deltaphi.min() < -np.pi:
             deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
