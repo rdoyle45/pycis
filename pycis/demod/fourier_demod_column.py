@@ -112,7 +112,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         window_apod = 1 - scipy.signal.windows.hann(window_width*2)
 
         locs = locs[locs >= 20]
-
+        print(locs)
         if np.size(locs) != 0:
             for i in range(0,np.size(locs)):
                 if window_width < locs[i] < np.size(col) - window_width:
