@@ -62,7 +62,7 @@ def fourier_demod_1d(img,grad, width, ilim, wtype, wfactor, dval, filtval, nfrin
     dc = np.array(dc).T
     phase = np.array(phase).T
     contrast = np.array(contrast).T
-   # S_apodised = np.array(S_apodised).T
+    S_apodised = np.array(S_apodised).T
         
     if tilt_angle != 0:
         dc = scipy.ndimage.rotate(dc, -tilt_angle)
