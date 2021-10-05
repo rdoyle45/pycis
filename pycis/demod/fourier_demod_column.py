@@ -107,7 +107,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         window_width = int(window_width)
 
         thres_normalised = (max_grad - min(grad)) / (max(grad) - min(grad))
-        locs = pycis.tools.indexes(grad, thres=thres_normalised, min_dist=window_width)
+        #locs = pycis.tools.indexes(grad, thres=thres_normalised, min_dist=window_width)
+        locs, _ = scipy.signal.find_peaks(grad, height=max_grad, distance=window_width)
         
         window_apod = 1 - scipy.signal.windows.hann(window_width*2)
 
