@@ -233,21 +233,19 @@ class CISImage():
         ####### TEST DIFFERENT WAYS OF WRAPPING ########
         #deltaphi = (deltaphi + np.pi) % (2 * np.pi) - np.pi
 
+        while deltaphi.max() > np.pi:
+            deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi
+        while deltaphi.min() < -np.pi:
+            deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
+
         # Calibrate contrast (note: probably a load of rubbish; MAST contrast calibrations were not good).
         contrast = self.xi / xi0_rot
 
         deltaphi = scipy.ndimage.rotate(deltaphi, -angle)
         contrast = scipy.ndimage.rotate(contrast, -angle)
 
-        deltaphi = pycis.tools.get_roi(deltaphi, roi_dim=[raw_x_dim, raw_y_dim])
+        self.deltaphi = pycis.tools.get_roi(deltaphi, roi_dim=[raw_x_dim, raw_y_dim])
         self.contrast = pycis.tools.get_roi(contrast, roi_dim=[raw_x_dim, raw_y_dim])
-
-        while deltaphi.max() > np.pi:
-            deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi
-        while deltaphi.min() < -np.pi:
-            deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
-
-        self.deltaphi = deltaphi
 
         # Convert demodulated phase to a flow!
         self.v_los = (con.c * self.deltaphi / (2 * np.pi * self.cal_dict['N']))
