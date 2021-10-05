@@ -97,7 +97,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
     col_in[dc > Ilim] = 2*col_in[dc > Ilim]/dc[dc > Ilim] - 1
     col_in[dc <= Ilim] = 0
-    #S_apodised = 2*col/dc - 1
 
     if apodise:
         # locate sharp edges:
@@ -117,14 +116,12 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         if np.size(locs) != 0:
             for i in range(0,np.size(locs)):
                 if window_width < locs[i] < np.size(col) - window_width:
-                  #  S_apodised[locs[i] - window_width: locs[i] + window_width] = S_apodised[locs[i] - window_width: locs[i] + window_width]*window_apod
                     col_in[locs[i] - window_width: locs[i] + window_width] = col_in[locs[i] - window_width: locs[i] + window_width]*window_apod
                 elif locs[i] < window_width:
-                   # S_apodised[locs[i]:locs[i] + window_width] = S_apodised[locs[i]:locs[i] + window_width] * window_apod[window_width : (2*window_width) + 1]
                     col_in[locs[i]:locs[i] + window_width] = col_in[locs[i]:locs[i] + window_width] * window_apod[window_width : (2*window_width) + 1]
 
         col_in *= scipy.signal.windows.tukey(col_in.shape[0], alpha=0.1)
-   #     S_apodised = grad
+
     fft_carrier = np.fft.rfft(col_in)
 
     fft_length = fft_carrier.size
@@ -221,4 +218,4 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         plt.tight_layout()
         plt.show()
      
-    return dc, phase, contrast#, S_apodised
+    return dc, phase, contrast, col_in
