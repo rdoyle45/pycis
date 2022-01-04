@@ -43,7 +43,7 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, grad=0.05, width=20, ilim=3, wtype='blackmanharris', wfactor=0.5, dval=1, filtval=1, rawcis=None, time=None, frame=None, despeckle=False, apodise=False, nfringes=None, angle=0):
+    def __init__(self, shot, grad=0.05, width=20, ilim=3, wtype='blackmanharris', wfactor=0.5, dval=1, filtval=1, rawcis=None, time=None, frame=None, despeckle=True, apodise=False, nfringes=None, angle=0):
         """
         Accessing the MAST CIS raw_data. Code written by Scott Silburn. Updated by Joe Allcock and Rhys Doyle.
 

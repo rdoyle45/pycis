@@ -6,7 +6,7 @@ import scipy.signal
 import scipy.ndimage
 
 
-def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, col, nfringes=None, apodise=False, display=False):
+def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, col, apodise=False, display=False):
     """ 1-D Fourier demodulation of single CIS interferogram raw_data column, extracting the DC component (intensity), phase and contrast.
     
     :param col: CIS interferogram column to be demodulated.
