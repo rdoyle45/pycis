@@ -43,40 +43,32 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, frame, grad, width, ilim, wtype, wfactor, dval, filtval, dirs, despeckle=False, apodise=False, nfringes=None, angle=None, f=1):
+    def __init__(self, shot, frame, grad, width, ilim, wtype, wfactor, dval, filtval, dirs, rawcis=None, time=None, despeckle=False, apodise=False, nfringes=None, angle=None, f=1):
         """ Accessing the MAST CIS raw_data. Code written by Scott Silburn. """
         # Get raw raw_data
-        self.shot = shot
-        if 28630 < shot < 30472 or 0 < shot < 20:
-            cam = 'rbc'
-        else:
-            raise ValueError('There was no CIS diagnostic for this shot!')
-
-        # Get the raw_data using pyuda.
-        try:
-            ipx_data = client.get_images('rbc', shot, frame_number=frame)
-            frame = ipx_data.frames[0]
-            self.raw_data = frame.k
-            self.time = frame.time
-        except Exception as error:
-            if error == ValueError:
-                raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
+        if rawcis:
+            if isinstance(rawcis, str):
+                self.raw_data = np.load(rawcis)
+                self.shot = shot
+                self.time = time
             else:
- #               from PIL import Image
-  #              im = Image.open('/pfs/work/g2rdoyl/CIS/Wavelength_test/' + str(f) + '.tif')
-#                self.raw_data = np.array(im)
+                raise Exception("Variable rawcis must be of type 'str'")
+        else:
+            self.shot = shot
+            if 28630 < shot < 30472 or 0 < shot < 20:
+                cam = 'rbc'
+            else:
+                raise ValueError('There was no CIS diagnostic for this shot!')
 
-                if dirs == 'Clean_ideal/':
-                    self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/Clean/image_clean.npy')
-                elif dirs == '1024_ideal/':
-                    self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/1024/image_maxsig_1024.npy')
-                elif dirs == '256_ideal/':
-                    self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/256/image_maxsig_256.npy')
-                elif dirs == '128_ideal/':
-                    self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/25028/from_scott/Pre_pycis_synthetic/128/image_maxsig_128.npy')
-
-    #self.raw_data = np.load('/pfs/work/g2rdoyl/CIS/29541/208/29541_data_new.npz')['raw']
-                self.time = 0.313
+            # Get the raw_data using pyuda.
+            try:
+                ipx_data = client.get_images('rbc', shot, frame_number=frame)
+                frame = ipx_data.frames[0]
+                self.raw_data = frame.k
+                self.time = frame.time
+            except Exception as error:
+                if error == ValueError:
+                    raise Exception("Frame {} does not exist. Please choose a different frame.".format(frame))
 
         # Get calibrations
         self._get_calibrations()
