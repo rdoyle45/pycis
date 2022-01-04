@@ -43,8 +43,30 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, grad, width, ilim, wtype, wfactor, dval, filtval, rawcis=None, time=None, frame=None, despeckle=False, apodise=False, nfringes=None, angle=None, f=1):
-        """ Accessing the MAST CIS raw_data. Code written by Scott Silburn. """
+    def __init__(self, shot, grad=0.05, width=20, ilim=3, wtype='blackmanharris', wfactor=0.5, dval=1, filtval=1, rawcis=None, time=None, frame=None, despeckle=False, apodise=False, nfringes=None, angle=0):
+        """
+        Accessing the MAST CIS raw_data. Code written by Scott Silburn. Updated by Joe Allcock and Rhys Doyle.
+
+        Parameters:
+
+            shot  (int)            : Shot Number
+            grad  (float)          : Maximum intensity gradient considered a 'sharp edge' for filtering
+            width (int)            : Width of appodisation window in pixels
+            ilim  (int)            : Minimum Intensity value considered in demod - anything below this is set to 0
+            wtype (str)            : Window function type for phase demodulation - 'hanning', 'blackmanharris' or 'tukey'
+            wfactor (float)        : A multiplicative factor determining the width of the filters, multiplies nfringes.
+            dval  (int)            : Size (in pixels) of despeckle filter
+            filtval  (int)         : Size (in pixels) of median filter applied pre-demod
+            rawcis  (str)          : Raw CIS file
+            time  (float)          : Time associated with rawcis file
+            frame  (int)           : CIS camera frame number - for use with pyuda pull CIS data from MAST servers
+            despeckle  (bool)      : Turn despeckle on
+            apodise  (bool)        : Turn apodisation on
+            nfringes (int or str)  : If integer - specifies number of fringes in image
+                                        str - read nfringes from file = nfringes
+            angle (float)          : Angle of CIS fringes
+
+        """
         # Get raw raw_data
         if rawcis:
             if isinstance(rawcis, str):
