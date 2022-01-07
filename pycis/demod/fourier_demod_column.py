@@ -29,7 +29,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     pixels = np.linspace(1, col_length, col_length)
 
     # locate carrier (fringe) frequency
-    #col_filt = scipy.signal.medfilt(col, filtval)
+    col_filt = scipy.signal.medfilt(col, filtval)
     #fft_col = np.fft.rfft(col_filt)
 
   #  if nfringes is None:
@@ -86,7 +86,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     wdw[lp-int(N/2):lp + int(N/2)] = 1 - fn(N)
     wdw[up - int(N/2):up + int(N/2)] = 1 - np.flipud(fn(N))
 
-    fft_col = np.fft.fft(col)
+    fft_col = np.fft.fft(col_filt)
     fft_dc = fft_col*wdw.T
 
     dc = 2*np.fft.ifft(fft_dc).real.T
