@@ -54,7 +54,7 @@ def fourier_demod_1d(img,grad, width, ilim, wtype, wfactor, dval, filtval, nfrin
     if isinstance(nfringes, str):
         nf = np.load(nfringes)
     else:
-        nf = np.full(len(pp_img.T), nfringes)
+        nf = np.full((len(pp_img.T),1), nfringes)
 
     pool = mp.Pool(processes=mp.cpu_count()-2)
     fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype, wfactor, filtval, apodise=apodise), zip(pp_img.T, nf))
