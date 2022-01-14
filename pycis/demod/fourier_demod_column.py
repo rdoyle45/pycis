@@ -35,7 +35,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     #if nfringes is None:
         nfringes_min, nfringes_max = (40, 160) # Range of carrier frequencies within which to search
         #nfringes = pycis.tools.indexes(abs(fft_col[nfringes_min:nfringes_max]), thres=0.7, min_dist=40)
-        nfringes = abs(fft_col[100:]).argmax() + 100
+    nfringes = abs(fft_col[100:]).argmax() + 100
         #if np.size(nfringes) != 1:
          #   dc = 2 * col
           #  phase = 0 * col
