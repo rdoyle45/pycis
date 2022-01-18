@@ -36,8 +36,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     peaks, peakheights = pycis.tools.PeakDetect(range(len(fft_col)), abs(fft_col), w=31, thres=0.05)
 
     if peaks.size != 0 and max(peaks)>=100:
-        index = peakheights[peaks>=100].argmax()
-        nfringes = peaks[peaks>=100][index]
+        index = peakheights[peaks >= 100].argmax()
+        nfringes = peaks[peaks >= 100][index]
 
     #if nfringes is None:
         #nfringes_min, nfringes_max = (40, 160) # Range of carrier frequencies within which to search
