@@ -26,7 +26,7 @@ SOFTWARE.
 
 
 import numpy as np
-
+from scipy.signal import savgol_filter
 
 def indexes(y, thres=0.3, min_dist=1):
     """Peak detection routine.
@@ -77,3 +77,26 @@ def indexes(y, thres=0.3, min_dist=1):
         peaks = np.arange(y.size)[~rem]
 
     return peaks
+
+
+def PeakDetect(x, y, w=31, n=4, thres=0.05):
+
+    # Peak detection using Savitsky-Golay smoothing filter
+    peaks = []
+    peakHeights = []
+    amplitude = max(y)
+    width = round((max(x)-min(x))/w)
+    thres = thres*amplitude
+
+    if width % 2 == 0:
+        width += 1
+
+    d = savgol_filter(y, width, polyorder=n, deriv=2, delta=x[1]-x[0])
+
+    for i in range(len(d)-3):
+        if i > 2 and abs(y[i])>thres:
+            if d[i-2]>d[i] and d[i-1]>d[i] and d[i+1]>d[i] and d[i+2]>d[i]:
+                peaks.append(x[i])
+                peakHeights.append(y[i])
+
+    return np.array(peaks), np.array(peakHeights)
