@@ -131,15 +131,15 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
         col_in *= scipy.signal.windows.tukey(col_in.shape[0], alpha=0.1)
 
-    #fft_carrier = np.fft.rfft(col_in)
+    fft_carrier = np.fft.fft(col_in)
 
-    #fft_length = fft_carrier.size
-    #window = pycis.demod.window(fft_length, nfringes, width_factor=wfactor, fn=wtype)
+    fft_length = fft_carrier.size
+    window = pycis.demod.window(fft_length, nfringes, width_factor=wfactor, fn=wtype)
 
-    #fft_carrier = np.multiply(fft_carrier,2*window)
-    #carrier = np.fft.irfft(fft_carrier, n=col_length)
+    fft_carrier = np.multiply(fft_carrier,2*window)
+    carrier = np.fft.ifft(fft_carrier, n=col_length)
 
-    carrier = col_in
+
 
     ###### TEST SCOTTS CODE #####
   #  fft_carrier = np.fft.fft(col_in)
@@ -150,7 +150,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
    # fft_carrier = fft_carrier*wdw_carrier.T
    # carrier = np.fft.ifft(fft_carrier).real.T
 
-    analytic_signal = scipy.signal.hilbert(carrier)
+    #analytic_signal = scipy.signal.hilbert(carrier)
     phase = np.angle(analytic_signal)
     contrast = np.divide(abs(analytic_signal), dc_smooth)
 
