@@ -36,7 +36,7 @@ def fourier_demod_1d(img,grad, width, ilim, wtype, wfactor, dval, filtval, nfrin
 
     # account for interferometer tilt (fringes tilted from horizontal)
     if tilt_angle != 0:
-        pp_img = scipy.ndimage.rotate(pp_img, tilt_angle, mode='nearest')
+        pp_img = scipy.ndimage.rotate(pp_img, tilt_angle)
         current_y_dim, current_x_dim = np.shape(pp_img)
         column_range = [0, current_x_dim]
         
