@@ -79,7 +79,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     if N % 2 != 0:
         N = N-1
 
-    N = N/2
+    N = int(N/2)
     halfwidth = int(N/2)
 
     wdw = np.ones((col_length))
