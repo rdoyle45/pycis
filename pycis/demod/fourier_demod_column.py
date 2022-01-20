@@ -38,6 +38,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     if peaks.size != 0 and max(peaks)>=100:
         index = peakheights[peaks >= 100].argmax()
         nfringes = peaks[peaks >= 100][index]
+    else:
+        print('NOT WORKING')
 
     #if nfringes is None:
         #nfringes_min, nfringes_max = (40, 160) # Range of carrier frequencies within which to search
