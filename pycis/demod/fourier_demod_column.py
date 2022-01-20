@@ -143,7 +143,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
 
     ###### TEST SCOTTS CODE #####
-    fn = fns(wtype)
+    fn = fns[wtype]
     fft_carrier = np.fft.fft(col_in)
     col_length = len(fft_carrier)
     wdw_carrier = np.zeros(col_length)
