@@ -76,7 +76,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     w = int(round(col_length/nfringes))
     if w % 2 == 0:
         w += 1
-    bandwidth = 0.5
+    bandwidth = wfactor
     N = int(round(bandwidth*nfringes))
     if N % 2 != 0:
         N = N-1
