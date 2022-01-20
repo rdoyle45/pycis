@@ -153,7 +153,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
     #analytic_signal = scipy.signal.hilbert(col_in)
     phase = np.angle(carrier)
-    contrast = np.divide(abs(analytic_signal), dc_smooth)
+    contrast = np.divide(abs(carrier), dc_smooth)
 
     # contrast[contrast > 1.] = 1.
     # contrast[contrast < 0.] = 0.
