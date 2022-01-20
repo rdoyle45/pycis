@@ -35,11 +35,12 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     # TEST NEW FIND PEAKS
     peaks, peakheights = pycis.tools.PeakDetect(range(len(fft_col)), abs(fft_col), w=31, thres=0.05)
 
-    if peaks.size != 0 and max(peaks)>=100:
+    if peaks.size != 0 and 130>=max(peaks)>=100:
         index = peakheights[peaks >= 100].argmax()
         nfringes = peaks[peaks >= 100][index]
         print(nfringes)
     else:
+        nfringes = 113
         print('NOT WORKING {}'.format(nfringes))
 
     #if nfringes is None:
