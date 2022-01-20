@@ -137,7 +137,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     window = pycis.demod.window(fft_length, nfringes, width_factor=wfactor, fn=wtype)
 
     fft_carrier = np.multiply(fft_carrier,2*window)
-    carrier = np.fft.ifft(fft_carrier, n=col_length)
+    analytic_signal = np.fft.ifft(fft_carrier, n=col_length)
 
 
 
