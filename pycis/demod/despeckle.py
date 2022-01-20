@@ -19,8 +19,14 @@ def despeckle(image, dval, display=False):
     :return: The despeckled image.
     """
 
+    # Test median filter over rows
+    image_out = np.zeros(image.shape)
+    for i, row in enumerate(image):
+        image_out[i, :] = scipy.signal.medfilt(row, dval)
+
+
     # apply median filters (smooths while preserving edges)
-    image_out = scipy.signal.medfilt(image, dval)
+    #image_out = scipy.signal.medfilt(image, dval)
 
     # loop over image rows
     # y_dim, x_dim = image_out.shape
