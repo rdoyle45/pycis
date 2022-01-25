@@ -91,7 +91,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
            'blackmanharris': scipy.signal.windows.blackmanharris,
            'tukey': scipy.signal.windows.tukey}
 
-    fn = fns['blackmanharris']
+    fn = fns['hanning']
     #fn= fns[wtype]
 
     wdw[lp-int(halfwidth):lp + int(halfwidth+1)] = 1 - fn(N)
