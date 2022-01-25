@@ -100,18 +100,20 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     fft_col = np.fft.fft(col_filt)
     fft_dc = fft_col*wdw.T
 
-    dc = 2*np.fft.ifft(fft_dc).real.T
+    dc = 2*np.fft.ifft(fft_dc)
     dc = scipy.ndimage.filters.median_filter(dc, w)
     dc_smooth = dc
 
     col_in = np.copy(col)
 
-    col_in[dc > Ilim] = 2*col_in[dc > Ilim]/dc[dc > Ilim] - 1
-    col_in[dc <= Ilim] = 0
+    col_in[dc >= Ilim] = 2*col_in[dc >= Ilim]/dc[dc >= Ilim]
+    col_in[dc < Ilim] = 1
+
+    col_in -= 1
+    col_in[col_in < 0] = 0
 
     if apodise:
         # locate sharp edges:
-        grad = np.ones_like(dc, dtype=np.float32)
         grad = abs(np.gradient(dc_smooth)) / dc_smooth
 
         window_width = int(window_width)
