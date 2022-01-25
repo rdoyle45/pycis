@@ -4,6 +4,7 @@ import numpy as np
 import pycis
 import scipy.signal
 import scipy.ndimage
+import scipy.fft
 
 
 def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, col, apodise=False, display=False):
@@ -97,10 +98,10 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     wdw[lp-int(halfwidth):lp + int(halfwidth+1)] = 1 - fn(N)
     wdw[up - int(halfwidth):up + int(halfwidth+1)] = 1 - np.flipud(fn(N))
 
-    fft_col = np.fft.fft(col_filt)
+    fft_col = scipy.fft.fft(col_filt)
     fft_dc = fft_col*wdw.T
 
-    dc = 2*np.fft.ifft(fft_dc)
+    dc = 2*scipy.fft.ifft(fft_dc)
     dc = scipy.ndimage.filters.median_filter(dc.real, w)
     dc_smooth = dc
 
@@ -145,13 +146,13 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
     ###### TEST SCOTTS CODE #####
     fn = fns[wtype]
-    fft_carrier = np.fft.fft(col_in)
+    fft_carrier = scipy.fft.fft(col_in)
     col_length = len(fft_carrier)
     wdw_carrier = np.zeros(col_length)
     wdw_carrier[nfringes-halfwidth:nfringes+halfwidth+1] = 2*fn(N)
 
     fft_carrier = fft_carrier*wdw_carrier.T
-    carrier = np.fft.ifft(fft_carrier)
+    carrier = scipy.fft.ifft(fft_carrier)
 
     #analytic_signal = scipy.signal.hilbert(col_in)
     phase = np.angle(carrier)
