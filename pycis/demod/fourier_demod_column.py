@@ -41,7 +41,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         print(nfringes)
     else:
         nfringes = 113
-        print('NOT WORKING {}'.format(nfringes))
 
     #if nfringes is None:
         #nfringes_min, nfringes_max = (40, 160) # Range of carrier frequencies within which to search
