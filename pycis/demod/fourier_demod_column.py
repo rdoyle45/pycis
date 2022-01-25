@@ -39,7 +39,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     if peaks.size != 0 and 130>=max(peaks)>=100:
         index = peakheights[peaks >= 100].argmax()
         nfringes = peaks[peaks >= 100][index]
-        print(nfringes)
     else:
         nfringes = 113
 
