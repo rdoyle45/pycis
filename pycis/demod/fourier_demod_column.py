@@ -29,8 +29,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     col_length = np.size(col)
     pixels = np.linspace(1, col_length, col_length)
 
-    # locate carrier (fringe) frequency
-    col_filt = scipy.signal.medfilt(col, filtval)
+    win = scipy.signal.windows.hann(50)
+    col_filt = scipy.signal.convolve(col, win)
     fft_col = np.fft.rfft(col_filt)
 
     # TEST NEW FIND PEAKS
