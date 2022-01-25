@@ -29,7 +29,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     col_length = np.size(col)
     pixels = np.linspace(1, col_length, col_length)
 
-    win = scipy.signal.windows.hann(50)
+    win = scipy.signal.windows.hann(5)
     col_filt = scipy.signal.convolve(col, win, mode='same')
     fft_col = np.fft.rfft(col_filt)
 
