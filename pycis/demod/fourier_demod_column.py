@@ -31,7 +31,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
     win = scipy.signal.windows.hann(5)
     col_filt = scipy.signal.convolve(col, win, mode='same')
-    fft_col = np.fft.rfft(col_filt)
+    fft_col = np.fft.rfft(col)
 
     # TEST NEW FIND PEAKS
     peaks, peakheights = pycis.tools.PeakDetect(range(len(fft_col)), abs(fft_col), w=31, thres=0.05)
@@ -105,7 +105,7 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     dc = scipy.ndimage.filters.median_filter(dc.real, w)
     dc_smooth = dc
 
-    col_in = np.copy(col)
+    col_in = np.copy(col_filt)
 
     col_in[dc >= Ilim] = 2*col_in[dc >= Ilim]/dc[dc >= Ilim]
     col_in[dc < Ilim] = 1
