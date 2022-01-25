@@ -94,8 +94,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     fn = fns['blackmanharris']
     #fn= fns[wtype]
 
-    wdw[lp-int(halfwidth):lp + int(halfwidth)] = 1 - fn(N)
-    wdw[up - int(halfwidth):up + int(halfwidth)] = 1 - np.flipud(fn(N))
+    wdw[lp-int(halfwidth):lp + int(halfwidth+1)] = 1 - fn(N)
+    wdw[up - int(halfwidth):up + int(halfwidth+1)] = 1 - np.flipud(fn(N))
 
     fft_col = np.fft.fft(col_filt)
     fft_dc = fft_col*wdw.T
