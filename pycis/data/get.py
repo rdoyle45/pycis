@@ -247,9 +247,10 @@ class CISImage():
         ####### TEST DIFFERENT WAYS OF WRAPPING ########
         #deltaphi = (deltaphi + np.pi) % (2 * np.pi) - np.pi
 
-        while deltaphi.max() > np.pi:
+        while abs(deltaphi).max() > np.pi:
             deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi
-        while deltaphi.min() < -np.pi:
+
+        #while deltaphi.min() < -np.pi:
             deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
 
         # Calibrate contrast (note: probably a load of rubbish; MAST contrast calibrations were not good).
