@@ -43,7 +43,7 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, grad=0.05, width=20, ilim=3, wtype='blackmanharris', wfactor=0.5, dval=3, filtval=5, rawcis=None, time=None, frame=None, despeckle=True, apodise=False, nfringes=None, angle=0):
+    def __init__(self, shot, grad=0.05, width=20, ilim=3, wtype='blackmanharris', wfactor=0.5, dval=3, filtval=5, rawcis=None, time=None, frame=None, despeckle=True, apodise=False, angle=0):
         """
         Accessing the MAST CIS raw_data. Code written by Scott Silburn. Updated by Joe Allcock and Rhys Doyle.
 
@@ -228,7 +228,7 @@ class CISImage():
         else:
             raise ValueError('Unknown type of plot "{:s}"; can be "flow", "I0", "raw" or "I0_flow"'.format(type))
 
-    def _demodulate(self, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=False, apodise=False, nfringes=None, angle=None):
+    def _demodulate(self, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=False, apodise=False, angle=None):
 
         raw_y_dim, raw_x_dim = np.shape(self.raw_data)
 
@@ -236,7 +236,7 @@ class CISImage():
         #self.I0, self.phi, self.xi = pycis.demod.fourier_demod_2d(self.raw_data, despeckle=True, nfringes=nfringes)
                                                           #tilt_angle=0)  # self.fringe_tilt)
 
-        self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, nfringes=nfringes, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
+        self.I0, self.phi, self.xi, self.S_apodised = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
         self.wrong_phi = scipy.ndimage.rotate(self.phi, 22.5)
 
         phi0_rot = scipy.ndimage.rotate(self.cal_dict['phi0'], angle)
