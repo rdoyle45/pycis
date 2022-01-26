@@ -55,7 +55,7 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     halfwidth = int((N-1)/2)
 
     # Creating window function to filter out upper and lower fringe peaks in fourier space
-    wdw = np.ones((col_length))
+    wdw = np.ones(col_length)
 
     lower_peak = nfringes+1
     upper_peak = col_length - nfringes+1
@@ -72,7 +72,7 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
 
     # Convolve the Image column with a window function pre-demod to reduce ringing artefacts
     win = scipy.signal.windows.hann(filtval)
-    col_filt = scipy.signal.convolve(col, win, mode='same')/sum(win)
+    col_filt = scipy.signal.convolve(col, win, mode='same')
 
     # FFT new image column and applies window function
     fft_col = scipy.fft.fft(col_filt)
