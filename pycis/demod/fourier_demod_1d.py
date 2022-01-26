@@ -73,4 +73,4 @@ def fourier_demod_1d(img, grad, width, ilim, wtype, wfactor, dval, filtval, desp
         display_fig.masking(plasma_frame, mask_frame, devim_frame, tolim_frame)
         plt.show()
 
-    return dc, phase, contrast, S_apodised
+    return dc, phase, contrast
