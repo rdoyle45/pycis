@@ -49,11 +49,13 @@ def fourier_demod_1d(img, grad, width, ilim, wtype, wfactor, dval, filtval, desp
     if display:
         print('-- demodulating...')
 
+    # run demodulation routine in parallel for each column
     pool = mp.Pool(processes=mp.cpu_count()-2)
     fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype, wfactor, filtval, apodise=apodise), pp_img.T)
-    dc, phase, contrast= zip(*fd_column_results)
+    dc, phase, contrast = zip(*fd_column_results)
     pool.close()
-    
+
+    # Repackage all the outputs
     dc = np.array(dc).T
     phase = np.array(phase).T
     contrast = np.array(contrast).T

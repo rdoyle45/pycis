@@ -43,7 +43,7 @@ def get_Bfield(pulse, time):
 
 # Class for representing a frame of coherence imaging raw_data.
 class CISImage():
-    def __init__(self, shot, grad=0.05, width=20, ilim=3, wtype='blackmanharris', wfactor=0.5, dval=3, filtval=1, rawcis=None, time=None, frame=None, despeckle=True, apodise=False, nfringes=None, angle=0):
+    def __init__(self, shot, grad=0.05, width=20, ilim=3, wtype='blackmanharris', wfactor=0.5, dval=3, filtval=5, rawcis=None, time=None, frame=None, despeckle=True, apodise=False, nfringes=None, angle=0):
         """
         Accessing the MAST CIS raw_data. Code written by Scott Silburn. Updated by Joe Allcock and Rhys Doyle.
 
@@ -56,7 +56,7 @@ class CISImage():
             wtype (str)            : Window function type for phase demodulation - 'hanning', 'blackmanharris' or 'tukey'
             wfactor (float)        : A multiplicative factor determining the width of the filters, multiplies nfringes.
             dval  (int)            : Size (in pixels) of despeckle filter
-            filtval  (int)         : Size (in pixels) of median filter applied pre-demod
+            filtval  (int)         : Size (in pixels) of convolution filter applied pre-demod
             rawcis  (str)          : Raw CIS file
             time  (float)          : Time associated with rawcis file
             frame  (int)           : CIS camera frame number - for use with pyuda pull CIS data from MAST servers

@@ -25,17 +25,16 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
             A tuple containing the DC component (intensity), phase and contrast.
     """
 
-    col = col[0]
+    # Setup initial variables for use later
     col = col.astype(np.float64)
-
     col_length = np.size(col)
     pixels = np.linspace(1, col_length, col_length)
 
-    win = scipy.signal.windows.hann(filtval)
-    col_filt = scipy.signal.convolve(col, win, mode='same')/sum(win)
+    # Initial fft just for the purposes of detecting the fringe frequency
     fft_col = np.fft.rfft(col)
 
-    # TEST NEW FIND PEAKS
+    # Fringe frequency peak detection - multiple free tuning parameters
+    # TODO - Would like this to be automatic
     peaks, peakheights = pycis.tools.PeakDetect(range(len(fft_col)), abs(fft_col), w=31, thres=0.05)
 
     if peaks.size != 0 and 130>=max(peaks)>=100:
@@ -44,9 +43,10 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     else:
         nfringes = 113
 
-    w = int(round(col_length/nfringes))
-    if w % 2 == 0:
-        w += 1
+    # Setup the fringe width and window function widths
+    fringe_width = int(round(col_length/nfringes))
+    if fringe_width % 2 == 0:
+        fringe_width += 1
     bandwidth = wfactor
     N = int(round(bandwidth*nfringes))
     if N % 2 == 0:
@@ -54,10 +54,11 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
 
     halfwidth = int((N-1)/2)
 
+    # Creating window function to filter out upper and lower fringe peaks in fourier space
     wdw = np.ones((col_length))
 
-    lp = nfringes+1
-    up = col_length - nfringes+1
+    lower_peak = nfringes+1
+    upper_peak = col_length - nfringes+1
 
     fns = {'hanning': scipy.signal.hanning,
            'blackmanharris': scipy.signal.windows.blackmanharris,
@@ -66,34 +67,41 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     fn = fns['hanning']
     #fn= fns[wtype]
 
-    wdw[lp-int(halfwidth):lp + int(halfwidth+1)] = 1 - fn(N)
-    wdw[up - int(halfwidth):up + int(halfwidth+1)] = 1 - np.flipud(fn(N))
+    wdw[lower_peak-int(halfwidth):lower_peak + int(halfwidth+1)] = 1 - fn(N)
+    wdw[upper_peak - int(halfwidth):upper_peak + int(halfwidth+1)] = 1 - np.flipud(fn(N))
 
+    # Convolve the Image column with a window function pre-demod to reduce ringing artefacts
+    win = scipy.signal.windows.hann(filtval)
+    col_filt = scipy.signal.convolve(col, win, mode='same')/sum(win)
+
+    # FFT new image column and applies window function
     fft_col = scipy.fft.fft(col_filt)
     fft_dc = fft_col*wdw.T
 
+    # Invert this filtered column to extract the I_0 component of the Raw CIS data - smooth across the fringe width
     dc = 2*scipy.fft.ifft(fft_dc)
-    dc = scipy.ndimage.filters.median_filter(dc.real, w)
+    dc = scipy.ndimage.filters.median_filter(dc.real, fringe_width)
     dc_smooth = dc
 
+    # Divide the I_0 (dc) data to leave just the sinusoidal fringe pattern
     col_in = np.copy(col_filt)
-
     col_in[dc >= ilim] = 2 * col_in[dc >= ilim] / dc[dc >= ilim]
     col_in[dc < ilim] = 1
 
     col_in -= 1
     col_in[col_in < 0] = 0
 
+    # Apodisation routine to reduce ringing artefacts further through smoothing imput data around high I_0 gradients
     if apodise:
         # locate sharp edges:
         grad = abs(np.gradient(dc_smooth)) / dc_smooth
 
+        # Find high spatial intensity gradients - # TODO change this to other peak finding routine
         window_width = int(window_width)
-
         locs, _ = scipy.signal.find_peaks(grad, height=max_grad, distance=window_width)
-        
         window_apod = 1 - scipy.signal.windows.hann(window_width*2)
 
+        # Apply apodisation window
         locs = locs[locs >= 20]
         if np.size(locs) != 0:
             for i in range(0,np.size(locs)):
@@ -102,11 +110,12 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
                 elif locs[i] < window_width:
                     col_in[locs[i]:locs[i] + window_width] = col_in[locs[i]:locs[i] + window_width] * window_apod[window_width : (2*window_width) + 1]
 
+        # Smooth ends for column to remove artefacts created by apodisation
         col_in *= scipy.signal.windows.tukey(col_in.shape[0], alpha=0.1)
 
+    # FFT this apodised column for Phase and Contrast demodulation
     fn = fns[wtype]
     fft_carrier = scipy.fft.fft(col_in)
-    col_length = len(fft_carrier)
     wdw_carrier = np.zeros(col_length)
     wdw_carrier[nfringes-halfwidth:nfringes+halfwidth+1] = 2*fn(N)
 
@@ -120,9 +129,8 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     # contrast[contrast < 0.] = 0.
 
     # Calculate upper and lower bounds for contrast envelope:
-    #contrast_envelope_lower = dc * (1 + contrast)
-    #contrast_envelope_upper = dc * (1 - contrast)
-
+    # contrast_envelope_lower = dc * (1 + contrast)
+    # contrast_envelope_upper = dc * (1 - contrast)
 
     # Optional plot output:
     if display:
