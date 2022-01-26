@@ -5,30 +5,31 @@ from matplotlib import pyplot as plt
 import pycis
 import multiprocessing as mp
 from functools import partial
-import itertools
 
 
-def fourier_demod_1d(img, grad, width, ilim, wtype, wfactor, dval, filtval, column_range=None, despeckle=False, tilt_angle=0, multiproc=True, display=False, apodise=False):
+def fourier_demod_1d(img, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=False, tilt_angle=0, display=False, apodise=False):
 
     """ 1-D Fourier demodulation of a coherence imaging interferogram image, looped over image columns to extract the DC, phase and contrast components.
     
-    :param img: Input interferogram image to be demodulated.
-    :type img: array_like
-    :param mask: Mask low intensity portions of the image with NaNs
-    :type mask: bool.
-    :param despeckle: Remove speckles from image.
-    :type despeckle: bool.
-    :param nfringes: Manually set the carrier (fringe) frequency to be demodulated, in units of cycles per sequence -- approximately the number of fringes present in the image. If no value is given, the fringe frequency is found automatically.
-    :param tilt_angle: interferometer tilt angle in degrees, default is zero. Tilted fringes feature has not yet been tested rigorously.
-    :param display: Display a plot.
-    :type display: bool.
+        Parameters:
+
+            img   (np.array)       : Array containing Raw CIS Data
+            grad  (float)          : Maximum intensity gradient considered a 'sharp edge' for filtering
+            width (int)            : Width of appodisation window in pixels
+            ilim  (int)            : Minimum Intensity value considered in demod - anything below this is set to 0
+            wtype (str)            : Window function type for phase demodulation - 'hanning', 'blackmanharris' or 'tukey'
+            wfactor (float)        : A multiplicative factor determining the width of the filters, multiplies nfringes.
+            dval  (int)            : Size (in pixels) of despeckle filter
+            filtval  (int)         : Size (in pixels) of convolved filter applied pre-demod
+            despeckle  (bool)      : Turn despeckle on
+            apodise  (bool)        : Turn apodisation on
+            tilt_angle (float)     : Angle of CIS fringes
     
-    :return: A tuple containing DC (intensity), phase and contrast images.
+        Return: A tuple containing DC (intensity), phase and contrast images.
     """
 
     start_time = time.time()
     raw_y_dim, raw_x_dim = np.shape(img)
-    current_y_dim, current_x_dim = np.shape(img)
 
     # prepocess (pp) image
     if display:
@@ -39,11 +40,6 @@ def fourier_demod_1d(img, grad, width, ilim, wtype, wfactor, dval, filtval, colu
     # account for interferometer tilt (fringes tilted from horizontal)
     if tilt_angle != 0:
         pp_img = scipy.ndimage.rotate(pp_img, tilt_angle)
-        current_y_dim, current_x_dim = np.shape(pp_img)
-        column_range = [0, current_x_dim]
-        
-    if column_range is None:
-        column_range = [0, current_x_dim]
 
     # remove neutron speckles
     if despeckle:
@@ -55,18 +51,15 @@ def fourier_demod_1d(img, grad, width, ilim, wtype, wfactor, dval, filtval, colu
 
     pool = mp.Pool(processes=mp.cpu_count()-2)
     fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype, wfactor, filtval, apodise=apodise), pp_img.T)
-    dc, phase, contrast, S_apodised = zip(*fd_column_results)
-    #dc, phase, contrast = zip(*fd_column_results)
+    dc, phase, contrast= zip(*fd_column_results)
     pool.close()
     
     dc = np.array(dc).T
     phase = np.array(phase).T
     contrast = np.array(contrast).T
-    S_apodised = np.array(S_apodised).T
         
     if tilt_angle != 0:
         dc = scipy.ndimage.rotate(dc, -tilt_angle)
-
         dc = pycis.tools.get_roi(dc, roi_dim=[raw_x_dim, raw_y_dim])
 
     if display:

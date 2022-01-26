@@ -7,19 +7,22 @@ import scipy.ndimage
 import scipy.fft
 
 
-def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, col, apodise=False, display=False):
+def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, col, apodise=False, display=False):
     """ 1-D Fourier demodulation of single CIS interferogram raw_data column, extracting the DC component (intensity), phase and contrast.
+
+        Parameters:
+
+            col   (np.array)       : Array containing Raw CIS Data Column
+            max_grad  (float)      : Maximum intensity gradient considered a 'sharp edge' for filtering
+            window_width (int)     : Width of appodisation window in pixels
+            ilim  (int)            : Minimum Intensity value considered in demod - anything below this is set to 0
+            wtype (str)            : Window function type for phase demodulation - 'hanning', 'blackmanharris' or 'tukey'
+            wfactor (float)        : A multiplicative factor determining the width of the filters, multiplies nfringes.
+            filtval  (int)         : Size (in pixels) of convolved filter applied pre-demod
+            apodise  (bool)        : Turn apodisation on
     
-    :param col: CIS interferogram column to be demodulated.
-    :type col: array_like, 1-D.
-    :param nfringes: Manually set the carrier (fringe) frequency to be demodulated, in units of cycles per sequence -- approximately the number of fringes present in the image. If no value is given, the fringe frequency is found automatically.
-    :type nfringes: int.
-    :param apodise: Apodise the extracted carrier at points of steep intensity gradient to minimise influence of artefacts and noise (See SS thesis.)
-    :type apodise: bool.
-    :param display: Display a plot.
-    :type display: bool. 
-    
-    :return: A tuple containing the DC component (intensity), phase and contrast.
+        Returns:
+            A tuple containing the DC component (intensity), phase and contrast.
     """
 
     col = col[0]
@@ -75,8 +78,8 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
     col_in = np.copy(col_filt)
 
-    col_in[dc >= Ilim] = 2*col_in[dc >= Ilim]/dc[dc >= Ilim]
-    col_in[dc < Ilim] = 1
+    col_in[dc >= ilim] = 2 * col_in[dc >= ilim] / dc[dc >= ilim]
+    col_in[dc < ilim] = 1
 
     col_in -= 1
     col_in[col_in < 0] = 0
@@ -110,7 +113,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     fft_carrier = fft_carrier*wdw_carrier.T
     carrier = scipy.fft.ifft(fft_carrier)
 
-    #analytic_signal = scipy.signal.hilbert(col_in)
     phase = np.angle(carrier)
     contrast = np.divide(abs(carrier), dc_smooth)
 
@@ -121,9 +123,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     #contrast_envelope_lower = dc * (1 + contrast)
     #contrast_envelope_upper = dc * (1 - contrast)
 
-    # Now calculate interferogram using extracted quantities for comparison:
-    #S_apodised = np.asarray(dc * (1 + contrast*np.cos(phase)))
-    #S = np.asarray(dc * (1 + (contrast * np.cos(phase_not_apodised))))
 
     # Optional plot output:
     if display:
@@ -189,4 +188,4 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
         plt.tight_layout()
         plt.show()
      
-    return dc, phase, contrast, col_in
+    return dc, phase, contrast
