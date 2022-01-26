@@ -97,7 +97,7 @@ class CISImage():
 
         # Do the demodulation
 
-        self._demodulate(grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=despeckle, apodise=apodise, nfringes=nfringes, angle=angle)
+        self._demodulate(grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=despeckle, apodise=apodise, angle=angle)
 
         # Assuming we have sight-line info, set the flow offset by looking at (geometrically) radial sight lines.
         # Not the most rigorous way of doing it but not too bad for now.
