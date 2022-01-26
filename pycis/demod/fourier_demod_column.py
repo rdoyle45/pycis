@@ -22,14 +22,13 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     :return: A tuple containing the DC component (intensity), phase and contrast.
     """
 
-    nfringes = int(col[1][0])
     col = col[0]
     col = col.astype(np.float64)
 
     col_length = np.size(col)
     pixels = np.linspace(1, col_length, col_length)
 
-    win = scipy.signal.windows.hann(5)
+    win = scipy.signal.windows.hann(filtval)
     col_filt = scipy.signal.convolve(col, win, mode='same')/sum(win)
     fft_col = np.fft.rfft(col)
 
@@ -42,36 +41,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
     else:
         nfringes = 113
 
-    #if nfringes is None:
-        #nfringes_min, nfringes_max = (40, 160) # Range of carrier frequencies within which to search
-        #nfringes = pycis.tools.indexes(abs(fft_col[nfringes_min:nfringes_max]), thres=0.7, min_dist=40)
-    #nfringes = int(abs(fft_col[100:]).argmax() + 100)
-        #if np.size(nfringes) != 1:
-         #   dc = 2 * col
-          #  phase = 0 * col
-           # contrast = 0 * col
-
-            #S_apodised = dc * (1 + (contrast * np.cos(phase)))
-            #S = S_apodised
-
-           # if display:
-            #    print('no carrier frequency found.')
-
-           # return dc, phase, contrast, col
-
-        #else:
-         #   nfringes = nfringes.squeeze() + nfringes_min  # remove single-dimensional entries from the shape of array
-
-    # generate window function
-#    fft_length = fft_col.size
-    #window = pycis.demod.window(fft_length, nfringes, width_factor=wfactor, fn=wtype)
-
-    # isolate DC
-  #  fft_dc = np.multiply(fft_col, 1 - window)
-   # dc = 2*np.fft.irfft(fft_dc)
-    #dc_smooth = scipy.ndimage.gaussian_filter(dc, fft_length/nfringes)
-
-    ###### TEST SCOTTS CODE #######
     w = int(round(col_length/nfringes))
     if w % 2 == 0:
         w += 1
@@ -118,8 +87,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
         window_width = int(window_width)
 
-        thres_normalised = (max_grad - min(grad)) / (max(grad) - min(grad))
-        #locs = pycis.tools.indexes(grad, thres=thres_normalised, min_dist=window_width)
         locs, _ = scipy.signal.find_peaks(grad, height=max_grad, distance=window_width)
         
         window_apod = 1 - scipy.signal.windows.hann(window_width*2)
@@ -134,16 +101,6 @@ def fourier_demod_column(max_grad, window_width, Ilim, wtype, wfactor, filtval, 
 
         col_in *= scipy.signal.windows.tukey(col_in.shape[0], alpha=0.1)
 
-    # fft_carrier = np.fft.fft(col_in)
-    #
-    # fft_length = fft_carrier.size
-    # window = pycis.demod.window(fft_length, nfringes, width_factor=wfactor, fn=wtype)
-    #
-    # fft_carrier = np.multiply(fft_carrier,2*window)
-    # carrier = np.fft.ifft(fft_carrier, n=col_length)
-
-
-    ###### TEST SCOTTS CODE #####
     fn = fns[wtype]
     fft_carrier = scipy.fft.fft(col_in)
     col_length = len(fft_carrier)

@@ -7,7 +7,9 @@ import multiprocessing as mp
 from functools import partial
 import itertools
 
-def fourier_demod_1d(img,grad, width, ilim, wtype, wfactor, dval, filtval, nfringes=None, column_range=None, despeckle=False, tilt_angle=0, multiproc=True, display=False, apodise=False):
+
+def fourier_demod_1d(img, grad, width, ilim, wtype, wfactor, dval, filtval, column_range=None, despeckle=False, tilt_angle=0, multiproc=True, display=False, apodise=False):
+
     """ 1-D Fourier demodulation of a coherence imaging interferogram image, looped over image columns to extract the DC, phase and contrast components.
     
     :param img: Input interferogram image to be demodulated.
@@ -51,13 +53,8 @@ def fourier_demod_1d(img,grad, width, ilim, wtype, wfactor, dval, filtval, nfrin
     if display:
         print('-- demodulating...')
 
-    if isinstance(nfringes, str):
-        nf = np.load(nfringes)
-    else:
-        nf = np.full((len(pp_img.T),1), nfringes)
-
     pool = mp.Pool(processes=mp.cpu_count()-2)
-    fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype, wfactor, filtval, apodise=apodise), zip(pp_img.T, nf))
+    fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype, wfactor, filtval, apodise=apodise), pp_img.T)
     dc, phase, contrast, S_apodised = zip(*fd_column_results)
     #dc, phase, contrast = zip(*fd_column_results)
     pool.close()
