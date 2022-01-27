@@ -68,15 +68,15 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     #fn= fns[wtype]
 
     wdw[lower_peak-int(halfwidth):lower_peak + int(halfwidth+1)] = 1 - fn(N)
-    # wdw[upper_peak - int(halfwidth):upper_peak + int(halfwidth+1)] = 1 - np.flipud(fn(N))
-    wdw[int(col_length/2):] = 0
+    wdw[upper_peak - int(halfwidth):upper_peak + int(halfwidth+1)] = 1 - np.flipud(fn(N))
+
     # Convolve the Image column with a window function pre-demod to reduce ringing artefacts
     win = scipy.signal.windows.hann(filtval)
     col_filt = scipy.signal.convolve(col, win, mode='same')/sum(win)
 
     # FFT new image column and applies window function
     fft_col = scipy.fft.fft(col_filt)
-    fft_dc = fft_col*wdw.T*2
+    fft_dc = fft_col*wdw.T
 
     # Invert this filtered column to extract the I_0 component of the Raw CIS data - smooth across the fringe width
     dc = 2*scipy.fft.ifft(fft_dc)
