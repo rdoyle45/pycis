@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors
 from scipy import constants as con
 import scipy
+import scipy.ndimage
 
 import pyuda
 client = pyuda.Client()
@@ -260,6 +261,8 @@ class CISImage():
 
         # Convert demodulated phase to a flow!
         self.v_los = (con.c * self.deltaphi / (2 * np.pi * self.cal_dict['N']))
+
+        self.v_los = scipy.ndimage.gaussian_filter(self.v_los, sigma=5)
 
         # Apply intensity flat field
         self.I0 = self.I0 / self.cal_dict['flatfield']
