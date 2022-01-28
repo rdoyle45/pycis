@@ -118,13 +118,13 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     fn = fns[wtype]
     fft_carrier = scipy.fft.fft(col_in)
     wdw_carrier = np.zeros(col_length)
-    wdw_carrier[nfringes-halfwidth:nfringes+halfwidth+1] = 4*fn(N)
+    wdw_carrier[nfringes-halfwidth:nfringes+halfwidth+1] = 2*fn(N)
 
     fft_carrier = fft_carrier*wdw_carrier
     carrier = scipy.fft.ifft(fft_carrier)
 
     phase = np.angle(carrier)
-    contrast = np.divide(abs(carrier), dc_smooth)
+    contrast = np.abs(carrier)
 
     # contrast[contrast > 1.] = 1.
     # contrast[contrast < 0.] = 0.
