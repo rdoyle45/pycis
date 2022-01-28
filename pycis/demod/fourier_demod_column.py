@@ -118,7 +118,7 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     fn = fns[wtype]
     fft_carrier = scipy.fft.fft(col_in)
     wdw_carrier = np.zeros(col_length)
-    wdw_carrier[nfringes-halfwidth:nfringes+halfwidth+1] = fn(N)
+    wdw_carrier[nfringes-halfwidth:nfringes+halfwidth+1] = 4*fn(N)
 
     fft_carrier = fft_carrier*wdw_carrier.T
     carrier = scipy.fft.ifft(fft_carrier)
