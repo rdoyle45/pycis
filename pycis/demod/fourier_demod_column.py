@@ -71,9 +71,9 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     wdw[upper_peak - int(halfwidth):upper_peak + int(halfwidth+1)] = 1 - np.flipud(fn(N))
 
     # Convolve the Image column with a window function pre-demod to reduce ringing artefacts
-    win = scipy.signal.windows.hann(filtval)
-    #col_filt = scipy.signal.convolve(col, win, mode='same', method='direct')/sum(win)
-    col_filt = col*2
+    win = scipy.signal.windows.hann(7)
+    col_filt = scipy.signal.convolve(col, win, mode='same', method='direct')/sum(win)
+
     # FFT new image column and applies window function
     fft_col = scipy.fft.fft(col_filt)
     fft_dc = fft_col*wdw.T
