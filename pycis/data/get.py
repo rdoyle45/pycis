@@ -248,20 +248,18 @@ class CISImage():
         # Subtract calib phase and wrap in to [-pi,pi]
         deltaphi = self.phi - phi0_rot
 
+        while abs(deltaphi).max() > np.pi:
+            deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi
+            deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
+
         # Calibrate contrast (note: probably a load of rubbish; MAST contrast calibrations were not good).
         contrast = self.xi / xi0_rot
 
         deltaphi = scipy.ndimage.rotate(deltaphi, -angle)
         contrast = scipy.ndimage.rotate(contrast, -angle)
 
-        deltaphi = pycis.tools.get_roi(deltaphi, roi_dim=[raw_x_dim, raw_y_dim])
+        self.phi_final = pycis.tools.get_roi(deltaphi, roi_dim=[raw_x_dim, raw_y_dim])
         self.contrast = pycis.tools.get_roi(contrast, roi_dim=[raw_x_dim, raw_y_dim])
-
-        while abs(deltaphi).max() > np.pi:
-            deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi
-            deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
-
-        self.phi_final = deltaphi
 
         # Convert demodulated phase to a flow!
         self.v_los = (con.c * self.phi_final / (2 * np.pi * self.cal_dict['N']))
