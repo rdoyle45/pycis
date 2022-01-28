@@ -110,7 +110,8 @@ class CISImage():
     def save(self, filename):
 
         # Save I0, v_los and time data for use on other non-CCFE connected systems
-        np.savez(filename, raw=self.raw_data, I0=self.I0, v_los=self.v_los, contrast=self.contrast, time=self.time, phi=self.deltaphi)
+        np.savez(filename, raw=self.raw_data, I0=self.I0, v_los=self.v_los, contrast=self.contrast,
+                 time=self.time, phi=self.deltaphi, prewrap_phi=self.prewrap_phi)
 
         return
 
@@ -238,7 +239,7 @@ class CISImage():
                                                           #tilt_angle=0)  # self.fringe_tilt)
 
         self.I0, self.phi, self.xi = pycis.demod.fourier_demod_1d(self.raw_data, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=despeckle, tilt_angle=angle, apodise=apodise)
-        self.wrong_phi = scipy.ndimage.rotate(self.phi, 22.5)
+        self.prewrap_phi = scipy.ndimage.rotate(self.phi, 22.5)
 
         phi0_rot = scipy.ndimage.rotate(self.cal_dict['phi0'], angle)
         xi0_rot = scipy.ndimage.rotate(self.cal_dict['xi0'], angle)
