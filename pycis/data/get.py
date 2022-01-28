@@ -111,7 +111,7 @@ class CISImage():
 
         # Save I0, v_los and time data for use on other non-CCFE connected systems
         np.savez(filename, raw=self.raw_data, I0=self.I0, v_los=self.v_los, contrast=self.contrast,
-                 time=self.time, phi=self.deltaphi, prewrap_phi=self.prewrap_phi, phi0=self.cal_dict['phi0'],
+                 time=self.time, phi=self.phi_final, prewrap_phi=self.prewrap_phi, phi0=self.cal_dict['phi0'],
                  xi0=self.cal_dict['xi0'])
 
         return
@@ -248,21 +248,23 @@ class CISImage():
         # Subtract calib phase and wrap in to [-pi,pi]
         deltaphi = self.phi - phi0_rot
 
-        while abs(deltaphi).max() > np.pi:
-            deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi
-            deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
-
         # Calibrate contrast (note: probably a load of rubbish; MAST contrast calibrations were not good).
         contrast = self.xi / xi0_rot
 
         deltaphi = scipy.ndimage.rotate(deltaphi, -angle)
         contrast = scipy.ndimage.rotate(contrast, -angle)
 
-        self.deltaphi = pycis.tools.get_roi(deltaphi, roi_dim=[raw_x_dim, raw_y_dim])
+        deltaphi = pycis.tools.get_roi(deltaphi, roi_dim=[raw_x_dim, raw_y_dim])
         self.contrast = pycis.tools.get_roi(contrast, roi_dim=[raw_x_dim, raw_y_dim])
 
+        while abs(deltaphi).max() > np.pi:
+            deltaphi[deltaphi > np.pi] = deltaphi[deltaphi > np.pi] - 2 * np.pi
+            deltaphi[deltaphi < -np.pi] = deltaphi[deltaphi < -np.pi] + 2 * np.pi
+
+        self.phi_final = deltaphi
+
         # Convert demodulated phase to a flow!
-        self.v_los = (con.c * self.deltaphi / (2 * np.pi * self.cal_dict['N']))
+        self.v_los = (con.c * self.phi_final / (2 * np.pi * self.cal_dict['N']))
 
         self.v_los = scipy.ndimage.gaussian_filter(self.v_los, sigma=5)
 
