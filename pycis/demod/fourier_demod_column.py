@@ -32,10 +32,11 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
 
     # Initial fft just for the purposes of detecting the fringe frequency
     fft_col = np.fft.rfft(col)
+    fft_length = np.size(fft_col)
 
     # Fringe frequency peak detection - multiple free tuning parameters
     # TODO - Would like this to be automatic
-    peaks, peakheights = pycis.tools.PeakDetect(range(len(fft_col)), abs(fft_col), w=31, thres=0.05)
+    peaks, peakheights = pycis.tools.PeakDetect(range(fft_length), abs(fft_col), w=31, thres=0.05)
 
     if peaks.size != 0 and 130>=max(peaks)>=100:
         index = peakheights[peaks >= 100].argmax()
@@ -55,7 +56,7 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     halfwidth = int((N-1)/2)
 
     # Creating window function to filter out upper and lower fringe peaks in fourier space
-    wdw = np.ones(col_length)
+    wdw = np.ones(fft_length)
 
     lower_peak = nfringes+1
     upper_peak = col_length - nfringes+1
@@ -68,14 +69,14 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     #fn= fns[wtype]
 
     wdw[lower_peak-int(halfwidth):lower_peak + int(halfwidth+1)] = 1 - fn(N)
-    wdw[upper_peak - int(halfwidth):upper_peak + int(halfwidth+1)] = 1 - np.flipud(fn(N))
+    #wdw[upper_peak - int(halfwidth):upper_peak + int(halfwidth+1)] = 1 - np.flipud(fn(N))
 
     # Convolve the Image column with a window function pre-demod to reduce ringing artefacts
     win = scipy.signal.windows.hann(filtval)
     col_filt = scipy.signal.convolve(col, win, mode='same', method='direct')/sum(win)
 
     # FFT new image column and applies window function
-    fft_col = scipy.fft.fft(col_filt)
+    fft_col = scipy.fft.rfft(col_filt)
     fft_dc = fft_col*wdw.T
 
     # Invert this filtered column to extract the I_0 component of the Raw CIS data - smooth across the fringe width
