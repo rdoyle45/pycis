@@ -79,8 +79,8 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     fft_dc = fft_col*wdw.T
 
     # Invert this filtered column to extract the I_0 component of the Raw CIS data - smooth across the fringe width
-    dc = 2*scipy.fft.ifft(fft_dc)
-    dc = scipy.ndimage.filters.median_filter(abs(dc), fringe_width)
+    dc = 2*scipy.fft.irfft(fft_dc)
+    dc = scipy.ndimage.filters.median_filter(dc, fringe_width)
     dc_smooth = dc
 
     # Divide the I_0 (dc) data to leave just the sinusoidal fringe pattern
