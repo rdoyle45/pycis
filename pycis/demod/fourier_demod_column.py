@@ -120,7 +120,7 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     wdw_carrier = np.zeros(col_length)
     wdw_carrier[nfringes-halfwidth:nfringes+halfwidth+1] = 4*fn(N)
 
-    fft_carrier = fft_carrier*wdw_carrier.T
+    fft_carrier = fft_carrier*wdw_carrier
     carrier = scipy.fft.ifft(fft_carrier)
 
     phase = np.angle(carrier)
