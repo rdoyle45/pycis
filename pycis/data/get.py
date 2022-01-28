@@ -281,7 +281,7 @@ class CISImage():
     # loading old MATLAB files
     def _get_calibrations(self):
 
-        # This dictionary will store the calobration
+        # This dictionary will store the calibration
         caldict = {}
 
         # Check which row of the calib lookup table we need

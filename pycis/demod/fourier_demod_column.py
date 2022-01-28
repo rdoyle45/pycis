@@ -58,8 +58,7 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     # Creating window function to filter out upper and lower fringe peaks in fourier space
     wdw = np.ones(fft_length)
 
-    lower_peak = nfringes+1
-    upper_peak = col_length - nfringes+1
+    lower_peak = nfringes
 
     fns = {'hanning': scipy.signal.hanning,
            'blackmanharris': scipy.signal.windows.blackmanharris,
@@ -69,7 +68,6 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     #fn= fns[wtype]
 
     wdw[lower_peak-int(halfwidth):lower_peak + int(halfwidth+1)] = 1 - fn(N)
-    #wdw[upper_peak - int(halfwidth):upper_peak + int(halfwidth+1)] = 1 - np.flipud(fn(N))
 
     # Convolve the Image column with a window function pre-demod to reduce ringing artefacts
     win = scipy.signal.windows.hann(filtval)
@@ -92,7 +90,7 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
     col_in -= 1
     col_in[col_in < 0] = 0
 
-    # Apodisation routine to reduce ringing artefacts further through smoothing imput data around high I_0 gradients
+    # Apodisation routine to reduce ringing artefacts further through smoothing input data around high I_0 gradients
     if apodise:
         # locate sharp edges:
         grad = abs(np.gradient(dc_smooth)) / dc_smooth
