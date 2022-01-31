@@ -7,7 +7,7 @@ import multiprocessing as mp
 from functools import partial
 
 
-def fourier_demod_1d(img, grad, width, ilim, wtype, wfactor, dval, filtval, despeckle=False, tilt_angle=0, display=False, apodise=False):
+def fourier_demod_1d(img, grad, width, ilim, wtype1, wtype2, wtype3, wfactor, dval, filtval, despeckle=False, tilt_angle=0, display=False, apodise=False):
 
     """ 1-D Fourier demodulation of a coherence imaging interferogram image, looped over image columns to extract the DC, phase and contrast components.
     
@@ -51,7 +51,7 @@ def fourier_demod_1d(img, grad, width, ilim, wtype, wfactor, dval, filtval, desp
 
     # run demodulation routine in parallel for each column
     pool = mp.Pool(processes=mp.cpu_count()-2)
-    fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype, wfactor, filtval, apodise=apodise), pp_img.T)
+    fd_column_results = pool.map(partial(pycis.demod.fourier_demod_column, grad, width, ilim, wtype1, wtype2, wtype3, wfactor, filtval, apodise=apodise), pp_img.T)
     dc, phase, contrast = zip(*fd_column_results)
     pool.close()
 

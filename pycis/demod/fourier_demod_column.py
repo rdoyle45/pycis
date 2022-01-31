@@ -7,7 +7,7 @@ import scipy.ndimage
 import scipy.fft
 
 
-def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, col, apodise=False, display=False):
+def fourier_demod_column(max_grad, window_width, ilim, wtype1, wtype2, wtype3, wfactor, filtval, col, apodise=False, display=False):
     """ 1-D Fourier demodulation of single CIS interferogram raw_data column, extracting the DC component (intensity), phase and contrast.
 
         Parameters:
@@ -64,13 +64,14 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
            'blackmanharris': scipy.signal.windows.blackmanharris,
            'tukey': scipy.signal.windows.tukey}
 
-    fn = fns['hanning']
-    #fn= fns[wtype]
+    #fn = fns['hanning']
+    fn1 = fns[wtype1]
+    fn2 = fns[wtype2]
 
-    wdw[lower_peak-int(halfwidth):lower_peak + int(halfwidth+1)] = 1 - fn(N)
+    wdw[lower_peak-int(halfwidth):lower_peak + int(halfwidth+1)] = 1 - fn2(N)
 
     # Convolve the Image column with a window function pre-demod to reduce ringing artefacts
-    win = scipy.signal.windows.hann(filtval)
+    win = fn1(filtval)
     col_filt = scipy.signal.convolve(col, win, mode='same', method='direct')#/sum(win)
 
     # FFT new image column and applies window function
@@ -113,10 +114,10 @@ def fourier_demod_column(max_grad, window_width, ilim, wtype, wfactor, filtval, 
         col_in *= scipy.signal.windows.tukey(col_in.shape[0], alpha=0.1)
 
     # FFT this apodised column for Phase and Contrast demodulation
-    fn = fns[wtype]
+    fn3 = fns[wtype3]
     fft_carrier = scipy.fft.fft(col_in)
     wdw_carrier = np.zeros(col_length)
-    wdw_carrier[nfringes-halfwidth:nfringes+halfwidth+1] = 2*fn(N)
+    wdw_carrier[nfringes-halfwidth:nfringes+halfwidth+1] = 2*fn3(N)
 
     fft_carrier = fft_carrier*wdw_carrier
     carrier = scipy.fft.ifft(fft_carrier)
