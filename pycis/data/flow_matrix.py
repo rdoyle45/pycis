@@ -509,6 +509,7 @@ class FlowGeoMatrix:
             self.image_geometry.set_pixel_aspect(f['im_px_aspect'], relative_to='Original')
             self.image_geometry.set_image_shape(*self.binning * np.array(self.pixel_mask.shape[::-1]),
                                                 coords=self.image_coords)
+            self.inv_emis = f['inv_emis']
 
             self.grid = PoloidalVolumeGrid(f['grid_verts'], f['grid_cells'], f['grid_wall'], src=self.history['grid'])
 
