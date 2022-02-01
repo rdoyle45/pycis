@@ -158,12 +158,12 @@ class FlowGeoMatrix:
             weight_rowinds, weight_colinds, weight_values = _weighting_matrix(geom_data, self.inv_emis, verbose)
             weighting_matrix = sparse.csr_matrix((weight_values, (weight_rowinds, weight_colinds)),
                                                  shape=(n_los, n_cells))
-            coo_weight = weighting_matrix.tocoo()
-            np.savez_compressed("{0}/weight_matrix_{1}_{2}.npz".format(os.getcwd(), str(shot), str(frame)),
-                                mat_row_inds=coo_weight.row,
-                                mat_col_inds=coo_weight.col,
-                                mat_data=coo_weight.data,
-                                mat_shape=coo_weight.shape)
+            # coo_weight = weighting_matrix.tocoo()
+            # np.savez_compressed("{0}/weight_matrix_{1}_{2}.npz".format(os.getcwd(), str(shot), str(frame)),
+            #                     mat_row_inds=coo_weight.row,
+            #                     mat_col_inds=coo_weight.col,
+            #                     mat_data=coo_weight.data,
+            #                     mat_shape=coo_weight.shape)
 
             # Multi-threadedly loop over each sight-line in raydata and calculate the positions at which
             # each interacts with a cell wall
@@ -207,12 +207,12 @@ class FlowGeoMatrix:
             b_l_matrix_data = np.asarray(b_l_matrix_data)
             b_l_sparse_matrix = sparse.csr_matrix((b_l_matrix_data[:, 2], (b_l_matrix_data[:, 0], b_l_matrix_data[:, 1])),
                                                   shape=(n_los, n_cells))
-            coo_bl = b_l_sparse_matrix.tocoo()
-            np.savez_compressed("{0}/bl_matrix_{1}_{2}.npz".format(os.getcwd(), str(shot), str(frame)),
-                                mat_row_inds=coo_bl.row,
-                                mat_col_inds=coo_bl.col,
-                                mat_data=coo_bl.data,
-                                mat_shape=coo_bl.shape)
+            # coo_bl = b_l_sparse_matrix.tocoo()
+            # np.savez_compressed("{0}/bl_matrix_{1}_{2}.npz".format(os.getcwd(), str(shot), str(frame)),
+            #                     mat_row_inds=coo_bl.row,
+            #                     mat_col_inds=coo_bl.col,
+            #                     mat_data=coo_bl.data,
+            #                     mat_shape=coo_bl.shape)
 
             self.data = weighting_matrix.multiply(b_l_sparse_matrix)
 
