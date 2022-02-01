@@ -277,6 +277,7 @@ class CISImage():
 
         # Just take sight-lines with I0 > 10 and tangency R < 5cm and use those as a zero flow reference
         self.v_cal_offset = self.v_los[np.logical_and(self.cal_dict['tangency_R'] < 0.05, self.I0 > 5)].mean()
+        print(self.v_cal_offset)
         self.v_los = self.v_los - self.v_cal_offset
 
     # Get CIS calib raw_data based on MAST calib log and
