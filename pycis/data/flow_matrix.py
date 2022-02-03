@@ -608,7 +608,7 @@ class FlowGeoMatrix:
         return emis_vector, cis_time
 
     # Plot velocities along defined flux surface in 1D
-    def flow_1D(self, psiN, gfile, flow_profile, plot=False):
+    def flow_1D(self, psiN, flow_profile, gfile=None, shot=None, time=None, plot=False):
 
         """
         Extract flow velocities for specific points along a line of constant \
@@ -631,7 +631,11 @@ class FlowGeoMatrix:
 
         """
 
-        eq = equilibrium(gfile=gfile)  # Load in geqdsk file containing equilibrium data
+        if gfile:
+            eq = equilibrium(gfile=gfile)  # Load in geqdsk file containing equilibrium data
+        else:
+            eq = equilibrium(device='MAST', shot=shot, time=time, with_bfield=True)
+
         flow_data = np.load(flow_profile)  # Load in SART solved flow profile
 
         # R,Z coordinates along a given flux surface
